@@ -222,8 +222,8 @@ function OnbStepTargets({ d, set }) {
     <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
     </${OnbGroup}>
-    <${OnbGroup} id="onb-g-deg" title="Degree by graduation" hint="Roles that ask for a higher degree get a low fit.">
-      <div class="onb-deg"><${Seg} label="Degree by graduation" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
+    <${OnbGroup} id="onb-g-deg" title="Degree when you graduate" hint="Roles that ask for a higher degree get a low fit.">
+      <div class="onb-deg"><${Seg} label="Degree when you graduate" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-role" title="Roles" hint="Tech-focused for now: software, data and AI, product, quant and hardware.">
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}<${Chip} key="other" on=${!!d.other} onClick=${() => set({ other: !d.other })}>Something else</${Chip}></div>

@@ -94,7 +94,7 @@ function plNextStep(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
   const silent = Apps.daysSilent(a);
-  const label = (r) => ROUND[r.type]?.label || "Interview";
+  const label = (r) => roundTitle(r);
   if (PL_CLOSED.includes(a.stage)) return a.stage === "rejected"
     ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it’s fair to ask for brief feedback. Otherwise, let it go." }
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };

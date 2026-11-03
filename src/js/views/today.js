@@ -114,7 +114,7 @@ function today_taskCopy(tk) {
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
   if (tk.kind === "apply") return { sub: today_typo(typeof tk.sub === "string" ? tk.sub.replace(" · this listing shows strong ghost signals", " · Strong ghost signals") : tk.sub), action: "Apply" };
   if (tk.kind === "nextround") return { sub: `${a.stage === "screen" ? "In screening" : "Interviewing"}, nothing scheduled yet. Add the next round’s date.`, action: "Add a round" };
-  const rl = tk.round && (ROUND[tk.round.type]?.label || "Interview");
+  const rl = tk.round && roundTitle(tk.round);
   if (tk.kind === "outcome") return { sub: `${rl} · ${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })} (${today_daysAgo(tk.round.at)})`, action: "Log outcome" };
   if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return { sub: `Your ${rl.toLowerCase()} was ${today_daysAgo(tk.round.at)}. A short note still helps.`, action: tk.action };
   return { sub: today_typo(tk.sub), action: tk.action };
@@ -559,8 +559,10 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
       <button type="button" class="btn ghost sm td-goal-edit" onClick=${() => go("prefs")}>Edit goal</button>
     </div>
     <div class="td-week-goal">
-      <div class="goal-top"><span class="num td-week-n">${thisWeek} / ${goal} applied</span><span class="hint">${thisWeek >= goal ? "Goal reached." : `${left} more to hit your goal`}</span></div>
-      <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
+      ${Apps.list().some((a) => !a.example && a.stage !== "saved")
+        ? html`<div class="goal-top"><span class="num td-week-n">${thisWeek} / ${goal} applied</span><span class="hint">${thisWeek >= goal ? "Goal reached." : `${left} more to hit your goal`}</span></div>
+      <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} label="Applications this week toward your goal" />`
+        : html`<div class="goal-top"><span class="hint">Goal: ${goal} applications a week. Mark a job as applied to start counting.</span></div>`}
     </div>
     ${thisWeek > 0 ? html`<div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
           ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
@@ -572,7 +574,7 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
   </section>`;
 }
 
-const TODAY_STAGE_COLOR = { saved: "var(--fg-3)", applied: "var(--accent)", screen: "var(--info)", interview: "var(--wait)", offer: "var(--ok)", rejected: "var(--bad)", ghosted: "var(--ghost)" };
+const TODAY_STAGE_COLOR = { saved: "var(--fg-3)", applied: "var(--accent)", screen: "var(--info)", interview: "var(--int)", offer: "var(--ok)", rejected: "var(--bad)", ghosted: "var(--ghost)" };
 
 function today_Pipeline({ apps }) {
   const counts = STAGES.map((st) => ({ ...st, n: apps.filter((a) => a.stage === st.id).length }));

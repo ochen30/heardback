@@ -150,7 +150,7 @@ function followUpTemplate(a, profile) {
   const name = a.contacts?.[0]?.name?.split(/\s+/)[0];
   const hi = name ? `Hi ${name},` : `Hi ${a.company} team,`;
   if (a.followedUpAt) {
-    return `Subject: Checking in on my ${a.title || "application"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
+    return `Subject: Checking in again on my ${a.title || "role"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
   }
   return `Subject: Following up on my ${a.title || "application"} application\n\n${hi}\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
