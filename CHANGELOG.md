@@ -44,3 +44,15 @@ QA found 32 bugs (2 crash, 4 broken). Fixed all P0/P1 and most P2:
 - Unreadable saved data is backed up instead of overwritten; failed saves warn you; edits flush on tab close.
 - Email parser scores signals instead of first match (11/11 realistic test emails now classified correctly), handles numeric dates, time zones (ET/PT…), assessment deadlines, platform senders (HackerRank etc.).
 - No duplicate rounds from re-logging the same email; Offer cards can't be arrow-keyed into Rejected; hidden examples aren't matched or exported as real; Delete all clears every Heardback key; Tab stays inside dialogs; long names wrap.
+
+### 02:10 PT — v4 published (design pass 2, new features)
+Design review 2 scored v3 at 7.4/10 (from 6.3). Applied its fixes:
+- Hover-only menus no longer take layout space (Today, Pipeline); tablet (768) layouts designed for the board and Find; toasts bottom-right on desktop and dark-mode aware; palette without a focus ring; custom checkboxes and radios that read well in both themes.
+- Application drawer is no longer form-first: rounds are summary rows with Edit (only the next round expanded), contacts start as "No contacts yet", outcome is a compact select.
+- Company stats use one layout and one "Reposted" metric everywhere; AI output says "Strengths" / "Gaps" (no red), one Regenerate; zero-count filter chips disabled; Insights "Patterns" card; one weekly-goal widget on Today.
+New:
+- **Posting taken down:** when a saved or applied job disappears from the live listings, Today and the pipeline card say so.
+- **Season closing:** apply nudges get urgent when a company has closed most of its Summer 2027 internship postings.
+- **PDF resumes:** upload a PDF in onboarding or Settings; it's read locally in the browser (pdf.js, loaded only when needed).
+- **New since your last visit** in Find; identical duplicate listings collapsed (Palo Alto Networks listed one title 26 times); fit score recalibrated.
+- Job data refreshed from live sources (8,225 open roles).

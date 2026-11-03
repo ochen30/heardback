@@ -559,7 +559,7 @@ p { margin: 0; }
   .toasts.over-drawer { right: calc(min(560px, 100vw) + 24px); }
 }
 @media (max-width: 860px) {
-  .toasts.over-drawer { top: calc(env(safe-area-inset-top, 0px) + 12px); bottom: auto; }
+  .toasts.over-drawer { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   .toast { max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
 }
 .palette-input input:focus, .palette-input input:focus-visible { box-shadow: none; outline: none; }

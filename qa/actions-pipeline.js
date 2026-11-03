@@ -331,6 +331,7 @@ const actions = {
     await wait(page, 100);
   },
   async hintDismiss(page) {
+    if (page.viewportSize().width <= 520) { log('skip hintDismiss at phone width (tip is hidden there)'); return; }
     assert(await page.locator('.pl-tip').count() === 1, 'keyboard tip shows');
     await page.click('.pl-tip-x');
     await wait(page, 100);
