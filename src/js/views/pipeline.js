@@ -198,13 +198,17 @@ VIEWS.pipeline = function PipelineView() {
   const offers = all.filter((a) => a.stage === "offer").length;
   const sub = [pluralize(all.length, "application"), `${active} active`, offers ? pluralize(offers, "offer") : null].filter(Boolean).join(" · ");
   const examples = hasExamples(s) && s.settings.showExamples;
+  const closedOpen = plClosedOpen(s);
+  /* Only items on screen can be selected: filtered out (or in the collapsed Closed rail) drops them */
+  const visible = view === "board" && !closedOpen ? apps.filter((a) => !PL_CLOSED.includes(a.stage)) : apps;
+  const sel = plUseSelection(visible.map((a) => a.id).join(","), view);
 
   if (!all.length) return html`<div class="page pl-page">
     <div class="page-head"><div><h1>Pipeline</h1><p>Track applications and what to do next.</p></div></div>
     <${PlEmpty} />
   </div>`;
 
-  return html`<div class=${cx("page wide pl-page", view === "board" && "pl-page-board")}>
+  return html`<div class=${cx("page wide pl-page", view === "board" && "pl-page-board", sel.size && "pl-selecting")}>
     <div class="page-head pl-head">
       <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${sub}</p></div>
       <span class="spacer"></span>
@@ -222,9 +226,115 @@ VIEWS.pipeline = function PipelineView() {
       <${Btn} size="sm" kind="ghost" onClick=${clearExamples}>Clear examples</${Btn}>
     </div>`}
     ${n && !apps.length && html`<div class="callout"><${Icon} name="search" /><span>No applications match “${q}”. <button type="button" class="pl-linkbtn" onClick=${() => setQ("")}>Clear the filter</button></span></div>`}
-    ${view === "board" ? html`<${PlBoard} apps=${apps} settings=${s.settings} closedOpen=${plClosedOpen(s)} hint=${!s.ui.pipelineHintDone} filtering=${!!n} />` : html`<${PlTable} apps=${apps} settings=${s.settings} sort=${s.ui.pipelineSort || { k: "activity", dir: -1 }} />`}
+    ${view === "board" ? html`<${PlBoard} apps=${apps} settings=${s.settings} closedOpen=${closedOpen} hint=${!s.ui.pipelineHintDone} filtering=${!!n} sel=${sel} />` : html`<${PlTable} apps=${apps} settings=${s.settings} sort=${s.ui.pipelineSort || { k: "activity", dir: -1 }} sel=${sel} />`}
+    ${sel.size > 0 && html`<${PlBulkBar} sel=${sel} view=${view} />`}
   </div>`;
 };
+
+/* ---------- Selection + bulk actions ---------- */
+/* Selection lives in the view. Range order is the on-screen order (board: column by column; table: row order). */
+function plOrder() { return [...document.querySelectorAll(".pl-page [data-card], .pl-page tr[data-row]")].map((el) => el.dataset.card || el.dataset.row); }
+function plTouch() { return window.matchMedia("(hover: none)").matches; }
+function plUseSelection(visKey, view) {
+  const [ids, setIds] = useState(() => new Set());
+  const anchor = useRef(null);
+  /* Keep only still-visible items when the filter or data changes */
+  useEffect(() => {
+    setIds((prev) => { if (!prev.size) return prev; const v = new Set(visKey.split(",")); const nx = new Set([...prev].filter((id) => v.has(id))); return nx.size === prev.size ? prev : nx; });
+  }, [visKey]);
+  /* Switching board/table starts fresh */
+  const first = useRef(true);
+  useEffect(() => { if (first.current) { first.current = false; return; } setIds(new Set()); anchor.current = null; }, [view]);
+  const clear = useCallback(() => { setIds(new Set()); anchor.current = null; }, []);
+  /* Escape clears, but only when nothing else (drawer, modal, menu, filter) handled it first */
+  useEffect(() => {
+    if (!ids.size) return;
+    const k = (e) => { if (e.key === "Escape" && !e.defaultPrevented && !ui.state.drawer && !ui.state.modal) clear(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [ids.size > 0]);
+  const toggle = (id, range) => {
+    const nx = new Set(ids);
+    const order = range && anchor.current && anchor.current !== id ? plOrder() : null;
+    let i = order ? order.indexOf(anchor.current) : -1, j = order ? order.indexOf(id) : -1;
+    if (i >= 0 && j >= 0) { if (i > j) [i, j] = [j, i]; order.slice(i, j + 1).forEach((x) => nx.add(x)); }
+    else if (nx.has(id)) nx.delete(id); else nx.add(id);
+    anchor.current = id;
+    setIds(nx);
+  };
+  const setMany = (list, on) => { const nx = new Set(ids); list.forEach((id) => (on ? nx.add(id) : nx.delete(id))); setIds(nx); };
+  return { ids, size: ids.size, has: (id) => ids.has(id), toggle, setMany, clear, list: () => plOrder().filter((id) => ids.has(id)) };
+}
+
+function plRestore(list) { store.set((s) => { const apps = { ...s.apps }; list.forEach((a) => (apps[a.id] = a)); return { ...s, apps }; }); }
+function plCount(list) { return list.length === 1 ? list[0].company : pluralize(list.length, "application"); }
+/* One store write for the whole batch, one toast, one Undo that restores every card */
+function plBulkMove(ids, to) {
+  const before = ids.map((id) => Apps.get(id)).filter((a) => a && a.stage !== to);
+  if (!before.length) { toast(`Already in ${STAGE[to].label}`); return 0; }
+  const t = now();
+  store.set((s) => {
+    const apps = { ...s.apps };
+    for (const a of before) {
+      const cur = apps[a.id]; if (!cur) continue;
+      const ev = { id: uid("e_"), at: t, kind: "stage", from: cur.stage, to, text: `Moved to ${STAGE[to].label}` };
+      const patch = { stage: to, lastActivityAt: t, events: [...(cur.events || []), ev] };
+      if (to !== "saved" && !cur.appliedAt) patch.appliedAt = t;
+      if (["screen", "interview", "offer", "rejected"].includes(to) && STAGE[cur.stage].i < STAGE[to].i) patch.lastReplyAt = t;
+      apps[a.id] = { ...cur, ...patch };
+    }
+    return { ...s, apps };
+  });
+  if (PL_CLOSED.includes(to)) plSetClosedOpen(true);
+  if (to === "offer") celebrate(before[0]);
+  toast(to === "ghosted" ? `Marked ${plCount(before)} as ghosted` : `Moved ${plCount(before)} to ${STAGE[to].label}`, { undo: () => plRestore(before) });
+  return before.length;
+}
+function plBulkDelete(ids, done) {
+  const list = ids.map((id) => Apps.get(id)).filter(Boolean);
+  if (!list.length) return;
+  const one = list.length === 1;
+  askConfirm({
+    title: one ? `Delete ${list[0].company}?` : `Delete ${list.length} applications?`,
+    body: `This removes ${one ? list[0].title || "this application" : `these ${list.length} applications`} with ${one ? "its" : "their"} rounds, notes and timeline from this device. You can undo right after.`,
+    confirmLabel: one ? "Delete application" : `Delete ${list.length} applications`, danger: true,
+    onConfirm: () => {
+      store.set((s) => { const apps = { ...s.apps }; list.forEach((a) => delete apps[a.id]); return { ...s, apps }; });
+      done();
+      toast(`Deleted ${plCount(list)}`, { undo: () => plRestore(list) });
+    },
+  });
+}
+/* Same columns as Settings > Export CSV, so the file imports back cleanly */
+function plExportCSV(ids) {
+  const list = ids.map((id) => Apps.get(id)).filter(Boolean);
+  const head = ["company", "title", "location", "stage", "applied", "last activity", "url", "rounds", "example"];
+  const iso = (t) => (t ? fmt.toDateInput(t) : "");
+  const rows = list.map((a) => [a.company, a.title, a.location, STAGE[a.stage]?.label || a.stage, iso(a.appliedAt), iso(a.lastActivityAt), a.url, (a.rounds || []).length, a.example ? "yes" : ""]);
+  saveFile(`heardback-${list.length}-applications-${fmt.toDateInput(now())}.csv`, [head, ...rows].map((r) => r.map(csvEscape).join(",")).join("\n"), "text/csv");
+}
+
+function PlBulkBar({ sel, view }) {
+  const [menu, setMenu] = useState(null);
+  const ids = sel.list();
+  const list = ids.map((id) => Apps.get(id)).filter(Boolean);
+  const stages = new Set(list.map((a) => a.stage));
+  const cur = stages.size === 1 ? [...stages][0] : null;
+  const after = () => { const first = ids[0]; sel.clear(); if (view === "board" && first && Apps.get(first)) plFocusCard(first); };
+  const move = (to) => { if (plBulkMove(ids, to)) after(); };
+  return html`<${Fragment}><div class="pl-bulk" role="toolbar" aria-label="Actions for selected applications">
+    <span class="pl-bulk-count num" aria-live="polite">${sel.size} selected</span>
+    <span class="pl-bulk-sep" aria-hidden="true"></span>
+    <${Btn} kind="ghost" size="sm" iconRight="chevD" cls="pl-bulk-move" aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"} onClick=${(e) => { const el = e.currentTarget; setMenu((m) => (m ? null : el)); }}>Move to…</${Btn}>
+    <${Btn} kind="ghost" size="sm" icon="ghost" cls="pl-bulk-ic" disabled=${cur === "ghosted"} aria-label="Mark ghosted" title="Mark ghosted" onClick=${() => move("ghosted")}><span class="pl-bulk-lbl">Mark ghosted</span></${Btn}>
+    <${Btn} kind="ghost" size="sm" icon="download" cls="pl-bulk-ic" aria-label="Export CSV" title="Export the selection as CSV" onClick=${() => plExportCSV(ids)}><span class="pl-bulk-lbl">Export CSV</span></${Btn}>
+    <${Btn} kind="ghost" size="sm" icon="trash" cls="pl-bulk-ic danger" aria-label="Delete" title="Delete selected applications" onClick=${() => plBulkDelete(ids, after)}><span class="pl-bulk-lbl">Delete</span></${Btn}>
+    <span class="pl-bulk-sep" aria-hidden="true"></span>
+    <${Btn} kind="ghost" size="sm" icon="x" cls="pl-bulk-x" aria-label="Clear selection" title="Clear selection (Esc)" onClick=${sel.clear} />
+  </div>
+  ${menu && html`<${PlMoveMenu} label=${`Move ${pluralize(list.length, "application")}`} current=${cur} anchor=${menu} onPick=${move} onClose=${() => setMenu(null)} />`}
+  </${Fragment}>`;
+}
 
 function PlEmpty() {
   return html`<div class="card pl-empty">
@@ -247,7 +357,7 @@ function PlEmpty() {
 }
 
 /* ---------- Board ---------- */
-function PlBoard({ apps, settings, closedOpen, hint, filtering }) {
+function PlBoard({ apps, settings, closedOpen, hint, filtering, sel }) {
   const [drag, setDrag] = useState(null);
   const [over, setOver] = useState(null);
   const [menu, setMenu] = useState(null);
@@ -273,7 +383,8 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering }) {
   const onKey = (a) => (e) => {
     if (e.target !== e.currentTarget) return;
     const k = e.key;
-    if (k === "Enter" || k === " ") { e.preventDefault(); openApp(a.id); }
+    if ((k === "x" || k === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); }
+    else if (k === "Enter" || k === " ") { e.preventDefault(); openApp(a.id); }
     else if (k === "ArrowRight" || k === "]" || k === "ArrowLeft" || k === "[") {
       e.preventDefault();
       /* Steps only within the main flow; closing an application is always explicit */
@@ -287,6 +398,7 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering }) {
     }
   };
   const card = (a) => html`<${PlCard} key=${a.id} a=${a} settings=${settings} dragging=${drag === a.id}
+    selected=${sel.has(a.id)} selecting=${sel.size > 0} onSelect=${(range) => sel.toggle(a.id, range)}
     onDragStart=${(e) => { e.dataTransfer.setData("text/plain", a.id); e.dataTransfer.effectAllowed = "move"; setDrag(a.id); }}
     onDragEnd=${() => { setDrag(null); setOver(null); }}
     onKeyDown=${onKey(a)}
@@ -295,7 +407,7 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering }) {
   const closedTargets = html`<div class="pl-drop-pair">${PL_CLOSED.map((id) => html`<div key=${id} class=${cx("pl-drop", over === id && "on")} data-col=${id} ...${dropProps(id)}><span class=${cx("dot", id)}></span>${STAGE[id].label}</div>`)}</div>`;
 
   return html`<${Fragment}>
-    <div class="board pl-board" role="list" aria-label="Pipeline board">
+    <div class=${cx("board pl-board", sel.size && "selecting")} role="list" aria-label="Pipeline board">
       ${PL_MAIN.map((sid) => {
         const st = STAGE[sid], list = by[sid];
         return html`<section role="listitem" key=${sid} class=${cx("col pl-col", over === sid && "drop")} data-col=${sid} aria-label=${`${st.label}, ${pluralize(list.length, "application")}`} ...${dropProps(sid)}>
@@ -323,23 +435,30 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering }) {
           <span class="pl-rail-count num">${closedList.length}</span><span class="pl-rail-label">Closed</span><${Icon} name="chevL" size=${14} />
         </button>`}
     </div>
-    <p class="sr" id="pl-kbd-hint">Press the left and right arrow keys to move a card to another stage, up and down to switch cards, Enter to open.</p>
+    <p class="sr" id="pl-kbd-hint">Press the left and right arrow keys to move a card to another stage, up and down to switch cards, Enter to open, X to select.</p>
     ${hint && html`<div class="pl-tip hide-sm" role="note">
       <${Icon} name="keyboard" size=${14} />
       <span>Tip: drag cards between columns, or focus a card and press <${Kbd}>←</${Kbd}> <${Kbd}>→</${Kbd}> to move it.</span>
       <button type="button" class="pl-tip-x" aria-label="Dismiss tip" title="Dismiss" onClick=${() => plUi({ pipelineHintDone: true })}><${Icon} name="x" size=${14} /></button>
     </div>`}
-    ${menu && Apps.get(menu.id) && html`<${PlMoveMenu} a=${Apps.get(menu.id)} anchor=${menu.el} onPick=${(to) => move(Apps.get(menu.id), to)} onClose=${() => setMenu(null)} />`}
+    ${menu && Apps.get(menu.id) && html`<${PlMoveMenu} label=${`Move ${Apps.get(menu.id).company}`} current=${Apps.get(menu.id).stage} anchor=${menu.el} onPick=${(to) => move(Apps.get(menu.id), to)} onClose=${() => setMenu(null)}
+      extra=${[{ icon: "check", label: sel.has(menu.id) ? "Deselect" : "Select", run: () => sel.toggle(menu.id) }, { icon: "arrowR", label: "Open details", run: () => openApp(menu.id) }]} />`}
   </${Fragment}>`;
 }
 
-function PlCard({ a, settings, dragging, onMenu, ...rest }) {
+function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, ...rest }) {
   const stt = plStatus(a, settings);
-  return html`<article class=${cx("app-card pl-card", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed")} tabindex="0" draggable="true" data-card=${a.id}
-    aria-label=${`${a.title} at ${a.company}. ${STAGE[a.stage].label}. ${stt.text}.`} aria-describedby="pl-kbd-hint"
-    onClick=${(e) => { if (!e.target.closest("button")) openApp(a.id); }} ...${rest}>
+  const click = (e) => {
+    if (e.target.closest("button")) return;
+    /* Checkbox, Cmd/Ctrl-click, Shift-click while selecting, or a tap on touch while selecting: toggle selection */
+    if (e.target.closest(".pl-chk") || e.metaKey || e.ctrlKey || (selecting && (e.shiftKey || plTouch()))) { onSelect(e.shiftKey); return; }
+    openApp(a.id);
+  };
+  return html`<article class=${cx("app-card pl-card", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed", selected && "sel")} tabindex="0" draggable="true" data-card=${a.id}
+    aria-label=${`${a.title} at ${a.company}. ${STAGE[a.stage].label}. ${stt.text}.${selected ? " Selected." : ""}`} aria-describedby="pl-kbd-hint"
+    onClick=${click} onMouseDown=${(e) => { if (e.shiftKey && selecting) e.preventDefault(); }} ...${rest}>
     <div class="pl-card-top">
-      <${Logo} name=${a.company} size="sm" />
+      <span class="pl-card-lead"><${Logo} name=${a.company} size="sm" /><span class="pl-chk" draggable="false"><input type="checkbox" id=${"pl-cs-" + a.id} tabindex="-1" checked=${!!selected} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></span></span>
       <span class="pl-card-co truncate">${a.company}</span>
       <button type="button" class="pl-more" aria-label=${`Move ${a.company} to another stage`} aria-haspopup="menu" title="Move to…" onClick=${(e) => { e.stopPropagation(); onMenu(e.currentTarget); }}><${Icon} name="more" /></button>
     </div>
@@ -351,7 +470,7 @@ function PlCard({ a, settings, dragging, onMenu, ...rest }) {
   </article>`;
 }
 
-function PlMoveMenu({ a, anchor, onPick, onClose }) {
+function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useLayoutEffect(() => {
@@ -378,13 +497,13 @@ function PlMoveMenu({ a, anchor, onPick, onClose }) {
     const i = items.indexOf(document.activeElement);
     items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
   };
-  return html`<div class="menu pl-menu" role="menu" aria-label=${`Move ${a.company}`} ref=${ref} onKeyDown=${nav} style=${pos ? `left:${pos.left}px;top:${pos.top}px` : "visibility:hidden;left:0;top:0"}>
+  return html`<div class="menu pl-menu" role="menu" aria-label=${label} ref=${ref} onKeyDown=${nav} style=${pos ? `left:${pos.left}px;top:${pos.top}px` : "visibility:hidden;left:0;top:0"}>
     <div class="pl-menu-label">Move to</div>
-    ${STAGES.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${a.stage === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
-      <span class=${cx("dot", st.id)}></span><span style="flex:1">${st.label}</span>${a.stage === st.id && html`<${Icon} name="check" size=${14} />`}
+    ${STAGES.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
+      <span class=${cx("dot", st.id)}></span><span style="flex:1">${st.label}</span>${current === st.id && html`<${Icon} name="check" size=${14} />`}
     </button>`)}
-    <div class="pl-menu-sep"></div>
-    <button type="button" role="menuitem" onClick=${() => { onClose(); openApp(a.id); }}><${Icon} name="arrowR" size=${14} />Open details</button>
+    ${extra && extra.length > 0 && html`<div class="pl-menu-sep"></div>`}
+    ${(extra || []).map((x) => html`<button type="button" role="menuitem" key=${x.label} onClick=${() => { onClose(); x.run(); }}><${Icon} name=${x.icon} size=${14} />${x.label}</button>`)}
   </div>`;
 }
 
@@ -398,9 +517,23 @@ const PL_COLS = [
   { k: "next", label: "Next step", v: (a) => { const u = plUpcoming(a); return u ? -1e15 + u.at : PL_CLOSED.includes(a.stage) ? 1e15 : 0; } },
   { k: "silent", label: "Days silent", v: (a) => (ACTIVE_STAGES.includes(a.stage) ? Apps.daysSilent(a) : -1), num: true },
 ];
-function PlTable({ apps, settings, sort }) {
+function PlTable({ apps, settings, sort, sel }) {
   const col = PL_COLS.find((c) => c.k === sort.k) || PL_COLS[3];
   const rows = useMemo(() => [...apps].sort((x, y) => { const a = col.v(x), b = col.v(y); return (a < b ? -1 : a > b ? 1 : 0) * sort.dir; }), [apps, sort.k, sort.dir]);
+  const ids = rows.map((a) => a.id);
+  const nSel = ids.filter((id) => sel.has(id)).length;
+  const allOn = nSel > 0 && nSel === ids.length;
+  const headRef = useRef(null);
+  useEffect(() => { if (headRef.current) headRef.current.indeterminate = nSel > 0 && !allOn; });
+  const onTableKey = (e) => {
+    const t = e.target;
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "a" && !(t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type !== "checkbox"))) { e.preventDefault(); sel.setMany(ids, true); }
+  };
+  const rowClick = (a) => (e) => {
+    if (e.target.closest("select")) return;
+    if (e.target.closest(".pl-chk-cell") || e.metaKey || e.ctrlKey || (sel.size && (e.shiftKey || plTouch()))) { sel.toggle(a.id, e.shiftKey); return; }
+    openApp(a.id);
+  };
   const setSort = (k) => plUi({ pipelineSort: { k, dir: sort.k === k ? -sort.dir : k === "company" || k === "stage" || k === "next" ? 1 : -1 } });
   return html`<${Fragment}>
   <div class="pl-msort">
@@ -410,10 +543,11 @@ function PlTable({ apps, settings, sort }) {
       ${![["activity", -1], ["next", 1], ["silent", -1], ["stage", 1], ["applied", -1], ["company", 1]].some(([k, d]) => k === col.k && d === sort.dir) && html`<option value=${`${col.k}:${sort.dir}`}>${col.label}${sort.dir > 0 ? ", ascending" : ", descending"}</option>`}
     </select>
   </div>
-  <div class="card pl-table-card">
+  <div class="card pl-table-card" onKeyDown=${onTableKey}>
     <div class="table-wrap">
       <table class="table pl-table">
-        <thead><tr>${PL_COLS.map((c) => html`<th key=${c.k} class=${cx(c.num && "pl-num")} aria-sort=${sort.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : "none"}>
+        <thead><tr><th class="pl-chk-cell"><input type="checkbox" id="pl-sel-all" ref=${headRef} checked=${allOn} disabled=${!ids.length} aria-label=${allOn ? "Deselect all" : "Select all visible applications"} title=${allOn ? "Deselect all" : "Select all"}
+          onChange=${(e) => sel.setMany(ids, e.currentTarget.checked)} /></th>${PL_COLS.map((c) => html`<th key=${c.k} class=${cx(c.num && "pl-num")} aria-sort=${sort.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : "none"}>
           <button type="button" onClick=${() => setSort(c.k)}><span>${c.label}</span>${sort.k === c.k ? html`<${Icon} name=${sort.dir > 0 ? "chevD" : "chevD"} size=${12} cls=${cx("pl-sort", sort.dir < 0 && "desc")} />` : html`<${Icon} name="sort" size=${12} cls="pl-sort-idle" />`}</button>
         </th>`)}</tr></thead>
         <tbody>
@@ -422,7 +556,10 @@ function PlTable({ apps, settings, sort }) {
             const silent = ACTIVE_STAGES.includes(a.stage) ? Apps.daysSilent(a) : null;
             const due = PL_DUE.includes(ns.kind);
             const dot = due ? "pl-dot-due" : ns.kind === "upcoming" ? "pl-dot-up" : "pl-dot-idle";
-            return html`<tr key=${a.id} tabindex="0" onClick=${(e) => { if (!e.target.closest("select")) openApp(a.id); }} onKeyDown=${(e) => { if (e.key === "Enter" && e.target === e.currentTarget) openApp(a.id); }}>
+            const on = sel.has(a.id);
+            return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
+              onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
+              <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
               <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}</span></div></div></td>
               <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
               <td class="num muted">${a.appliedAt ? fmt.date(a.appliedAt) : html`<span class="faint">—</span>`}</td>
@@ -431,7 +568,7 @@ function PlTable({ apps, settings, sort }) {
               <td class="num pl-num">${silent == null ? html`<span class="faint">—</span>` : html`<span class=${cx(silent >= settings.followUpDays && "pl-warn")}>${silent}</span>`}</td>
             </tr>`;
           })}
-          ${!rows.length && html`<tr><td colspan="6" class="faint" style="text-align:center">No applications match the filter.</td></tr>`}
+          ${!rows.length && html`<tr><td colspan="7" class="faint" style="text-align:center">No applications match the filter.</td></tr>`}
         </tbody>
       </table>
     </div>

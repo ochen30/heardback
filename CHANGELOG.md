@@ -56,3 +56,10 @@ New:
 - **PDF resumes:** upload a PDF in onboarding or Settings; it's read locally in the browser (pdf.js, loaded only when needed).
 - **New since your last visit** in Find; identical duplicate listings collapsed (Palo Alto Networks listed one title 26 times); fit score recalibrated.
 - Job data refreshed from live sources (8,225 open roles).
+
+### 02:30 PT — v5 published (new features)
+- **Mock interview with Claude** (Interview prep): a realistic interviewer for the round type and role, one question at a time, short feedback after each answer, then a scorecard (strengths, what to work on, a stronger answer outline) you can save to the round's notes. Runs on your own Claude account; hidden when Claude isn't available.
+- **Bulk actions** in Pipeline (board and table): select with checkboxes, Shift-click ranges, Cmd/Ctrl-click or X; move, mark ghosted, export or delete many at once with one Undo.
+- **Command palette context actions:** with an application open, Cmd/Ctrl+K offers "Move to Interviews", "Add a round", "Draft a follow-up"; with a job open, "Save", "Mark as applied", "View company".
+- **How we score listings:** a methodology page with the exact signals, points and live score distribution across all listings, plus known limits. Linked from Find and every job's ghost check.
+- Modal polish: content never squeezes into nested scroll areas; dialogs without fields don't show a focus ring on open.

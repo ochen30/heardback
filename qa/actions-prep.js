@@ -142,3 +142,93 @@ module.exports = {
     console.log(s.join('\n'));
   },
 };
+
+// ---- Mock interview (run with MOCK=1). patchMock swaps in a slower, word-by-word streaming double that honours
+// AbortSignal, plus a valid scorecard for the JSON call, so streaming, Stop and the end summary can be checked.
+async function patchMock(page, { delay = 30, firstDelay = 0, card = true } = {}) {
+  await page.evaluate(({ delay, firstDelay, card }) => {
+    const orig = caps.sample; let n = 0;
+    const f = async (input, opts = {}) => {
+      n++;
+      const last = Array.isArray(input) ? input[input.length - 1].content : String(input);
+      const text = /final question/.test(last) ? 'That answer was clear and well structured. A specific number for the result would make it land harder. Thanks for your time today, that is the end of our interview.'
+        : n === 1 ? 'Thanks for making the time today. To start, tell me about a project where you had to make a trade-off under time pressure. What did you choose, and why?'
+        : 'Good, you named the constraint clearly, though I would like to hear more about what you personally did. Next: describe a time you got critical feedback on your work. How did you respond?';
+      if (firstDelay) await new Promise((r) => setTimeout(r, firstDelay));
+      let acc = '';
+      for (const w of text.split(' ')) {
+        if (opts.signal && opts.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        await new Promise((r) => setTimeout(r, delay));
+        acc += (acc ? ' ' : '') + w; opts.onText && opts.onText({ text: acc, delta: w });
+      }
+      return { text: acc };
+    };
+    f.json = async (p, o) => {
+      if (!card) return orig.json(p, o);
+      await new Promise((r) => setTimeout(r, 400));
+      return { overall: 4, strengths: ['Clear structure: constraint, choice, result', 'Owned the decision and explained the reasoning'], improve: ['Quantify the result instead of describing it', 'Say what you would do differently next time'], betterAnswer: { question: 'Describe a time you got critical feedback on your work.', outline: 'Situation: code review on the caching change, one sentence\nFeedback: what the reviewer flagged, quoted plainly\nAction: what you changed and how you checked it\nResult: [your result], and the habit you kept' } };
+    };
+    caps.sample = f;
+  }, { delay, firstDelay, card });
+}
+const ANSWERS = ['We had two days before a demo, so I cut the export feature and shipped search first because users asked for it most.', 'My lead said my PR was too big to review. I split it into three smaller ones and added tests, and review time dropped.', 'I would start by asking what the user is trying to do, then list the options and pick the simplest one we can measure.'];
+async function mockAnswer(page, i, viaKey = true) {
+  await page.waitForFunction(() => document.querySelector('#prep-mock-answer') && !document.querySelector('#prep-mock-stop'), null, { timeout: 15000 });
+  await page.fill('#prep-mock-answer', ANSWERS[i % ANSWERS.length]);
+  if (viaKey) await page.press('#prep-mock-answer', 'Control+Enter'); else await page.click('#prep-mock-send');
+}
+const waitIdle = (page) => page.waitForFunction(() => !document.querySelector('#prep-mock-stop'), null, { timeout: 20000 });
+Object.assign(module.exports, {
+  async mockStartDefault(page) { await module.exports.withResume(page); },
+  async mockCanned(page) { await module.exports.withResume(page); await page.click('#prep-mock-start'); await wait(page, 900); },
+  async mockThinking(page) { await module.exports.withResume(page); await patchMock(page, { firstDelay: 5000 }); await page.click('#prep-mock-start'); await wait(page, 400); },
+  async mockStreaming(page) { await module.exports.withResume(page); await patchMock(page, { delay: 120 }); await page.click('#prep-mock-start'); await wait(page, 1300); },
+  async mockStop(page) {
+    await module.exports.withResume(page); await patchMock(page, { firstDelay: 5000 }); await page.click('#prep-mock-start'); await wait(page, 300);
+    await page.click('#prep-mock-stop'); await wait(page, 300);
+    const st = await page.evaluate(() => ({ err: !!document.querySelector('.prep-mock-err'), stop: !!document.querySelector('#prep-mock-stop') }));
+    console.log('[prep]', st.err && !st.stop ? 'ok' : 'FAIL', 'stop before text shows retry', JSON.stringify(st));
+  },
+  async mockStopMid(page) {
+    await module.exports.withResume(page); await patchMock(page, { delay: 120 }); await page.click('#prep-mock-start'); await wait(page, 900);
+    await page.click('#prep-mock-stop'); await wait(page, 600);
+    const st = await page.evaluate(() => ({ turns: document.querySelectorAll('.prep-mock-turn').length, stopped: /stopped/.test(document.querySelector('.prep-mock-who')?.textContent || ''), canSend: !!document.querySelector('#prep-mock-answer') }));
+    console.log('[prep]', st.turns === 1 && st.stopped && st.canSend ? 'ok' : 'FAIL', 'stop mid-stream keeps partial', JSON.stringify(st));
+  },
+  async mockTurn(page) {
+    await module.exports.withResume(page); await patchMock(page); await page.click('#prep-mock-start'); await waitIdle(page);
+    await mockAnswer(page, 0); await waitIdle(page); await wait(page, 300);
+    const st = await page.evaluate(() => ({ turns: document.querySelectorAll('.prep-mock-turn').length, count: document.querySelector('.prep-mock .prep-count')?.textContent, focus: document.activeElement?.id, draft: document.querySelector('#prep-mock-answer').value }));
+    console.log('[prep]', st.turns === 3 && st.focus === 'prep-mock-answer' && !st.draft ? 'ok' : 'FAIL', 'answer via Ctrl+Enter', JSON.stringify(st));
+  },
+  async mockEnd(page) {
+    await module.exports.withResume(page); await patchMock(page, { delay: 5 });
+    await page.getByRole('button', { name: '3 questions', exact: true }).click();
+    await page.click('#prep-mock-start'); await waitIdle(page);
+    for (let i = 0; i < 3; i++) { await mockAnswer(page, i, i !== 1); await wait(page, 100); await waitIdle(page); }
+    await page.waitForSelector('.prep-score', { timeout: 10000 });
+    await page.evaluate(() => document.getElementById('workspace').scrollTo(0, 0)); await wait(page, 300);
+  },
+  async mockSave(page) {
+    await module.exports.mockEnd(page);
+    await page.click('#prep-mock-save'); await wait(page, 500);
+    const st = await page.evaluate(() => ({ store: Object.values(store.get().apps).flatMap((a) => a.rounds || []).some((r) => /Mock interview with Claude/.test(r.prep || '')), ui: /Mock interview with Claude/.test(document.querySelector('textarea[id^="prep-notes-"]')?.value || ''), btn: document.querySelector('#prep-mock-save')?.textContent }));
+    console.log('[prep]', st.store && st.ui ? 'ok' : 'FAIL', 'save to round notes', JSON.stringify(st));
+    await page.locator('#prep-mock-save').scrollIntoViewIfNeeded();
+  },
+  async mockEndBadJson(page) {
+    await module.exports.withResume(page); await patchMock(page, { delay: 5, card: false });
+    await page.getByRole('button', { name: '3 questions', exact: true }).click();
+    await page.click('#prep-mock-start'); await waitIdle(page);
+    for (let i = 0; i < 3; i++) { await mockAnswer(page, i); await wait(page, 100); await waitIdle(page); }
+    await wait(page, 800);
+    console.log('[prep]', (await page.locator('.prep-mock-err').count()) ? 'ok' : 'FAIL', 'bad scorecard shape shows retry');
+    await page.locator('.prep-mock-err').scrollIntoViewIfNeeded();
+  },
+  async mockPractice(page) { await module.exports.prepPracticeItem(page); },
+  async mockHidden(page) {
+    const n = await page.locator('#prep-mock-start').count();
+    console.log('[prep]', n === 0 ? 'ok' : 'FAIL', 'mock hidden without Claude');
+    await page.click('#prep-practice'); await wait(page);
+  },
+});

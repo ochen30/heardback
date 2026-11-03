@@ -367,10 +367,306 @@ function PrepAskCard({ type }) {
   </div>`;
 }
 
+/* ---------- Mock interview with Claude ----------
+   The page keeps the turns. Standing instructions travel in the leading user turn; each later user turn is
+   the candidate's answer plus a short pacing note the candidate never sees. Scorecard is a separate JSON call. */
+const PREP_MOCK_LENGTHS = [{ id: 3, label: "3 questions" }, { id: 5, label: "5 questions" }];
+const prepIsMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
+
+function prepMockStyle(type, cat) {
+  const tech = {
+    Software: "software engineering concepts and problem solving: data structures, algorithms and complexity, debugging, testing, and system basics. Ask them to talk through an approach in words rather than write full code",
+    "Data & AI": "data and machine learning concepts: statistics, SQL, model evaluation, overfitting, feature work, and how they would analyze a real dataset",
+    Product: "product thinking with technical awareness: how things are built, trade-offs, metrics, and working with engineers",
+    Quant: "quantitative reasoning: probability, expected value, statistics, and mental math. Ask for their reasoning step by step and check the math",
+    Hardware: "hardware and embedded concepts: digital logic, timing, microcontrollers, interrupts, buses, and how they would debug a board",
+  };
+  const t = tech[cat] || tech.Software;
+  switch (type) {
+    case "recruiter": return "A recruiter screen. Conversational and light: background, why this role, what they are looking for, timeline, location and work authorization. No technical depth.";
+    case "behavioral": return "A behavioral interview. Ask for specific past situations and probe for what the candidate personally did and what the measurable result was (situation, task, action, result).";
+    case "technical": return `A technical interview focused on ${t}.`;
+    case "case":
+      if (cat === "Quant") return "A quant case round: probability puzzles, expected value, estimation, and quick mental math. Ask for reasoning step by step and check the math.";
+      if (cat === "Data & AI") return "An analytics case: define metrics, diagnose a change in a metric, and design an experiment. Push for clear assumptions.";
+      return "A product case: clarify the user and goal, list pain points, prioritize one, propose a solution, and choose success metrics. Push for structure and trade-offs.";
+    case "onsite": return `A final-round interview. Mix one behavioral question, questions on ${t}, and one on motivation for the role.`;
+    default: return `A general interview for this role: mix motivation, one behavioral question, and questions on ${t}.`;
+  }
+}
+
+function prepMockBrief(m, n, resume) {
+  const res = (resume || "").trim().slice(0, 4000);
+  return `You are the interviewer in a mock interview that a candidate is using to practice. Stay in role for the whole conversation.
+
+Context
+- Company: ${m.company ? `${m.company}. Do not state or invent anything about this company: its products, teams, culture, values, or interview process. Keep questions general to the role.` : "none. This is general practice, so do not name a company."}
+- Role: ${m.title || m.cat + " role"} (${m.cat}, early career: internship or new grad)
+- Round: ${m.roundLabel}. ${prepMockStyle(m.type, m.cat)}
+- Candidate's resume${res ? `:\n"""\n${res}\n"""` : ": not provided. Ask about their experience instead of assuming any."}
+
+How to run the interview
+- There are ${n} questions in total. Ask exactly one question per message. A follow-up that probes the previous answer counts as the next question.
+- Be kind but rigorous, like a good real interviewer: warm, specific, professional, no flattery.
+- After each answer, give 1 to 2 sentences of honest feedback on it (what landed, what was missing), then ask the next question.
+- Use the resume to ask about real projects when it suits the round. Never invent experience, numbers or details the candidate has not given.
+- If the candidate says they don't know or asks for a hint, give one small nudge, then move on.
+- Plain text only. No markdown, headings, bullet points, or speaker labels. Keep each message under 90 words.
+
+Begin now with one short sentence of greeting, then question 1.`;
+}
+
+function prepMockTranscript(turns) {
+  return turns.map((t) => `${t.role === "assistant" ? "Interviewer" : "Candidate"}: ${t.text}`).join("\n\n").slice(-14000);
+}
+
+function prepMockSummary(m, card, asked) {
+  const L = [`Mock interview with Claude, ${fmt.date(now())}: ${pluralize(asked, "question")}${card ? `, overall ${card.overall}/5` : ""}`];
+  if (card) {
+    if (card.strengths.length) L.push("Strengths: " + card.strengths.join("; "));
+    if (card.improve.length) L.push("Work on: " + card.improve.join("; "));
+    if (card.better) L.push(`Rework "${card.better.question}":\n${card.better.outline}`);
+  }
+  return L.join("\n");
+}
+
+function prepMockCard(r) {
+  if (!r || typeof r !== "object" || Array.isArray(r)) throw { code: "invalid_json" };
+  const list = (x) => (Array.isArray(x) ? x : []).map((s) => String(typeof s === "string" ? s : s?.text || "").trim()).filter(Boolean).slice(0, 4);
+  const overall = Math.round(Number(r.overall));
+  if (!(overall >= 1 && overall <= 5)) throw { code: "invalid_json" };
+  const b = r.betterAnswer && typeof r.betterAnswer === "object" ? r.betterAnswer : null;
+  const outline = b ? (Array.isArray(b.outline) ? b.outline.join("\n") : String(b.outline || "")).trim() : "";
+  return { overall, strengths: list(r.strengths), improve: list(r.improve), better: b && b.question && outline ? { question: String(b.question).trim(), outline } : null };
+}
+
+function PrepMockTurn({ t, live }) {
+  const me = t.role === "user";
+  return html`<li class=${cx("prep-mock-turn", me ? "me" : "them")}>
+    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html`<span class="faint"> · stopped</span>`}</span>
+    <p class="prep-mock-text">${t.text}${live && html`<span class="prep-mock-caret" aria-hidden="true"></span>`}</p>
+  </li>`;
+}
+
+function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
+  const [n, setN] = useState(5);
+  const [phase, setPhaseS] = useState("start"); // start | live | scoring | end
+  const [m, setM] = useState(null); // context frozen at start
+  const [turns, setTurns] = useState([]); // {role:'user'|'assistant', text, note?, stopped?}
+  const [draft, setDraft] = useState("");
+  const [stream, setStream] = useState(null); // null | "" | partial text
+  const [err, setErr] = useState("");
+  const [card, setCard] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const ctl = useRef(null), inputRef = useRef(null), headRef = useRef(null);
+  const turnsRef = useRef(turns); turnsRef.current = turns;
+  useEffect(() => () => ctl.current?.abort(), []);
+  const setPhase = (p) => { setPhaseS(p); onPhase && onPhase(p); };
+  const busy = stream !== null;
+  const asked = turns.filter((t) => t.role === "assistant").length;
+  const answered = turns.filter((t) => t.role === "user").length;
+  const waitingAnswer = phase === "live" && !busy && turns.length > 0 && turns[turns.length - 1].role === "assistant" && answered < n;
+
+  const roundLabel = ROUND[ctx.type]?.label || "Interview";
+  const ctxLine = (x) => x.company ? `${x.company} · ${x.title || x.cat}` : `General practice · ${x.cat}`;
+
+  const apiTurns = (list, mm, nn) => [{ role: "user", content: prepMockBrief(mm, nn, resume) }, ...list.map((t) => ({ role: t.role, content: t.text + (t.note ? "\n\n" + t.note : "") }))];
+
+  const score = async (list, mm) => {
+    ctl.current?.abort(); const ac = new AbortController(); ctl.current = ac;
+    setPhase("scoring"); setErr(""); setStream("");
+    const prompt = `You were the interviewer in a mock ${mm.roundLabel.toLowerCase()} interview for an early-career ${mm.title || mm.cat + " role"}. Transcript:\n"""\n${prepMockTranscript(list)}\n"""\n\nWrite a short, honest scorecard based only on this transcript. Kind and specific, no flattery. Do not invent facts about the candidate${mm.company ? " or the company" : ""}.\nReturn only JSON with this shape:\n{"overall": integer 1-5, "strengths": [2 or 3 short phrases], "improve": [2 or 3 short phrases], "betterAnswer": {"question": "the interview question they answered least well, quoted", "outline": "3 to 5 short lines separated by newlines that outline a stronger answer, using only facts from the transcript or placeholders like [your result]"}}`;
+    try {
+      const res = await askClaudeJSON(prompt, { signal: ac.signal, cache: false });
+      if (ac.signal.aborted) return;
+      setCard(prepMockCard(res)); setPhase("end");
+      requestAnimationFrame(() => headRef.current?.focus({ preventScroll: true }));
+    } catch (e) { if (!ac.signal.aborted) setErr(aiErr(e)); }
+    if (ctl.current === ac) setStream(null);
+  };
+
+  const ask = async (list, mm = m, nn = n) => {
+    ctl.current?.abort(); const ac = new AbortController(); ctl.current = ac;
+    setErr(""); setStream("");
+    let partial = "";
+    try {
+      const res = await askClaude(apiTurns(list, mm, nn), { signal: ac.signal, cache: false, onText: (x) => { if (!ac.signal.aborted) { partial = x.text; setStream(x.text); } } });
+      if (ac.signal.aborted) return;
+      const text = String(res?.text || partial).trim();
+      if (!text) throw { code: "upstream_error" };
+      const next = [...list, { role: "assistant", text }];
+      setTurns(next); setStream(null);
+      const done = next.filter((t) => t.role === "user").length >= nn;
+      if (done) score(next, mm);
+      else requestAnimationFrame(() => { inputRef.current?.focus({ preventScroll: true }); inputRef.current?.closest(".prep-mock-compose")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+      return;
+    } catch (e) { if (!ac.signal.aborted) setErr(aiErr(e)); }
+    if (ctl.current === ac) setStream(null);
+  };
+
+  const stop = () => {
+    const ac = ctl.current; if (!ac) return;
+    ac.abort();
+    if (phase === "scoring") { setStream(null); setErr("Stopped before the scorecard was ready."); return; }
+    const partial = (stream || "").trim();
+    setStream(null);
+    if (partial) {
+      const next = [...turnsRef.current, { role: "assistant", text: partial, stopped: true }];
+      setTurns(next);
+      if (next.filter((t) => t.role === "user").length >= n) return score(next, m);
+    } else setErr("Stopped. Ask Claude again when you're ready.");
+    requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+  };
+
+  const start = () => {
+    const mm = { company: a?.company || "", title: a?.title || "", cat: ctx.cat, type: ctx.type, roundLabel };
+    setM(mm); setTurns([]); setCard(null); setSaved(false); setDraft(""); setPhase("live");
+    ask([], mm, n);
+  };
+
+  const send = () => {
+    const text = draft.trim();
+    if (!text || busy || !waitingAnswer) return;
+    const k = answered + 1;
+    const note = k >= n
+      ? `[Note from the practice app, not the candidate: this was the answer to the final question (${k} of ${n}). Give 1 to 2 sentences of feedback on it, then close the interview in one warm sentence. Do not ask another question.]`
+      : `[Note from the practice app, not the candidate: this was the answer to question ${k} of ${n}. Give 1 to 2 sentences of feedback, then ask question ${k + 1}.]`;
+    const next = [...turns, { role: "user", text, note }];
+    setTurns(next); setDraft("");
+    ask(next);
+  };
+
+  // Retry the last step after a stop or an error.
+  const retry = () => {
+    if (phase === "scoring") return score(turnsRef.current, m);
+    const list = turnsRef.current;
+    if (!list.length || list[list.length - 1].role === "user") ask(list);
+  };
+
+  const finishEarly = () => {
+    if (busy) { ctl.current?.abort(); setStream(null); }
+    const list = turnsRef.current;
+    if (!list.some((t) => t.role === "user")) { setPhase("start"); setTurns([]); setErr(""); return; }
+    score(list, m);
+  };
+
+  const reset = () => { ctl.current?.abort(); setStream(null); setErr(""); setTurns([]); setCard(null); setSaved(false); setDraft(""); setPhase("start"); };
+
+  const save = () => {
+    if (!a || !r) return;
+    flushAll(); // write any unsaved prep-notes typing first
+    const cur = Apps.get(a.id)?.rounds?.find((x) => x.id === r.id);
+    if (!cur) return;
+    const add = prepMockSummary(m, card, answered);
+    Apps.updateRound(a.id, r.id, { prep: (cur.prep || "").trim() ? `${cur.prep.trimEnd()}\n\n${add}` : add });
+    setSaved(true); onSaved && onSaved();
+    toast("Added the scorecard to this round's prep notes");
+  };
+
+  const onKey = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } };
+
+  /* ----- start ----- */
+  if (phase === "start") {
+    return html`<div class="card prep-mock-start" aria-labelledby="prep-mock-title">
+      <div class="prep-mock-start-main">
+        <div class="prep-head-ico prep-mock-ico"><${Icon} name="msg" size=${18} /></div>
+        <div class="stack-sm prep-mock-start-text">
+          <h3 id="prep-mock-title" class="prep-mock-title">Mock interview with Claude</h3>
+          <p class="prep-mock-ctx"><span class="truncate">${a ? ctxLine({ company: a.company, title: a.title, cat: ctx.cat }) : ctxLine({ cat: ctx.cat })}</span><span class="prep-mock-type"> · ${roundLabel}</span></p>
+          <p class="prep-mock-desc">Claude plays the interviewer, one question at a time. Type your answers, get short feedback on each, and a scorecard at the end.</p>
+        </div>
+      </div>
+      <div class="prep-mock-start-foot">
+        <div class="prep-mock-len"><span class="label" id="prep-mock-len-l">Length</span><${Seg} label="Interview length" value=${n} options=${PREP_MOCK_LENGTHS} onChange=${setN} /></div>
+        <span class="spacer"></span>
+        <span class="hint prep-mock-note">Uses your own Claude account. Nothing is saved outside this browser.</span>
+        <${Btn} kind="primary" icon="play" onClick=${start} id="prep-mock-start">Start mock interview</${Btn}>
+      </div>
+    </div>`;
+  }
+
+  /* ----- live, scoring, end ----- */
+  const live = phase === "live";
+  const shownQ = Math.min(Math.max(asked, 1), n);
+  const statusRow = busy && (stream === "" || phase === "scoring")
+    ? html`<div class="row prep-thinking prep-mock-status" role="status"><span class="prep-dot"></span><span class="muted">${phase === "scoring" ? "Writing your scorecard…" : "Thinking…"}</span><${Btn} size="sm" kind="ghost" icon="x" onClick=${stop} id="prep-mock-stop">Stop</${Btn}></div>`
+    : busy ? html`<div class="row prep-mock-status"><span class="hint">Claude is replying</span><${Btn} size="sm" kind="ghost" icon="x" onClick=${stop} id="prep-mock-stop">Stop</${Btn}></div>` : null;
+  const transcript = html`<ol class="prep-mock-log" role="log" aria-label="Interview transcript" aria-busy=${busy ? "true" : "false"}>
+    ${turns.map((t, i) => html`<${PrepMockTurn} key=${i} t=${t} />`)}
+    ${busy && phase === "live" && stream && html`<${PrepMockTurn} key="s" t=${{ role: "assistant", text: stream }} live=${true} />`}
+  </ol>`;
+
+  return html`<div class=${cx("card prep-mock", phase !== "end" && "on")}>
+    <div class="card-head prep-mock-head">
+      <div class="stack-sm prep-mock-head-text">
+        <h3 ref=${headRef} tabindex="-1">${phase === "end" ? "Mock interview scorecard" : "Mock interview"}</h3>
+        <span class="prep-mock-sub truncate">${ctxLine(m)} · ${m.roundLabel}</span>
+      </div>
+      <span class="spacer"></span>
+      ${phase !== "end" && html`<span class="prep-count num" aria-live="polite">${phase === "scoring" ? "Scoring" : `Question ${shownQ} of ${n}`}</span>`}
+      ${live && html`<${Btn} size="sm" kind="ghost" icon="flag" onClick=${finishEarly} id="prep-mock-end"><span class="hide-sm">${answered ? "End and score" : "End"}</span><span class="show-sm">End</span></${Btn}>`}
+    </div>
+    ${phase !== "end" && html`<div class="prep-mock-progress" aria-hidden="true"><i style=${`width:${Math.round(((phase === "scoring" ? n : answered) / n) * 100)}%`}></i></div>`}
+    <div class="card-body prep-mock-body">
+      ${phase === "end"
+        ? html`<${PrepMockScore} card=${card} />
+          <details class="prep-mock-details"><summary>Transcript<span class="faint num"> · ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
+        : transcript}
+      ${statusRow}
+      ${err && html`<div class="callout wait prep-mock-err" role="alert"><${Icon} name="alert" /><span class="prep-mock-err-text">${err}</span><${Btn} size="sm" icon="refresh" onClick=${retry} id="prep-mock-retry">${phase === "scoring" ? "Try the scorecard again" : "Ask again"}</${Btn}></div>`}
+      ${phase === "end" && html`<span class="ai-label"><${Icon} name="spark" />Scored by Claude from this transcript. Use what helps.</span>`}
+    </div>
+    ${live && html`<div class="prep-mock-compose">
+      <label class="sr" for="prep-mock-answer">Your answer</label>
+      <textarea id="prep-mock-answer" ref=${inputRef} class="textarea" rows="4" placeholder=${waitingAnswer ? "Type your answer…" : "Wait for the question…"} value=${draft} onInput=${(e) => setDraft(e.currentTarget.value)} onKeyDown=${onKey}></textarea>
+      <div class="prep-mock-compose-foot">
+        <span class="hint hide-sm"><${Kbd}>${prepIsMac ? "⌘" : "Ctrl"}</${Kbd}> <${Kbd}>Enter</${Kbd}> to send</span>
+        <span class="spacer"></span>
+        <${Btn} kind="primary" icon="send" onClick=${send} disabled=${!waitingAnswer || !draft.trim()} id="prep-mock-send">Send answer</${Btn}>
+      </div>
+    </div>`}
+    ${phase === "end" && html`<div class="prep-practice-foot prep-mock-foot">
+      <${Btn} kind="ghost" icon="copy" onClick=${() => copyText(prepMockSummary(m, card, answered), "Scorecard")} id="prep-mock-copy">Copy</${Btn}>
+      <span class="spacer"></span>
+      <${Btn} kind=${a ? undefined : "primary"} icon="refresh" onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>
+      ${a && html`<${Btn} kind="primary" icon=${saved ? "check" : "doc"} onClick=${save} disabled=${saved} id="prep-mock-save">${saved ? "Saved to notes" : "Save to round notes"}</${Btn}>`}
+    </div>`}
+    ${phase === "scoring" && !busy && err && html`<div class="prep-practice-foot prep-mock-foot"><span class="spacer"></span><${Btn} onClick=${reset} id="prep-mock-again">New mock interview</${Btn}></div>`}
+  </div>`;
+}
+
+function PrepMockScore({ card }) {
+  if (!card) return null;
+  const words = ["", "Needs work", "Getting there", "Solid", "Strong", "Excellent"];
+  return html`<div class="prep-score">
+    <div class="prep-score-top">
+      <div class="prep-score-num"><span class="num">${card.overall}</span><span class="faint num">/5</span></div>
+      <div class="stack-sm">
+        <span class="prep-score-word">${words[card.overall]}</span>
+        <span class="prep-score-dots" role="img" aria-label=${`${card.overall} out of 5`}>${[1, 2, 3, 4, 5].map((i) => html`<i key=${i} class=${i <= card.overall ? "on" : undefined}></i>`)}</span>
+      </div>
+    </div>
+    <div class="prep-score-cols">
+      <div class="prep-score-col"><h4 class="prep-score-h"><${Icon} name="check" size=${14} />What worked</h4>
+        ${card.strengths.length ? html`<ul class="prep-score-list">${card.strengths.map((x, i) => html`<li key=${i}>${x}</li>`)}</ul>` : html`<p class="hint">Nothing specific noted.</p>`}</div>
+      <div class="prep-score-col"><h4 class="prep-score-h"><${Icon} name="target" size=${14} />Work on</h4>
+        ${card.improve.length ? html`<ul class="prep-score-list">${card.improve.map((x, i) => html`<li key=${i}>${x}</li>`)}</ul>` : html`<p class="hint">Nothing specific noted.</p>`}</div>
+    </div>
+    ${card.better && html`<div class="prep-score-better">
+      <span class="prep-tip-label">A stronger answer to</span>
+      <p class="prep-score-q">${card.better.question}</p>
+      <p class="prep-score-outline">${card.better.outline}</p>
+    </div>`}
+  </div>`;
+}
+
 function PrepWorkspace({ a, r }) {
   const resume = useStore((s) => s.profile.resume);
   const skills = useStore((s) => s.profile.skills);
+  const pc = useCaps();
   const [practice, setPractice] = useState(false);
+  const [mockPhase, setMockPhase] = useState("start");
+  const [notesRev, setNotesRev] = useState(0);
   const [pType, setPType] = useState("behavioral");
   const [pCat, setPCat] = useState(() => store.get().profile.roles?.[0] || "Software");
   const isPractice = !a;
@@ -410,14 +706,15 @@ function PrepWorkspace({ a, r }) {
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
         </div>`}
+    ${pc.sample && !practice && html`<${PrepMock} key=${r?.id || "p"} ctx=${{ type, cat }} a=${a} r=${r} resume=${resume} onPhase=${setMockPhase} onSaved=${() => setNotesRev((x) => x + 1)} />`}
     ${practice
       ? html`<${PrepPractice} key=${type + cat} questions=${questions} ctx=${ctx} onExit=${() => setPractice(false)} />`
-      : html`<${PrepQuestionsCard} key=${type + cat} questions=${questions} onPractice=${() => setPractice(true)} />`}
+      : !(pc.sample && mockPhase !== "start") && html`<${PrepQuestionsCard} key=${type + cat} questions=${questions} onPractice=${() => { setMockPhase("start"); setPractice(true); }} />`}
     <${PrepTailored} key=${(r?.id || "p") + type + cat} ctx=${ctx} skills=${skills || []} />
     <${PrepTalking} resume=${resume} />
     ${isPractice ? html`<${PrepAskCard} type=${askType} />` : html`<div class="grid cols-2 prep-two">
       <${PrepAskCard} type=${askType} />
-      <${PrepNotes} key=${r.id} a=${a} r=${r} />
+      <${PrepNotes} key=${r.id + ":" + notesRev} a=${a} r=${r} />
     </div>`}
   </div>`;
 }

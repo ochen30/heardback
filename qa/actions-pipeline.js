@@ -354,6 +354,187 @@ const actions = {
     await page.click('#pl-c-add');
     await wait(page, 100);
   },
+  /* ---------- Selection + bulk actions ---------- */
+  async tableSelect(page) {
+    const rows = page.locator('.pl-table tbody tr[data-row]');
+    await rows.nth(0).locator('td.pl-chk-cell').click();
+    await rows.nth(3).locator('td.pl-chk-cell').click({ modifiers: ['Shift'] });
+    await page.waitForTimeout(150);
+    const n = await page.locator('.pl-table tbody tr.sel').count();
+    assert(n === 4, `checkbox + shift-click selects a range of 4 (got ${n})`);
+    assert((await page.locator('.pl-bulk-count').textContent()).trim() === '4 selected', 'action bar shows "4 selected"');
+    const ind = await page.evaluate(() => document.getElementById('pl-sel-all').indeterminate);
+    assert(ind, 'header checkbox is indeterminate');
+    await page.mouse.move(5, 5);
+  },
+  async tableSelectAll(page) {
+    await page.click('#pl-sel-all');
+    await page.waitForTimeout(120);
+    assert(await page.locator('.pl-table tbody tr.sel').count() === 10, 'header checkbox selects all 10');
+    await page.click('#pl-sel-all');
+    await page.waitForTimeout(120);
+    assert(await page.locator('.pl-bulk').count() === 0, 'header checkbox again clears; bar hides');
+    await page.locator('.pl-table tbody tr[data-row]').nth(2).focus();
+    await page.keyboard.press('x');
+    await page.waitForTimeout(80);
+    assert(await page.locator('.pl-table tbody tr.sel').count() === 1, 'X toggles the focused row');
+    await page.keyboard.press('ArrowDown').catch(() => {});
+    await page.locator('.pl-table tbody tr[data-row]').nth(4).focus();
+    await page.keyboard.press('Shift+X');
+    await page.waitForTimeout(80);
+    assert(await page.locator('.pl-table tbody tr.sel').count() === 3, 'Shift+X selects the range');
+    await page.keyboard.press('Control+a');
+    await page.waitForTimeout(80);
+    assert(await page.locator('.pl-table tbody tr.sel').count() === 10, 'Ctrl+A inside the table selects all visible');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(80);
+    assert(await page.locator('.pl-bulk').count() === 0, 'Escape clears the selection');
+    await page.locator('#pl-filter').focus();
+    await page.keyboard.press('Control+a');
+    assert(await page.locator('.pl-bulk').count() === 0, 'Ctrl+A in the filter does not select rows');
+  },
+  async tableBulkMove(page) {
+    await actions.tableSelect(page);
+    const ids = await page.evaluate(() => [...document.querySelectorAll('.pl-table tr.sel')].map((r) => r.dataset.row));
+    const before = await page.evaluate((ids) => ids.map((id) => Apps.get(id).stage), ids);
+    await page.click('.pl-bulk-move');
+    await page.waitForTimeout(150);
+    assert(await page.locator('.pl-menu').count() === 1, 'Move to… opens the stage menu');
+    await page.locator('.pl-menu button:has-text("Interview")').click();
+    await page.waitForTimeout(200);
+    const after = await page.evaluate((ids) => ids.map((id) => Apps.get(id).stage), ids);
+    assert(after.every((x) => x === 'interview'), `all selected moved to Interview (${after})`);
+    const toasts = await page.evaluate(() => ui.state.toasts.map((t) => t.text));
+    assert(toasts.length === 1 && /Moved \d+ applications to Interview/.test(toasts[0]), `one toast: ${toasts}`);
+    assert(await page.locator('.pl-bulk').count() === 0, 'selection clears after the move');
+  },
+  async tableBulkUndo(page) {
+    await actions.tableSelect(page);
+    const ids = await page.evaluate(() => [...document.querySelectorAll('.pl-table tr.sel')].map((r) => r.dataset.row));
+    const before = await page.evaluate((ids) => ids.map((id) => JSON.stringify(Apps.get(id))), ids);
+    await page.click('.pl-bulk-move');
+    await page.locator('.pl-menu button:has-text("Rejected")').click();
+    await page.waitForTimeout(150);
+    await page.locator('.toast button:has-text("Undo")').click();
+    await page.waitForTimeout(150);
+    const restored = await page.evaluate((ids) => ids.map((id) => JSON.stringify(Apps.get(id))), ids);
+    assert(restored.every((x, i) => x === before[i]), 'Undo restores every moved application exactly');
+  },
+  async tableBulkOffer(page) {
+    await page.evaluate(() => { window.__cel = 0; const c = window.celebrate; window.celebrate = (a) => { window.__cel++; c(a); }; });
+    await actions.tableSelect(page);
+    await page.click('.pl-bulk-move');
+    await page.locator('.pl-menu button:has-text("Offer")').click();
+    await page.waitForTimeout(200);
+    const n = await page.evaluate(() => window.__cel);
+    assert(n === 1, `celebrate fires once for a batch of offers (got ${n})`);
+  },
+  async tableBulkGhost(page) {
+    await actions.tableSelect(page);
+    await page.click('.pl-bulk button[aria-label="Mark ghosted"]');
+    await page.waitForTimeout(150);
+    const n = await page.evaluate(() => Object.values(store.get().apps).filter((a) => a.stage === 'ghosted').length);
+    assert(n >= 4, `Mark ghosted moves the selection (ghosted now ${n})`);
+  },
+  async tableBulkDelete(page) {
+    await actions.tableSelect(page);
+    await page.click('.pl-bulk button[aria-label="Delete"]');
+    await page.waitForTimeout(200);
+    assert(await page.locator('.modal:has-text("Delete 4 applications?")').count() === 1, 'in-page confirm opens');
+  },
+  async tableBulkDeleteConfirm(page) {
+    await actions.tableBulkDelete(page);
+    await page.click('.modal button:has-text("Delete 4 applications")');
+    await page.waitForTimeout(200);
+    assert(await page.evaluate(() => Apps.list().length) === 6, 'confirm deletes 4 in one go');
+    const toasts = await page.evaluate(() => ui.state.toasts.length);
+    assert(toasts === 1, 'one toast for the batch');
+    await page.locator('.toast button:has-text("Undo")').click();
+    await page.waitForTimeout(150);
+    assert(await page.evaluate(() => Apps.list().length) === 10, 'Undo restores all 4');
+  },
+  async tableBulkExport(page) {
+    await page.evaluate(() => { window.__saved = null; window.saveFile = (name, text, mime) => { window.__saved = { name, text, mime }; toast(`Saved ${name}`); }; });
+    await actions.tableSelect(page);
+    await page.click('.pl-bulk button[aria-label="Export CSV"]');
+    await page.waitForTimeout(150);
+    const f = await page.evaluate(() => window.__saved);
+    assert(f && f.mime === 'text/csv' && f.text.split('\n').length === 5, `CSV has a header + 4 rows (${f && f.name})`);
+    assert(/^company,title,location,stage/.test(f.text), 'CSV columns match Settings export');
+    assert(await page.locator('.pl-bulk').count() === 1, 'selection stays after export');
+  },
+  async tableFilterKeeps(page) {
+    await page.click('#pl-sel-all');
+    await page.fill('#pl-filter', 'north');
+    await page.waitForTimeout(200);
+    assert((await page.locator('.pl-bulk-count').textContent()).trim() === '1 selected', 'filter keeps only still-visible selected items');
+    await page.fill('#pl-filter', '');
+    await page.waitForTimeout(150);
+    assert((await page.locator('.pl-bulk-count').textContent()).trim() === '1 selected', 'hidden items stay deselected after clearing the filter');
+    await page.click('.seg button:has-text("Board")');
+    await page.waitForTimeout(150);
+    assert(await page.locator('.pl-bulk').count() === 0, 'switching view clears the selection');
+  },
+  async boardHover(page) {
+    if (page.viewportSize().width < 600) { log('skip hover at phone width'); return; }
+    await page.locator('.pl-card:has-text("Verity Labs")').hover();
+    await page.waitForTimeout(200);
+    const op = await page.locator('.pl-card:has-text("Verity Labs") .pl-chk').evaluate((el) => getComputedStyle(el).opacity);
+    assert(op === '1', 'hover shows the card checkbox');
+  },
+  async boardSelect(page) {
+    const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+    const narrow = page.viewportSize().width < 600;
+    if (narrow) {
+      await page.locator('.pl-card:has-text("Ostrich Systems") .pl-more').click();
+      await page.locator('.pl-menu button:has-text("Select")').click();
+    } else {
+      await page.locator('.pl-card:has-text("Ostrich Systems")').click({ modifiers: [mod] });
+    }
+    await page.waitForTimeout(100);
+    assert(await page.locator('.pl-card.sel').count() === 1, narrow ? 'menu Select starts selection' : 'Cmd/Ctrl-click selects a card');
+    await page.locator('.pl-card:has-text("Cobalt Atlas") .pl-chk').click();
+    await page.waitForTimeout(100);
+    assert(await page.locator('.pl-card.sel').count() === 2, 'checkbox adds a second card');
+    assert(await page.locator('.pl-board.selecting').count() === 1, 'board is in selection mode');
+    assert(await page.locator('.drawer').count() === 0, 'selecting does not open the drawer');
+    const card = page.locator('.pl-card:has-text("Verity Labs")');
+    await card.focus();
+    await page.keyboard.press('x');
+    await page.waitForTimeout(100);
+    assert(await page.locator('.pl-card.sel').count() === 3, 'X toggles the focused card');
+    await page.mouse.move(5, 5);
+  },
+  async boardSelectEsc(page) {
+    await actions.boardSelect(page);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+    assert(await page.locator('.pl-card.sel').count() === 0, 'Escape clears the board selection');
+  },
+  async boardBulkMove(page) {
+    await actions.boardSelect(page);
+    await page.click('.pl-bulk-move');
+    await page.waitForTimeout(150);
+    await page.locator('.pl-menu button:has-text("Screen")').click();
+    await page.waitForTimeout(200);
+    const st = await Promise.all(['Ostrich Systems', 'Cobalt Atlas', 'Verity Labs'].map((c) => stageOf(page, c)));
+    assert(st.every((x) => x === 'screen'), `board bulk move to Screen (${st})`);
+    // existing interactions still work after a bulk action
+    await (await firstCard(page, 'Quarry Analytics')).focus();
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(150);
+    assert((await stageOf(page, 'Quarry Analytics')) === 'screen', 'arrow-key move still works');
+  },
+  async boardBulkMenu(page) {
+    await actions.boardSelect(page);
+    await page.click('.pl-bulk-move');
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+    assert(await page.locator('.pl-menu').count() === 0 && await page.locator('.pl-card.sel').count() === 3, 'Escape closes the menu first, keeps the selection');
+    await page.click('.pl-bulk-move');
+    await page.waitForTimeout(200);
+  },
   async scrollBoard(page) { await page.evaluate(() => document.querySelector('.pl-board').scrollBy({ left: 300, behavior: 'instant' })); await wait(page, 300); },
 };
 // Every action starts from a clean board (no overlays left from a previous action).
