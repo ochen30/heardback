@@ -144,7 +144,7 @@ function cleanApp(a, id) {
     stage: STAGE[a.stage] ? a.stage : "applied", createdAt: created, appliedAt: ts(a.appliedAt), lastActivityAt: ts(a.lastActivityAt) || created, lastReplyAt: ts(a.lastReplyAt), followedUpAt: ts(a.followedUpAt),
     notes: strOr(a.notes), salary: strOr(a.salary), source: strOr(a.source || "manual"), example: !!a.example,
     contacts: (Array.isArray(a.contacts) ? a.contacts : []).filter(isObj).map((c) => ({ name: strOr(c.name), role: strOr(c.role), email: strOr(c.email) })),
-    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
+    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), where: strOr(r.where), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
     events: (Array.isArray(a.events) ? a.events : []).filter(isObj).map((e) => ({ ...e, id: strOr(e.id) || uid("e_"), at: ts(e.at) || created, kind: strOr(e.kind || "note"), text: strOr(e.text), from: STAGE[e.from] ? e.from : undefined, to: STAGE[e.to] ? e.to : undefined })),
   };
 }

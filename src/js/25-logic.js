@@ -21,7 +21,7 @@ function computeTasks(s = store.get()) {
       }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}`, action: "Prep" });
+        if (!skip(key)) out.push({ key, kind: "prep", pri: until < 12 * 3600000 ? -1 : until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}`, action: "Prep" });
       }
       if (until <= 0 && -until < 2 * DAY && !r.thanked && r.outcome === "pending") {
         const key = `thanks:${a.id}:${r.id}`;

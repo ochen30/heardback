@@ -22,6 +22,7 @@ function cal_text(app, round) {
   const summary = `${type}: ${app.company}${app.title ? " · " + app.title : ""}`;
   const lines = [`${type} for ${app.title || "the role"} at ${app.company}.`];
   if (round.interviewers) lines.push(`With: ${round.interviewers}`);
+  if (round.where) lines.push(`Where: ${round.where}`);
   if (round.prep) lines.push(`Prep notes: ${round.prep}`);
   if (app.url) lines.push(`Posting: ${app.url}`);
   lines.push("Added from Heardback.");
@@ -54,13 +55,20 @@ async function addToCalendar(appId, roundId) {
       if (!fallthrough.includes(e?.code)) { toast("Google Calendar didn't respond. Downloading a calendar file instead."); }
     }
   }
-  if (!caps.downloads) { toast("Calendar files can't be saved in this view. Open Heardback on claude.ai to add it to your calendar.", { ms: 7000 }); return; }
+  if (!caps.downloads) {
+    const { summary } = cal_text(app, round);
+    const who = roundPeople(round);
+    const text = `${summary}\n${fmt.dateTime(round.at)}${who ? `\nWith ${who}` : ""}${round.where ? `\nWhere: ${round.where}` : ""}`;
+    copyText(text, "Event details copied. Paste them into your calendar.");
+    return;
+  }
   const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
-  if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
+  if (ok) { Apps.updateRound(appId, roundId, { calendar: "ics" }); toast("Calendar file saved. Open it to add the event."); }
 }
 function CalendarButton({ appId, round, size = "sm" }) {
   useCaps();
   if (!round?.at || round.at < now() - DAY) return null;
   const done = round.calendar;
-  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? "In calendar" : "Add to calendar"}</${Btn}>`;
+  const doneLabel = done === "google" ? "In calendar" : "Calendar file saved";
+  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"}</${Btn}>`;
 }
