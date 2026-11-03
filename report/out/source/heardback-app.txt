@@ -616,6 +616,13 @@ p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offs
 .modal-body:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
 /* One keyboard-focus style for list rows and cards (J/K navigation) */
 .kb-active, .kb-row:focus-visible { outline: none; box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
+@media (max-width: 640px) {
+  .meth-table thead { display: none; }
+  .meth-table tr { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .meth-table td { display: block; padding: 0; height: auto; border: 0; }
+  .meth-pts { min-width: 0; white-space: normal; color: var(--fg-2); }
+  .meth-table tbody tr:last-child { border-bottom: 0; }
+}
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -697,8 +704,9 @@ p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offs
 /* age reads left-aligned so the green "new" dots form a column */
 .find-c-fresh { justify-self: stretch; justify-content: flex-start; }
 .find-save.on { color: var(--accent-text); }
-/* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
+/* J/K focuses the title so the drawer can hand focus back; the row's shared .kb-active style is the indicator */
 .find-row[aria-current="true"] .find-row-title:focus-visible { box-shadow: none; }
+.find-row.kb-active { background: var(--surface-2); }
 .find-stage { border: 0; background: none; padding: 0; cursor: pointer; border-radius: 99px; }
 .find-more { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 4px 0; font-size: var(--fs-sm); flex-wrap: wrap; }
 .find-keys { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-xs); color: var(--fg-3); }
@@ -797,7 +805,6 @@ a.find-link { cursor: pointer; }
 .find-cotable th.r, .find-cotable td.r { text-align: right; }
 .find-cotable td:first-child { max-width: 320px; }
 .find-coname { font-weight: 500; }
-.find-cotable tbody tr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
 .find-split { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); }
 .find-split-bar { width: 56px; height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; flex: none; }
 .find-split-bar i { display: block; height: 100%; background: var(--fg-3); }
@@ -958,7 +965,6 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 
 .pl-card { position: relative; gap: 4px; padding: 10px 10px 10px 12px; user-select: none; -webkit-user-select: none; }
 .pl-card:active { cursor: grabbing; }
-.pl-card:focus-visible { border-color: var(--accent); }
 .pl-card.closed { opacity: .82; }
 .pl-card.closed:hover, .pl-card.closed:focus-visible { opacity: 1; }
 .pl-card-top { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 2px; }
@@ -1016,12 +1022,13 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-num { text-align: right; }
 .pl-table th.pl-num { text-align: right; }
 .pl-table th.pl-num button { position: relative; }
-.pl-table th.pl-num button .ico { position: absolute; left: 100%; margin-left: 2px; }
+.pl-table th.pl-num button .ico { position: absolute; right: 100%; margin-right: 4px; }
 .pl-sort { transition: transform var(--t-fast); transform: rotate(180deg); }
 .pl-sort.desc { transform: none; }
 .pl-sort-idle { opacity: 0; }
 .pl-table th button:hover .pl-sort-idle { opacity: .7; }
-.pl-table tbody tr:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
+.pl-table tbody tr.kb-row:focus-visible { border-radius: 0; }
+.pl-table tbody tr.sel.kb-row:focus-visible td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
 .pl-tcell { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 380px; }
 .pl-tname { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
 .pl-ttitle { font-weight: 500; color: var(--fg); }
@@ -1077,6 +1084,8 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 }
 .pl-close-btn:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-close-btn.rejected.on { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.pl-close-btn.pl-close-more { display: none; width: 36px; height: 36px; padding: 0; justify-content: center; border-color: transparent; background: none; color: var(--fg-3); }
+.pl-close-btn.pl-close-more:hover, .pl-close-btn.pl-close-more[aria-expanded="true"] { background: var(--surface-2); color: var(--fg); }
 .pl-close-btn.ghosted.on { background: var(--ghost-soft); color: var(--ghost); border-color: transparent; }
 
 .pl-dtabs { margin-bottom: -4px; flex: none; }
@@ -1223,9 +1232,9 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 @media (max-width: 520px) {
   .pl-dhead .logo { display: none; }
   .pl-steps { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, .8fr); }
-  .pl-stage-line > .pl-small { flex-basis: 100%; margin-bottom: 2px; }
-  .pl-stage-line > .spacer { display: none; }
-  .pl-close-btn { flex: 1; justify-content: center; }
+  /* R8 #7: the closers fold into one menu button at the end of the stage line, below the stepper rather than above the tabs */
+  .pl-close-btn.pl-close-wide { display: none; }
+  .pl-close-btn.pl-close-more { display: inline-flex; }
   .pl-col { flex-basis: 82%; }
   .pl-round-name { min-width: 0; }
   .pl-round-sum { flex-wrap: wrap; row-gap: 4px; }
@@ -1273,10 +1282,10 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .pl-chk input { position: relative; }
 @media (hover: hover) { .pl-card:hover .pl-chk { opacity: 1; } }
 .pl-board.selecting .pl-chk, .pl-card.sel .pl-chk { opacity: 1; }
-/* Selection is a tint, like table rows: no frame; focus adds the one standard ring */
+/* Selection is a tint, like table rows: no frame; keyboard focus adds the shared .kb-row bar */
 .pl-card.sel { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); box-shadow: none; }
-/* Focused + selected: fill and ring only, no tinted border on top */
-.pl-card.sel:focus-visible { border-color: var(--line); box-shadow: var(--focus); }
+/* Focused + selected: keeps the tint, gains the same left bar as any focused card */
+.pl-card.sel.kb-row:focus-visible { box-shadow: inset 2px 0 0 var(--accent); }
 .pl-card.sel .pl-card-foot { border-top-color: color-mix(in srgb, var(--accent) 20%, var(--line)); }
 .pl-card.sel.closed { opacity: 1; }
 
@@ -1328,6 +1337,8 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-table td.pl-chk-cell { width: 40px; padding: 14px 0 0 12px; vertical-align: top; }
   /* Stage shows as its dot only; titles get the width back */
   .pl-table th:nth-child(3) { width: 52px; }
+  /* The Sort by select above the table carries the sort state; header icons would spill past the 52px column */
+  .pl-table th button .ico { display: none; }
   .pl-table td:nth-child(3) { padding-right: 8px; vertical-align: top; padding-top: 0; }
   .pl-stage-sel .select { width: 40px; min-height: 40px; height: 40px; padding: 0; color: transparent; background-size: 0 0; border-color: transparent; }
   .pl-stage-sel .select option { color: var(--fg); }
@@ -1344,17 +1355,31 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 @media (max-width: 520px) { .pl-banner-more { display: none; } }
 @media (hover: none) { .pl-board:not(.selecting) .pl-chk { pointer-events: none; } }
 
-/* B4: taken-down posting callout (quiet: neutral surface, amber icon only) */
-.pl-removed { align-items: flex-start; }
-.pl-removed > .ico { color: var(--wait); }
-.pl-removed-body { flex: 1; min-width: 0; gap: 8px; }
-.pl-removed-body b { color: var(--fg); font-weight: 600; }
-.pl-removed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: -2px; }
-.pl-removed-btn[disabled] { opacity: 1; color: var(--fg-3); background: transparent; }
+/* B4: taken-down posting, shown in the Next step card's place (one block, each action once) */
+.pl-removed-body { flex: 1; min-width: 0; }
+.pl-removed-actions { display: flex; flex-wrap: nowrap; gap: 8px; margin-top: 6px; }
 .pl-removed-tag { flex: none; }
-/* B9: "Log outcome · Onsite / Final, 2d ago" may wrap to a second line instead of truncating */
-.pl-status-2l { white-space: normal; align-items: flex-start; line-height: 1.35; }
-.pl-status-2l .ico { margin-top: 2px; }
+/* Phones: the icon column gives its width back so the two actions share one line */
+@media (max-width: 520px) { .pl-next-card .pl-next-ico { display: none; } .pl-removed-actions { flex-wrap: wrap; } .pl-removed-actions .btn { flex: 0 0 auto; } }
+
+
+/* R8 #2: tablet / small laptop. The table fits its card instead of scrolling inside it.
+   Applied (a date, also in the drawer) gives its width to Next step; every other column stays. */
+@media (min-width: 521px) and (max-width: 1100px) {
+  .pl-table { min-width: 0; table-layout: fixed; }
+  .pl-table th.pl-chk-cell { width: 44px; }
+  .pl-table th:nth-child(4), .pl-table td:nth-child(4) { display: none; }
+  .pl-table th:nth-child(3) { width: 116px; }
+  .pl-table th:nth-child(5) { width: 96px; }
+  .pl-table th:nth-child(6) { width: 22%; }
+  .pl-table th:nth-child(7) { width: 92px; }
+  .pl-table th + th, .pl-table td + td { padding-left: 8px; }
+  .pl-table th button { white-space: nowrap; }
+  .pl-table td:nth-child(6) .pl-next { white-space: normal; align-items: baseline; }
+  .pl-table td:nth-child(6) .pl-next > .dot { flex: none; transform: translateY(-1px); }
+  .pl-tcell { max-width: none; }
+  .pl-ttitle, .pl-tco { display: block; }
+}
 
 /* ===== Onboarding, Settings, Interview prep (prep.css) ===== */
 
@@ -1364,8 +1389,17 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .onb-brand { display: flex; align-items: center; gap: 12px; }
 .onb-brand .spacer { flex: 1; }
 .onb-word { font-size: var(--fs-lg); font-weight: 650; letter-spacing: -0.02em; }
-.onb-value { margin-top: -12px; color: var(--fg-2); font-size: var(--fs-md); }
+.onb-pitch { display: flex; flex-direction: column; gap: 8px; margin-top: -8px; }
+.onb-value { color: var(--fg); font-size: var(--fs-md); line-height: 1.5; max-width: 52ch; }
+.onb-trust { display: flex; align-items: center; gap: 6px; color: var(--fg-2); font-size: var(--fs-sm); }
+.onb-trust .ico { color: var(--ok); flex: none; }
 .onb-link { border: 0; background: none; padding: 6px 4px; color: var(--fg-2); font-size: var(--fs-sm); font-weight: 500; border-radius: var(--r-sm); min-height: 32px; }
+.onb-browse { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; margin-right: -12px; color: var(--accent-text); }
+.onb-browse:hover { color: var(--accent-text); }
+.onb-sample { min-height: 44px; padding: 0 4px; margin-left: -4px; text-align: left; }
+.onb-note { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-sm); color: var(--fg-2); }
+.onb-note .ico { color: var(--fg-3); flex: none; margin-top: 3px; }
+.onb-matches > .onb-note { padding: 0 4px; }
 .onb-link:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; }
 .onb-progress { display: flex; flex-direction: column; gap: 8px; padding-top: 24px; border-top: 1px solid var(--line); }
 .onb-step-label { font-size: var(--fs-xs); color: var(--fg-3); font-weight: 500; letter-spacing: .02em; }
@@ -1422,8 +1456,11 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .onb-big { font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.025em; line-height: 1.1; }
 .onb-big-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); }
 .onb-count + .callout { margin: 16px 20px; }
-.onb-job { cursor: default; padding: 12px 20px; }
-.onb-job:hover { background: var(--surface); }
+.onb-job { width: 100%; padding: 12px 20px; border-width: 0; text-align: left; min-height: 56px; }
+.list > .onb-job + .onb-job { border-top: 1px solid var(--line); }
+.onb-job:hover { background: var(--surface-2); }
+.onb-reason { font-size: var(--fs-xs); color: var(--fg-2); }
+.onb-flag-h { display: flex; flex-direction: column; gap: 2px; padding: 14px 20px 6px; border-top: 1px solid var(--line); }
 .onb-source { padding: 12px 20px; border-top: 1px solid var(--line); }
 .onb-ex { align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
 .onb-ex input { margin-top: 2px; }
@@ -1583,6 +1620,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .onb-card-pad { padding: 16px; }
   .onb-count { padding: 16px; }
   .onb-job { padding: 12px 16px; }
+  .onb-flag-h { padding: 12px 16px 4px; }
   .onb-source { padding: 12px 16px; }
   .onb-name { max-width: none; }
   .onb-add { max-width: none; }
@@ -1721,6 +1759,12 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .chip.onb-skill[aria-pressed="true"] { background: var(--surface-2); border-color: var(--line); color: var(--fg); }
 .chip.onb-skill .ico { color: var(--fg-3); opacity: 1; }
 .pf-statement { text-wrap: pretty; }
+.onb-deg { max-width: 100%; overflow-x: auto; }
+.onb-deg .seg { flex-wrap: nowrap; }
+@media (max-width: 520px) {
+  .onb-deg .seg { display: flex; width: 100%; }
+  .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
+}
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -1973,20 +2017,36 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .td-up-in { font-weight: 400; }
 .stat-value.td-early { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); letter-spacing: 0; line-height: 1.3; padding: 6px 0 4px; }
 
-/* Needs you: three quiet groups, keyboard focus ring */
+/* Needs you: three quiet groups. Keyboard focus uses the shared .kb-row style (styles.css). */
 .td-group + .td-group { border-top: 1px solid var(--line); }
-.td-group-h { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 10px 16px 2px; }
-.td-group-h h3 { font-size: var(--fs-xs); font-weight: 600; color: var(--fg-3); letter-spacing: .02em; white-space: nowrap; }
+.td-group-h { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 12px 16px 4px; }
+.td-group-h h3 { font-size: var(--fs-xs); font-weight: 600; color: var(--fg-2); letter-spacing: .02em; white-space: nowrap; }
 .td-group-h .td-count { font-size: var(--fs-xs); margin-left: 0; }
-.td-group-h .spacer { flex: 1; }
-.td-group-h .td-batch { margin: -4px -8px -4px 0; color: var(--fg-2); }
+/* Few tasks: one flat list. Group headings stay for screen readers only. */
+.td-flat .td-group-h { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .td-group-more { padding: 4px 8px 8px; }
+.td-less .ico { rotate: 180deg; }
 .td-group .list > .td-task:first-child { border-top: 0; }
 .td-task { outline: none; position: relative; }
-.td-task:focus-visible { box-shadow: inset 2px 0 0 var(--accent), inset 0 0 0 1px var(--line-strong); background: var(--surface-2); border-radius: 0; }
 .td-task:focus-visible .td-more { opacity: 1; }
-.td-outcome { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-.td-keys { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--fg-3); white-space: nowrap; transition: opacity var(--t-fast); }
+/* Outcome: two joined buttons */
+.td-outcome { display: flex; gap: 0; flex-wrap: nowrap; justify-content: flex-end; }
+.td-outcome .btn { border-radius: 0; }
+.td-outcome .btn + .btn { margin-left: -1px; }
+.td-outcome .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.td-outcome .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.td-outcome .btn:hover, .td-outcome .btn:focus-visible { position: relative; z-index: 1; }
+/* Ghost batch: one row, its applications listed on Review */
+.td-review { color: var(--fg-2); }
+.td-review .ico { width: 14px; height: 14px; color: var(--fg-3); transition: rotate var(--t-fast); }
+.td-review[aria-expanded="true"] .ico { rotate: 180deg; }
+.td-batch-row .task-sub.td-meta > * { color: var(--fg-2); }
+.td-batch-list .td-task { padding-left: 56px; grid-template-columns: minmax(0, 1fr) auto; padding-top: 8px; padding-bottom: 8px; }
+.td-batch-list .td-task .task-ico { display: none; }
+.td-batch-list .td-task:first-child { border-top: 0; }
+.td-batch-list .td-act { color: var(--fg-2); }
+.td-keys { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--fg-3); white-space: nowrap; opacity: 0; transition: opacity var(--t-fast); }
+.card:hover > .card-head .td-keys { opacity: 1; }
 .td-keys .kbd + .kbd { margin-left: -1px; }
 .td-keys .kbd:not(:first-child) { margin-left: 8px; }
 .td-keys .kbd + .kbd:nth-child(2) { margin-left: 2px; }
@@ -1996,13 +2056,26 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 @media (max-width: 640px) {
   .td-up-row { grid-template-columns: 64px 24px minmax(0, 1fr) auto; gap: 10px; }
   .td-outcome { justify-content: flex-start; }
-  .td-group-h .td-batch { min-height: 36px; }
+  /* 44px tap target for the ⋯ button without making the row taller (beats .btn.sm.icon) */
+  .td-task .btn.td-more { width: 44px; height: 44px; min-height: 44px; margin: -4px -8px -4px auto; }
+  .td-batch-list .td-task { padding-left: 56px; grid-template-columns: minmax(0, 1fr); }
+  .td-batch-list .td-task-actions { grid-column: 1; }
+  .td-batch-row .td-act { order: -1; }
 }
-@media (max-width: 640px) { .td-outcome { display: contents; } }
 .st-insight-act { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-weight: 500; white-space: nowrap; }
 .st-insight-act .ico { width: 14px; height: 14px; }
 @media (max-width: 640px) { .st-insight-act { display: flex; width: fit-content; margin: 2px 0 0; min-height: 36px; } }
 @media (max-width: 640px) and (min-width: 360px) { .td-task-actions.is-outcome { gap: 4px; flex-wrap: nowrap; } }
+@media (max-width: 640px) { .td-batch-list .td-act { margin-left: -10px; } }
+
+/* First-run Today: fresh roles + the two ways in */
+.td-start-sub { padding: 10px 16px 4px; }
+.td-start-foot { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--line); }
+.td-start-acts { gap: 8px; flex: none; }
+@media (max-width: 520px) {
+  .td-start-acts { width: 100%; }
+  .td-start-acts .btn { flex: 1; height: 44px; justify-content: center; }
+}
 
 </style>
 <div id="app"><div style="display:grid;place-items:center;height:100vh;color:#6b7482;font:14px system-ui">Loading Heardback…</div></div>
@@ -2112,7 +2185,7 @@ const LEVELS = [{ id: "intern", label: "Internship" }, { id: "newgrad", label: "
 const STORE_KEY = "heardback:v1";
 const defaultState = () => ({
   v: 1,
-  profile: { roles: [], levels: ["intern", "newgrad"], locations: [], remote: true, needsSponsor: false, resume: "", skills: [], onboarded: false, name: "", weeklyGoal: 10 },
+  profile: { roles: [], levels: ["intern", "newgrad"], locations: [], remote: true, needsSponsor: false, resume: "", skills: [], onboarded: false, name: "", weeklyGoal: 10, degree: "BS" },
   apps: {},
   settings: { theme: "system", followUpDays: 7, ghostDays: 21, shareAnon: false, showExamples: true, hideGhostAbove: 0 },
   dismissed: {},
@@ -2132,6 +2205,7 @@ function cleanProfile(p) {
     roles: strArr(p.roles), levels: strArr(p.levels).filter((l) => l === "intern" || l === "newgrad"), locations: strArr(p.locations), skills: strArr(p.skills),
     remote: p.remote == null ? d.remote : !!p.remote, needsSponsor: !!p.needsSponsor, onboarded: !!p.onboarded,
     resume: strOr(p.resume).slice(0, 60000), name: strOr(p.name).slice(0, 80), weeklyGoal: clamp(Math.round(numOr(p.weeklyGoal, d.weeklyGoal)), 1, 100),
+    degree: ["AS", "BS", "MS", "PhD"].includes(p.degree) ? p.degree : "BS",
   };
 }
 function cleanSettings(x) {
@@ -2698,7 +2772,8 @@ function expectedSkills(job) {
 
 /* ===== Fit score: transparent, based only on what the listing states ===== */
 function fitScore(job, profile) {
-  if (!profile || (!profile.roles?.length && !profile.locations?.length && !profile.skills?.length)) return null;
+  // Without skills every matching job scores the same, which says nothing. Fit appears once a resume or skills are added.
+  if (!profile || !profile.skills?.length) return null;
   const parts = [];
   let score = 0, max = 0;
   // role (35)
@@ -2720,6 +2795,15 @@ function fitScore(job, profile) {
     if (hit) { score += 20; parts.push({ k: "Location", ok: true, text: hit === "remote" ? "Remote option" : `In ${LOC_OPTIONS.find((o) => o.id === hit)?.label || hit}` }); }
     else parts.push({ k: "Location", ok: false, text: `${(job.l || [])[0] || "Location"} isn't on your list` });
   }
+  // degree: a hard gate when the listing's lowest accepted degree is above yours
+  const DEG_RANK = { AS: 0, BS: 1, MS: 2, PhD: 3 };
+  const mine = DEG_RANK[profile.degree || "BS"] ?? 1;
+  const listed = (job.deg || []).filter((d) => d in DEG_RANK);
+  const phdTitle = /\bph\.?\s?d\b|doctoral/i.test(job.t);
+  const minReq = listed.length ? Math.min(...listed.map((d) => DEG_RANK[d])) : phdTitle ? 3 : null;
+  let degreeGap = false;
+  if (minReq != null && minReq > mine) { degreeGap = true; parts.push({ k: "Degree", ok: false, text: `Asks for ${minReq === 3 ? "a PhD" : minReq === 2 ? "a master's" : "a bachelor's"}` }); }
+  else if (minReq != null) parts.push({ k: "Degree", ok: true, text: "Open to your degree" });
   // sponsorship (10)
   max += 10;
   if (profile.needsSponsor) {
@@ -2740,7 +2824,8 @@ function fitScore(job, profile) {
     score += Math.round(20 * Math.min(1, r));
     parts.push({ k: "Skills", ok: matched.length ? true : false, text: matched.length ? `You list ${matched.slice(0, 3).join(", ")}` : `Usually asks for ${exp.slice(0, 3).join(", ")}` });
   }
-  return { score: Math.round((score / max) * 100), parts, matched, missing, expected: exp };
+  const raw = Math.round((score / max) * 100);
+  return { score: degreeGap ? Math.min(raw, 35) : raw, parts, matched, missing, expected: exp, degreeGap };
 }
 
 /* ===== Email parsing (rule-based; Claude upgrade lives in the paste modal) ===== */
@@ -3518,7 +3603,7 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
   const metaP = inCompany ? [find_locText(job), FIND_LV[job.lvl], job.term].filter(Boolean) : find_metaParts(job);
   const metaT = metaP.join(" · ");
   const title = find_title(job.t);
-  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-current=${sel ? "true" : undefined} onClick=${open}>
+  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co", sel && "kb-active")} role="listitem" data-find-i=${i} aria-current=${sel ? "true" : undefined} onClick=${open}>
     ${!inCompany && html`<${Logo} name=${job.co} />`}
     <div class="find-row-main">
       <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${title}>${title}</button>
@@ -4073,7 +4158,7 @@ VIEWS.companies = function CompaniesView() {
         <tbody>${rows.map((x) => {
           const n = appsBy.get(x.k) || 0;
           const g = rs.get(x.name) ?? 0;
-          return html`<tr key=${x.name} tabindex="0" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
+          return html`<tr key=${x.name} tabindex="0" class="kb-row" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
             <td><div class="row"><${Logo} name=${x.name} size="sm" /><span class="truncate find-coname">${x.name}</span></div></td>
             <td class="r num">${fmt.num(x.open)}</td>
             ${(() => { const a = agg.get(x.name) || { n: x.c.open, ni: x.c.intern, ng: x.c.newgrad }; return html`<td><div class="find-split" title=${`${pluralize(a.ni, "internship")} · ${a.ng} new grad`}><span class="find-split-bar"><i style=${`width:${a.n ? (a.ni / a.n) * 100 : 0}%`}></i></span><span class="num muted">${fmt.num(a.ni)} / ${fmt.num(a.ng)}</span></div></td>`; })()}
@@ -4365,8 +4450,26 @@ function onbMatches(jobs, p) {
 function onbTop(list, p, n = 5) {
   return list
     .map((j) => ({ j, f: fitScore(j, p) }))
-    .sort((a, b) => (b.f?.score || 0) - (a.f?.score || 0) || (a.j.g || 0) - (b.j.g || 0) || b.j.p - a.j.p)
+    .sort((a, b) => (b.f?.score || 0) - (a.f?.score || 0) || (ghostLevel(a.j.g || 0) === "low" ? 0 : 1) - (ghostLevel(b.j.g || 0) === "low" ? 0 : 1) || b.j.p - a.j.p)
     .slice(0, n);
+}
+/* One listing with ghost signals, so the idea is visible before the first search: the newest flagged match
+   with a stated reason, preferring "some" signals (a typical case) over "strong". */
+function onbFlagged(list, skip) {
+  let best = null;
+  for (const j of list) {
+    if (skip.has(j.id) || (j.g || 0) < 25 || !(j.gr || []).length) continue;
+    if (ghostLevel(j.g) === "mid") return j;
+    if (!best) best = j;
+  }
+  return best;
+}
+/* Location text for a matched row: the city that matched the picked locations first (else Find's default). */
+function onbLocText(j, p) {
+  const locs = (p.locations || []).filter((l) => l !== "remote");
+  if (j.r && !(j.l || []).length) return "Remote";
+  const city = locs.length ? (j.l || []).find((l) => locs.some((id) => jobInLoc({ ...j, l: [l] }, id))) : null;
+  return city ? `${city}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}` : find_locText(j);
 }
 function onbSummary(p) {
   const lv = p.levels.length === 1 ? (p.levels[0] === "intern" ? "Internships" : "New grad roles") : "Internships and new grad roles";
@@ -4424,6 +4527,8 @@ function OnbLocChecklist({ idp, value, onChange, label, roles = [], levels = [] 
 }
 
 /* ---------- Steps ---------- */
+const ONB_DEGREES = [{ id: "AS", label: "Associate" }, { id: "BS", label: "Bachelor’s" }, { id: "MS", label: "Master’s" }, { id: "PhD", label: "PhD" }];
+const ONB_OTHER_NOTE = "Most listings here are technical roles. You can still track any application.";
 function OnbGroup({ title, hint, children, id }) {
   return html`<section class="onb-group" aria-labelledby=${id}>
     <div class="onb-group-head"><h3 id=${id}>${title}</h3>${hint && html`<span class="hint">${hint}</span>`}</div>
@@ -4436,8 +4541,12 @@ function OnbStepTargets({ d, set }) {
     <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
     </${OnbGroup}>
-    <${OnbGroup} id="onb-g-role" title="Roles" hint="Leave empty to see every role.">
-      <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}</div>
+    <${OnbGroup} id="onb-g-deg" title="Degree by graduation" hint="Roles that ask for a higher degree get a low fit.">
+      <div class="onb-deg"><${Seg} label="Degree by graduation" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
+    </${OnbGroup}>
+    <${OnbGroup} id="onb-g-role" title="Roles" hint="Tech-focused for now: software, data and AI, product, quant and hardware.">
+      <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}<${Chip} key="other" on=${!!d.other} onClick=${() => set({ other: !d.other })}>Something else</${Chip}></div>
+      ${d.other && html`<p class="onb-note" role="status"><${Icon} name="info" size=${14} /><span>${ONB_OTHER_NOTE}</span></p>`}
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-loc" title="Locations" hint="Leave empty to see every location.">
       <${OnbLocChecklist} idp="onb" value=${locs} roles=${d.roles} levels=${d.levels} onChange=${(v) => set({ locations: v })} />
@@ -4452,11 +4561,25 @@ function OnbStepTargets({ d, set }) {
   </div>`;
 }
 
-function OnbStepMatches({ d, examples, setExamples }) {
+function OnbJobRow({ j, f, p, onOpen, reason }) {
+  return html`<button type="button" class="job-row onb-job" onClick=${() => onOpen(j.id)}>
+    <${Logo} name=${j.co} />
+    <div class="stack-sm" style="gap:2px;min-width:0">
+      <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
+      <${find_Meta} cls="job-meta find-row-meta" parts=${[j.co, onbLocText(j, p)]} />
+      ${reason && html`<span class="onb-reason">${reason}</span>`}
+    </div>
+    <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", find_fitHi(f.score, j) && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+  </button>`;
+}
+
+function OnbStepMatches({ d, examples, setExamples, onOpen }) {
   const J = useJobs();
   const list = useMemo(() => (J.status === "ready" ? onbMatches(J.jobs, d) : []), [J.status, J.jobs, d]);
   const top = useMemo(() => onbTop(list, d), [list, d]);
+  const flagged = useMemo(() => onbFlagged(list, new Set(top.map((x) => x.j.id))), [list, top]);
   const low = list.filter((j) => (j.g || 0) < 25).length;
+  const hasFit = top.some((x) => x.f);
   return html`<div class="stack onb-matches">
     <div class="card">
       ${J.status === "error"
@@ -4466,22 +4589,19 @@ function OnbStepMatches({ d, examples, setExamples }) {
           : html`<div class="onb-count">
               <div class="row wrap" style="align-items:baseline;gap:10px"><span class="onb-big num">${fmt.num(list.length)}</span><span class="onb-big-label">${list.length === 1 ? "open role matches" : "open roles match"}</span></div>
               <${find_Meta} cls="hint onb-summary" parts=${onbSummary(d)} />
-              ${list.length > 0 && html`<span class="hint num">${fmt.num(low)} of them show no ghost-job signals.</span>`}
+              ${list.length > 0 && list.length > low && html`<span class="hint num">${fmt.num(list.length - low)} of these ${fmt.num(list.length)} show ghost-job signals, like being reposted again and again or open for months. We flag them so you don’t waste an application.</span>`}
+              ${list.length > 0 && list.length === low && html`<span class="hint num">None of these show ghost-job signals right now.</span>`}
             </div>
             ${list.length === 0
               ? html`<div class="callout"><${Icon} name="info" /><span>Nothing open matches all of these right now. Go back and add a role or location, or finish and widen your search in Find jobs.</span></div>`
               : html`<div class="list onb-top" aria-label="Top matches">
-                ${top.map(({ j, f }) => html`<div class="job-row onb-job" key=${j.id}>
-                  <${Logo} name=${j.co} />
-                  <div class="stack-sm" style="gap:2px">
-                    <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-                    <${find_Meta} cls="job-meta find-row-meta" parts=${[j.co, j.r && !(j.l || []).length ? "Remote" : find_locText(j)]} />
-                  </div>
-                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", find_fitHi(f.score, j) && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
-                </div>`)}
-              </div>`}
-            <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
+                ${top.map(({ j, f }) => html`<${OnbJobRow} key=${j.id} j=${j} f=${f} p=${d} onOpen=${onOpen} />`)}
+              </div>
+              ${flagged && html`<div class="onb-flag-h"><span class="label">One we flagged</span><span class="hint">Still open, but worth a check before you apply.</span></div>
+                <div class="list onb-top" aria-label="Flagged listing"><${OnbJobRow} j=${flagged} f=${fitScore(flagged, d)} p=${d} onOpen=${onOpen} reason=${flagged.gr[0]} /></div>`}`}
+            <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} ${hasFit ? "Fit is out of 100." : "Tap a role to see its listing check."}</span></div>`}
     </div>
+    ${d.other && html`<p class="onb-note" role="note"><${Icon} name="info" size=${14} /><span>${ONB_OTHER_NOTE}</span></p>`}
     <label class="check onb-ex" for="onb-examples">
       <input id="onb-examples" type="checkbox" checked=${examples} onChange=${(e) => setExamples(e.currentTarget.checked)} />
       <span class="stack-sm" style="gap:0"><span>Add example applications to explore</span><span class="hint">10 fictional applications. Clear them any time in Settings.</span></span>
@@ -4492,7 +4612,7 @@ function OnbStepMatches({ d, examples, setExamples }) {
 const ONB_STEPS = [
   { title: "What are you looking for?", lede: "Pick what fits. You can change any of this later in Settings." },
   { title: "Add your resume (optional)", lede: "We use it to score fit and suggest interview talking points. Skip it if you’d rather not." },
-  { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first." },
+  { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first.", ledeNoFit: "Real listings that match your targets, newest and most likely real first." },
 ];
 
 /* Draft of the choices so far, kept in store.ui.onboardDraft so a reload resumes at the same step. */
@@ -4510,7 +4630,7 @@ VIEWS.__onboarding = function Onboarding() {
   const [d, setD] = useState(() => saved ? { ...saved.d } : ({
     // no level pre-picked: empty means both, like Roles and Locations
     levels: !start.onboarded && (start.levels || []).length === LEVELS.length ? [] : start.levels || [], roles: start.roles || [], locations: start.locations || [],
-    remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "",
+    remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "", degree: start.degree || "BS",
   }));
   const [res, setRes] = useState(() => (saved ? saved.res : onbEditorInit(start)));
   const [examples, setExamples] = useState(saved ? saved.examples : false);
@@ -4528,25 +4648,41 @@ VIEWS.__onboarding = function Onboarding() {
   const commit = (done) => {
     store.set((s) => {
       const { onboardDraft, ...ui } = s.ui || {};
-      return { ...s, ui: done ? ui : s.ui, profile: { ...s.profile, ...d, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } };
+      const { other, ...dd } = d;
+      return { ...s, ui: done ? ui : s.ui, profile: { ...s.profile, ...dd, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } };
     });
   };
-  const finish = () => {
+  const finish = (route = "today") => {
     commit(true);
     if (examples && !hasExamples()) loadExamples();
-    go("today");
+    go(route);
   };
-  const skip = () => { commit(true); go("today"); };
+  // "Just browse jobs": finish with whatever is picked (empty = everything) and land on the full list.
+  const browse = () => { commit(true); go("find"); };
+  const sample = () => { commit(true); if (!hasExamples()) loadExamples(); go("pipeline"); };
+  // Tapping a preview finishes setup and opens that listing over Find (after the route change, which closes drawers).
+  const openPreview = (id) => {
+    const open = () => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      openJob(id);
+      setTimeout(() => { if (!ui.state.drawer) openJob(id); }, 300); // in case the route's reset landed after us
+    }, 0)));
+    if (location.hash === "#find") { finish("find"); open(); return; }
+    window.addEventListener("hashchange", open, { once: true });
+    finish("find");
+  };
   const S = ONB_STEPS[step];
   return html`<div class="onboard-wrap" ref=${top} role="dialog" aria-modal="true" aria-label="Set up Heardback">
     <div class="onboard">
       <header class="onb-brand">
         <div class="row" style="gap:10px"><${BrandMark} size=${30} /><span class="onb-word">Heardback</span></div>
         <span class="spacer"></span>
-        <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
+        <button type="button" class="onb-link onb-browse" onClick=${browse}>Just browse jobs<${Icon} name="arrowR" size=${14} /></button>
       </header>
       ${saved && html`<p class="onb-resumed" role="status"><${Icon} name="check" size=${14} />Picking up where you left off.</p>`}
-      ${step === 0 && !saved && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
+      ${step === 0 && html`<div class="onb-pitch">
+        <p class="onb-value">Internship and new-grad listings, checked for ghost jobs. Track every application and interview in one calm place.</p>
+        <p class="onb-trust"><${Icon} name="shield" size=${14} /><span>Free. Your data stays in this browser.</span></p>
+      </div>`}
       ${step === 0 && typeof storage !== "undefined" && storage.corrupt && html`<div class="callout wait onb-corrupt" role="alert"><${Icon} name="alert" />
         <span class="onb-corrupt-text">Your saved data couldn’t be read, so setup started over. A copy was kept in this browser. If you exported a backup, restore it now.</span>
         <label class="btn sm onb-restore"><${Icon} name="upload" />Restore from backup<input id="onb-restore" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; if (typeof pfImportFile === "function") pfImportFile(f); }} /></label>
@@ -4557,18 +4693,18 @@ VIEWS.__onboarding = function Onboarding() {
       </div>
       <div>
         <h1 id="onb-title" tabindex="-1">${S.title}</h1>
-        <p class="lede">${S.lede}</p>
+        <p class="lede">${step === 2 && !draft.skills.length ? S.ledeNoFit : S.lede}</p>
       </div>
       ${step === 0 && html`<${OnbStepTargets} d=${d} set=${set} />`}
       ${step === 1 && html`<div class="card onb-card onb-card-pad"><${OnbResumeEditor} value=${res} onChange=${setRes} idp="onb-res" /></div>`}
-      ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} />`}
+      ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} onOpen=${openPreview} />`}
       <footer class="onb-foot">
-        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<span></span>`}
-        <span class="spacer"></span>
-        ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
+        ${step > 0 ? html`<${Btn} key="back" icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<button key="sample" type="button" class="onb-link onb-sample" onClick=${sample}>See a sample tracker first</button>`}
+        <span class="spacer" key="sp"></span>
+        ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} key="skip" kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
         ${step < 2
-          ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
-          : html`<${Btn} kind="primary" iconRight="arrowR" onClick=${finish} id="onb-finish">Start using Heardback</${Btn}>`}
+          ? html`<${Btn} key="next" kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
+          : html`<${Btn} key="finish" kind="primary" iconRight="arrowR" onClick=${() => finish()} id="onb-finish">Start using Heardback</${Btn}>`}
       </footer>
     </div>
   </div>`;
@@ -4632,6 +4768,8 @@ function plSortInCol(list) {
 }
 
 function plRoundLabel(r) { return ROUND[r?.type]?.label || "Round"; }
+/* "Recruiter call" -> "Recruiter", "Onsite / Final" -> "Onsite": fits a card foot on one line */
+function plShortRound(r) { return plRoundLabel(r).replace(/ call$/i, "").replace(/ \/ .*$/, ""); }
 /* "Today, 11 PM" -> "today, 11 PM" (weekday and month names keep their capital) */
 function plLower(w) { return w.replace(/^(Today|Tomorrow)\b/, (m) => m.toLowerCase()); }
 function plPastPending(a, t = now()) { return (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0] || null; }
@@ -4647,7 +4785,12 @@ function plStatus(a, st) {
   }
   /* A past round still waiting on its outcome says so, instead of "Replied 21d ago" */
   const past = ["screen", "interview"].includes(a.stage) ? plPastPending(a, t) : null;
-  if (past) return { icon: "flag", tone: "wait", lead: "Log outcome", rest: `${plRoundLabel(past)}, ${fmt.ago(past.at)}`, text: `Log outcome · ${plRoundLabel(past)}, ${fmt.ago(past.at)}`, title: `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
+  if (past) {
+    const thanks = past.type !== "assessment" && !past.thanked && t - past.at < 2 * DAY;
+    /* R8 #4: the card foot carries the state and the age only, so it never truncates; the round type is in the title */
+    const lead = thanks ? "Send thanks" : "Outcome?", rest = fmt.ago(past.at);
+    return { icon: thanks ? "send" : "flag", tone: "wait", lead, rest, text: `${lead} · ${plShortRound(past)}, ${rest}`, title: thanks ? `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: send a thank-you note` : `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
+  }
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
@@ -4677,8 +4820,8 @@ function plNextStep(a, st) {
   if (past) return { kind: "outcome", icon: "flag", round: past, short: "Log the outcome", title: `How did the ${label(past).toLowerCase()} go?`, sub: `It was ${fmt.ago(past.at)}. Log the outcome and a few notes while you remember.` };
   if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It’s no longer in the live listings. Check the company’s careers page, or remove it from your board." };
   if (a.stage === "saved") return { kind: "saved", icon: "bolt", short: "Apply", title: "Apply, then mark it applied", sub: `You saved this ${fmt.ago(a.createdAt)}. Early applicants tend to hear back more often.` };
-  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they’re interested. Marking it keeps your board honest. You can move it back any time." };
-  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven’t heard back. A short, specific note is fine.` };
+  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${pluralize(plDaysSince(a.lastReplyAt || a.appliedAt || a.createdAt), "day")}. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they’re interested. Marking it keeps your board honest. You can move it back any time." };
+  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${pluralize(plDaysSince(a.appliedAt || a.createdAt), "day")} ago and haven’t heard back. A short, specific note is fine.` };
   if (a.stage === "applied") {
     const due = (a.followedUpAt || a.appliedAt || t) + st.followUpDays * DAY;
     return { kind: "wait", icon: "clock", short: a.followedUpAt ? "Waiting after follow-up" : "Wait for a reply", title: "Waiting for a reply", sub: a.followedUpAt ? `You followed up ${fmt.ago(a.followedUpAt)}.` : `Heardback will suggest a follow-up on ${fmt.date(due)} if you haven’t heard back.` };
@@ -5131,7 +5274,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
     if (e.target.closest(".pl-chk") || e.metaKey || e.ctrlKey || (selecting && (e.shiftKey || plTouch()))) { onSelect(e.shiftKey); return; }
     openApp(a.id);
   };
-  return html`<article class=${cx("app-card pl-card", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed", selected && "sel")} tabindex="0" draggable="true" data-card=${a.id}
+  return html`<article class=${cx("app-card pl-card kb-row", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed", selected && "sel")} tabindex="0" draggable="true" data-card=${a.id}
     aria-label=${`${a.title} at ${a.company}. ${STAGE[a.stage].label}. ${stt.text}.${selected ? " Selected." : ""}`} aria-describedby="pl-kbd-hint"
     onClick=${click} onMouseDown=${(e) => { if (e.shiftKey && selecting) e.preventDefault(); }} ...${rest}>
     <div class="pl-card-top">
@@ -5142,12 +5285,12 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone, stt.lead && "pl-status-2l")} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : stt.lead ? html`<span>${stt.lead}<span class="pl-status-extra"> · ${stt.rest}</span></span>` : html`<span class="truncate">${stt.text}</span>`}</span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : stt.lead ? html`<span class="truncate">${stt.lead}<span class="pl-status-extra"> · ${stt.rest}</span></span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
 
-function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
+function PlMoveMenu({ label, current, anchor, onPick, onClose, extra, stages = STAGES }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useLayoutEffect(() => {
@@ -5176,7 +5319,7 @@ function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
   };
   return html`<div class="menu pl-menu" role="menu" aria-label=${label} ref=${ref} onKeyDown=${nav} style=${pos ? `left:${pos.left}px;top:${pos.top}px` : "visibility:hidden;left:0;top:0"}>
     <div class="pl-menu-label">Move to</div>
-    ${STAGES.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
+    ${stages.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
       <span class=${cx("dot", st.id)}></span><span style="flex:1">${st.label}</span>${current === st.id && html`<${Icon} name="check" size=${14} />`}
     </button>`)}
     ${extra && extra.length > 0 && html`<div class="pl-menu-sep"></div>`}
@@ -5234,7 +5377,7 @@ function PlTable({ apps, settings, sort, sel }) {
             const due = PL_DUE.includes(ns.kind);
             const dot = due ? "pl-dot-due" : ns.kind === "upcoming" ? "pl-dot-up" : "pl-dot-idle";
             const on = sel.has(a.id);
-            return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
+            return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx("kb-row", on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
               onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
               <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
               <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${today_meta([STAGE[a.stage]?.label, ...(ns.kind === "closed" ? [] : ns.kind === "ghost" ? [`No reply in ${silent} days`] : [ns.short, silent != null && silent >= settings.followUpDays ? `${silent}d silent` : null])])}</span></div></div></td>
@@ -5285,6 +5428,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const ns = plNextStep(a, settings);
   const act = plNextAction(a, ns, setT);
   const removed = listingRemoved(a);
+  const takedown = plTakedown(a, ns, removed);
   const head = html`<div class="pl-dhead">
     <${Logo} name=${a.company} size="lg" />
     <div class="pl-dhead-text">
@@ -5296,11 +5440,9 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
     </div>
   </div>`;
   const foot = html`
-    ${act && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
-    ${ns.kind === "wait" && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
-    ${a.url && (removed
-      ? html`<button type="button" class="btn pl-removed-btn hide-sm" disabled title="This listing is no longer live"><${Icon} name="flag" />Posting removed</button>`
-      : html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`)}
+    ${act && !takedown && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
+    ${ns.kind === "wait" && !takedown && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
+    ${a.url && !removed && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del} aria-label="Delete application" title="Delete application"><span class="hide-sm">Delete</span></${Btn}>`;
   const counts = { rounds: (a.rounds || []).length, timeline: (a.events || []).length };
@@ -5312,12 +5454,12 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
     setT(nx); setTimeout(() => document.getElementById(`pl-tab-${nx}`)?.focus(), 0);
   };
   return html`<${Drawer} onClose=${closeDrawer} label=${`${a.company}: ${a.title}`} head=${head} foot=${foot}>
-    <${PlStepper} a=${a} />
+    <${PlStepper} a=${a} hideGhost=${takedown && a.stage !== "screen"} />
     <div class="tabs pl-dtabs" role="tablist" aria-label="Sections" onKeyDown=${onTabKey}>
       ${PL_TABS.map((x) => html`<button type="button" role="tab" key=${x.id} id=${`pl-tab-${x.id}`} aria-selected=${t === x.id ? "true" : "false"} aria-controls="pl-tabpanel" tabindex=${t === x.id ? "0" : "-1"} onClick=${() => setT(x.id)}>${x.label}${counts[x.id] ? html`<span class="count">${counts[x.id]}</span>` : null}</button>`)}
     </div>
     <div id="pl-tabpanel" role="tabpanel" aria-labelledby=${`pl-tab-${t}`} class="pl-tabpanel">
-      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} removed=${removed} hasCo=${hasCo} />`}
+      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} removed=${removed} takedown=${takedown} hasCo=${hasCo} />`}
       ${t === "rounds" && html`<${PlRounds} a=${a} />`}
       ${t === "timeline" && html`<${PlTimeline} a=${a} />`}
       ${t === "notes" && html`<${PlNotes} a=${a} />`}
@@ -5325,12 +5467,18 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   </${Drawer}>`;
 };
 
-function PlStepper({ a }) {
+function PlStepper({ a, hideGhost }) {
+  const [menu, setMenu] = useState(null);
   const cur = STAGE[a.stage].i;
   const far = plFurthest(a);
   const closed = PL_CLOSED.includes(a.stage);
   /* Applied reads the editable applied date, so editing it updates the header */
   const since = a.stage === "applied" && a.appliedAt ? a.appliedAt : plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
+  /* R8 #7: an offer you hold can't be ghosted; it closes as declined or rescinded (Rejected). The takedown block already offers
+     Mark as ghosted, so the header doesn't repeat it. On phones two closers fold into one menu button. */
+  const closers = a.stage === "offer"
+    ? [{ id: "rejected", icon: "x", label: "Close offer", title: "Declined it, or it was rescinded: moves it to Rejected" }]
+    : PL_CLOSED.filter((id) => id !== "ghosted" || !hideGhost || a.stage === id).map((id) => ({ id, icon: id === "ghosted" ? "ghost" : "x", label: a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted", title: `Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})` }));
   return html`<div class="pl-stepper" role="group" aria-label="Stage">
     <div class="pl-steps">
       ${PL_MAIN.map((id, i) => {
@@ -5344,9 +5492,11 @@ function PlStepper({ a }) {
     <div class="pl-stage-line">
       <span class="pl-small muted"><span class=${cx("dot", a.stage)}></span>${STAGE[a.stage].label}${since ? ` since ${fmt.date(since)}` : ""}</span>
       <span class="spacer" style="flex:1"></span>
-      ${PL_CLOSED.map((id) => html`<button type="button" key=${id} class=${cx("pl-close-btn", id, a.stage === id && "on")} aria-pressed=${a.stage === id ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})`}>
-        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted"}
+      ${closers.map((c) => html`<button type="button" key=${c.id} class=${cx("pl-close-btn", c.id, a.stage === c.id && "on", closers.length > 1 && "pl-close-wide")} aria-pressed=${a.stage === c.id ? "true" : "false"} onClick=${() => Apps.move(a.id, c.id)} title=${c.title}>
+        <${Icon} name=${c.icon} size=${14} />${c.label}
       </button>`)}
+      ${closers.length > 1 && html`<button type="button" class="pl-close-btn pl-close-more" aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"} aria-label="Close this application" title="Mark as rejected or ghosted" onClick=${(e) => { const el = e.currentTarget; setMenu((m) => (m ? null : el)); }}><${Icon} name="more" size=${16} /></button>`}
+      ${menu && html`<${PlMoveMenu} label=${`Close ${a.company}`} current=${a.stage} anchor=${menu} stages=${closers.map((c) => STAGE[c.id])} onPick=${(to) => Apps.move(a.id, to)} onClose=${() => setMenu(null)} />`}
     </div>
   </div>`;
 }
@@ -5387,24 +5537,30 @@ function PlEscape({ onEscape }) {
 
 function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : "")).replace(/\/$/, ""); } catch { return u; } }
 
-/* B4: an Applied / Screen application whose linked posting is no longer live */
+/* B4: an Applied / Screen application whose linked posting is no longer live. When nothing more
+   specific is next (a round, a thank-you, an outcome), the takedown block takes the Next step's place. */
+function plTakedown(a, ns, removed) {
+  return !!removed && ["applied", "screen"].includes(a.stage) && ["follow", "ghost", "wait", "schedule"].includes(ns.kind);
+}
 function PlRemoved({ a, jobs, hasCo }) {
   const open = hasCo ? (jobs.byCompany.get(a.company) || []).length : 0;
   const screen = a.stage === "screen";
-  return html`<div class="callout pl-removed" role="note">
-    <${Icon} name="flag" />
+  const roles = hasCo && html`<button type="button" class="pl-linkbtn" onClick=${() => openCompany(a.company)}>${open ? `See ${a.company}’s ${pluralize(open, "open role")}` : `See ${a.company}’s open roles`} →</button>`;
+  return html`<div class="pl-next-card wait pl-removed">
+    <span class="pl-next-ico"><${Icon} name="flag" /></span>
     <div class="stack-sm pl-removed-body">
-      <span><b>This posting was taken down.</b> ${screen ? `It may be filled, but your process with ${a.company} can still go on.` : "It may be filled."}</span>
+      <span class="pl-eyebrow">Next step</span>
+      <strong>This posting was taken down</strong>
+      <span class="muted pl-small">${screen ? `Your process with ${a.company} can still go on.` : "It may be filled."} ${roles}</span>
       <div class="pl-removed-actions">
-        ${html`<${Btn} size="sm" icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</${Btn}>`}
-        ${html`<${Btn} size="sm" kind="ghost" icon="ghost" onClick=${() => Apps.move(a.id, "ghosted")}>Mark as ghosted</${Btn}>`}
-        ${hasCo && html`<${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openCompany(a.company)}>${open ? `See ${a.company}’s ${pluralize(open, "open role")}` : `See ${a.company}’s open roles`}</${Btn}>`}
+        <${Btn} size="sm" icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>${screen ? "Draft a follow-up" : "Draft a last follow-up"}</${Btn}>
+        ${!screen && html`<${Btn} size="sm" kind="ghost" icon="ghost" onClick=${() => Apps.move(a.id, "ghosted")}>Mark as ghosted</${Btn}>`}
       </div>
     </div>
   </div>`;
 }
 
-function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
+function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
   const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
@@ -5415,8 +5571,7 @@ function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
     ghost: html`<button type="button" class="pl-linkbtn" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</button>`,
   }[ns.kind];
   return html`<div class="pl-ov">
-    ${removed && ["applied", "screen"].includes(a.stage) && html`<${PlRemoved} a=${a} jobs=${jobs} hasCo=${hasCo} />`}
-    <div class=${cx("pl-next-card", ns.tone)}>
+    ${takedown ? html`<${PlRemoved} a=${a} jobs=${jobs} hasCo=${hasCo} />` : html`<div class=${cx("pl-next-card", ns.tone)}>
       <span class="pl-next-ico"><${Icon} name=${ns.icon} /></span>
       <div class="stack-sm" style="flex:1;min-width:0">
         <span class="pl-eyebrow">Next step</span>
@@ -5424,7 +5579,7 @@ function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
         <span class="muted pl-small">${plSepText(ns.sub)}</span>
         ${secondary && html`<div class="pl-next-actions pl-small">${secondary}</div>`}
       </div>
-    </div>
+    </div>`}
 
     <section class="dsec">
       <h3>Details</h3>
@@ -6136,6 +6291,9 @@ function PfProfile() {
     </${PfRow}>
     <${PfRow} label="Remote">
       <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
+    </${PfRow}>
+    <${PfRow} label="Degree" hint="Roles that ask for a higher degree get a low fit.">
+      <${Seg} label="Highest degree by graduation" value=${p.degree || "BS"} options=${[{ id: "AS", label: "Associate" }, { id: "BS", label: "Bachelor’s" }, { id: "MS", label: "Master’s" }, { id: "PhD", label: "PhD" }]} onChange=${(v) => pfSetProfile({ degree: v })} />
     </${PfRow}>
     <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don’t sponsor.">
       <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I’ll need sponsorship" />
@@ -7511,10 +7669,17 @@ const TODAY_SNOOZE = [{ d: 1, label: "Snooze 1 day" }, { d: 3, label: "Snooze 3 
 function today_taskCopy(tk) {
   const a = tk.app;
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
-  if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
+  if (tk.kind === "apply") return { sub: today_typo(typeof tk.sub === "string" ? tk.sub.replace(" · this listing shows strong ghost signals", " · Strong ghost signals") : tk.sub), action: "Apply" };
   if (tk.kind === "nextround") return { sub: `${a.stage === "screen" ? "In screening" : "Interviewing"}, nothing scheduled yet. Add the next round’s date.`, action: "Add a round" };
-  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
+  const rl = tk.round && (ROUND[tk.round.type]?.label || "Interview");
+  if (tk.kind === "outcome") return { sub: `${rl} · ${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })} (${today_daysAgo(tk.round.at)})`, action: "Log outcome" };
+  if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return { sub: `Your ${rl.toLowerCase()} was ${today_daysAgo(tk.round.at)}. A short note still helps.`, action: tk.action };
   return { sub: today_typo(tk.sub), action: tk.action };
+}
+/* Calendar days, so "yesterday" means the previous date, not 24 hours. */
+function today_daysAgo(ts) {
+  const n = Math.round((fmt.startOfDay(now()) - fmt.startOfDay(ts)) / DAY);
+  return n <= 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`;
 }
 /* Core builds task text with straight apostrophes; display them typographically. */
 function today_typo(t) { return typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t; }
@@ -7535,8 +7700,8 @@ function today_logOutcome(tk, outcome) {
   const restore = () => store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: before } }));
   if (outcome === "waiting") {
     const prev = store.get().dismissed[tk.key];
-    dismissTask(tk.key, 2);
-    toast(`We’ll ask again ${fmt.date(now() + 2 * DAY, { weekday: "short" })}`, { undo: () => today_undismiss(tk.key, prev) });
+    dismissTask(tk.key, 3);
+    toast(`We’ll ask again ${fmt.date(now() + 3 * DAY, { weekday: "short" })}`, { undo: () => today_undismiss(tk.key, prev) });
     return;
   }
   Apps.updateRound(a.id, r.id, { outcome });
@@ -7548,51 +7713,108 @@ function today_logOutcome(tk, outcome) {
 }
 function today_typing(el) { return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable); }
 
-function today_TaskRow({ tk, primary, idx }) {
+/* Snooze or dismiss several tasks at once (the ghost batch row); one toast undoes all of them. */
+function today_snoozeMany(tks, d) {
+  const prev = tks.map((tk) => [tk.key, store.get().dismissed[tk.key]]);
+  for (const tk of tks) dismissTask(tk.key, d);
+  const undo = () => prev.forEach(([k, p]) => today_undismiss(k, p));
+  toast(d ? `Snoozed ${tks.length} until ${fmt.date(now() + d * DAY, { weekday: "short", month: "short", day: "numeric" })}` : `Dismissed ${tks.length}`, { undo });
+}
+
+function today_TaskRow({ tk, primary, idx, child }) {
   const [menu, setMenu] = useState(null);
   const close = useCallback(() => setMenu(null), []);
   const a = tk.app;
   const copy = today_taskCopy(tk);
-  const cls = cx("btn sm td-act", primary && "primary");
+  const cls = cx("btn sm td-act", primary && "primary", child && "ghost");
   let act;
   if (tk.kind === "outcome" && tk.round) act = html`<div class="td-outcome" role="group" aria-label=${"Outcome of the " + a.company + " round"}>
-      <button type="button" class="btn sm" data-primary onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
+      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
-      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "waiting")}>Still waiting</button>
     </div>`;
   else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
   else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
   else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
   const safeKey = tk.key.replace(/[^a-z0-9]/gi, "-");
-  return html`<div class="task td-task" data-key=${tk.key} data-fidx=${idx} tabindex="-1" aria-label=${today_typo(tk.title)}>
+  const day = (d) => fmt.date(now() + d * DAY, { weekday: "short" });
+  const snooze = tk.kind === "outcome"
+    ? [{ key: "wait", icon: "clock", label: "Still waiting", hint: "Ask again " + day(3), run: () => today_logOutcome(tk, "waiting") },
+       { key: "s1", icon: "clock", label: "Snooze 1 day", hint: "S", run: () => today_snooze(tk, 1) },
+       { key: "s7", icon: "clock", label: "Snooze 1 week", hint: day(7), run: () => today_snooze(tk, 7) }]
+    : TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: o.d === 1 ? "S" : day(o.d), run: () => today_snooze(tk, o.d) }));
+  const sub = child
+    ? today_meta([a.appliedAt ? `Applied ${fmt.date(a.appliedAt, { month: "short", day: "numeric" })}` : null, a.title], "task-sub", "div")
+    : typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`;
+  return html`<div class="task td-task kb-row" data-key=${tk.key} data-fidx=${idx} tabindex="-1" aria-label=${today_typo(tk.title)}>
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
-      ${typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`}
+      ${sub}
     </div>
     <div class=${cx("task-actions td-task-actions", tk.kind === "outcome" && "is-outcome")}>
       ${act}
       <button type="button" class="btn sm ghost icon td-more" id=${"more-" + safeKey} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
-        aria-label=${"More options: " + tk.title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
+        aria-label=${"More options: " + today_typo(tk.title)} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
     </div>
     ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Task options"
-      items=${[
-        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: o.d === 1 ? "S" : fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => today_snooze(tk, o.d) })),
-        { key: "sep", sep: true },
-        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", hint: "D", run: () => today_dismiss(tk) },
-      ]} />`}
+      items=${[...snooze, { key: "sep", sep: true }, { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", hint: "D", run: () => today_dismiss(tk) }]} />`}
   </div>`;
 }
 
-const TODAY_GROUPS = [{ id: "today", label: "Today" }, { id: "quick", label: "Quick wins" }, { id: "later", label: "When you have time" }];
+/* Three or more no-reply applications fold into one row: one batch action, with the rows a click away. */
+function today_BatchRow({ item, primary, idx, open, onToggle }) {
+  const [menu, setMenu] = useState(null);
+  const close = useCallback(() => setMenu(null), []);
+  const tks = item.tasks, n = tks.length;
+  const title = `${n} applications with no reply in ${store.get().settings.ghostDays || 21}+ days`;
+  const day = (d) => fmt.date(now() + d * DAY, { weekday: "short" });
+  return html`<div class="task td-task td-batch-row kb-row" data-key=${item.key} data-fidx=${idx} tabindex="-1" aria-label=${title}>
+    <span class="task-ico ghost"><${Icon} name="ghost" /></span>
+    <div class="td-task-text">
+      <button type="button" class="td-task-title task-title" aria-expanded=${open ? "true" : "false"} aria-controls=${"td-bl-" + item.group} onClick=${onToggle}>${title}</button>
+      ${today_meta(tks.map((tk) => `${tk.app.company} ${Apps.daysSilent(tk.app)}d`), "task-sub", "div")}
+    </div>
+    <div class="task-actions td-task-actions">
+      <button type="button" class="btn sm ghost td-review" aria-expanded=${open ? "true" : "false"} aria-controls=${"td-bl-" + item.group} onClick=${onToggle}>Review<${Icon} name="chevD" /></button>
+      <button type="button" class=${cx("btn sm td-act", primary && "primary")} data-primary onClick=${() => today_ghostAll(tks)}>Mark all as ghosted</button>
+      <button type="button" class="btn sm ghost icon td-more" id=${"more-" + item.key.replace(/[^a-z0-9]/gi, "-")} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
+        aria-label=${"More options: " + title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
+    </div>
+    ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Options for all ${n}"
+      items=${[...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label.replace("Snooze", "Snooze all"), hint: o.d === 1 ? "S" : day(o.d), run: () => today_snoozeMany(tks, o.d) })),
+        { key: "sep", sep: true }, { key: "dismiss", icon: "x", label: "Dismiss all", cls: "td-dismiss", hint: "D", run: () => today_snoozeMany(tks, 0) }]} />`}
+  </div>`;
+}
+
+const TODAY_GROUPS = [{ id: "today", label: "Today" }, { id: "quick", label: "This week" }, { id: "later", label: "Later" }];
 const TODAY_GROUP_MAX = 8;
-// Within Quick wins: things only you can answer first, then nudges, then cleanup.
+const TODAY_BATCH_MIN = 3;
+const TODAY_FLAT_MAX = 6; // at or under this many tasks, one flat list (group headers are only for screen readers)
+// Within This week: things only you can answer first, then nudges, then cleanup.
 const TODAY_QUICK_ORDER = { confirm: 0, thanks: 0, outcome: 1, removed: 2, nextround: 3, follow: 4, ghost: 5 };
+/* Sort a group so the first row (and its primary button) is the soonest thing:
+   Today: thank-yous first (time-boxed), then rounds by start time. This week: by kind, then longest silence first. */
+function today_sortGroup(id, all) {
+  const at = new Map(all.map((t, i) => [t.key, i]));
+  const ord = (x, y) => at.get(x.key) - at.get(y.key);
+  const silent = (t) => (t.kind === "follow" || t.kind === "ghost" ? Apps.daysSilent(t.app) || 0 : 0);
+  const time = (t) => (t.round && t.round.at) || Infinity;
+  if (id === "today") return all.slice().sort((x, y) => (x.kind === "thanks" ? 0 : 1) - (y.kind === "thanks" ? 0 : 1) || (time(x) - time(y) || 0) || ord(x, y));
+  if (id === "quick") return all.slice().sort((x, y) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || silent(y) - silent(x) || ord(x, y));
+  return all;
+}
+/* Groups of display items: a task, or one ghost batch standing in for 3+ ghost tasks. */
 function today_groups(tasks, open) {
   return TODAY_GROUPS.map((g) => {
-    let all = tasks.filter((tk) => (tk.group || "later") === g.id);
-    if (g.id === "quick") all = all.map((tk, i) => [tk, i]).sort(([x, i], [y, j]) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || i - j).map((p) => p[0]);
-    return { ...g, all, shown: open[g.id] ? all : all.slice(0, TODAY_GROUP_MAX) };
+    const all = today_sortGroup(g.id, tasks.filter((tk) => (tk.group || "later") === g.id));
+    const ghosts = all.filter((tk) => tk.kind === "ghost");
+    let items = all;
+    if (ghosts.length >= TODAY_BATCH_MIN) {
+      const at = all.indexOf(ghosts[0]);
+      items = all.filter((tk) => tk.kind !== "ghost");
+      items.splice(at, 0, { key: "ghost-batch:" + g.id, kind: "ghostBatch", group: g.id, tasks: ghosts });
+    }
+    return { ...g, all, items, shown: open[g.id] ? items : items.slice(0, TODAY_GROUP_MAX) };
   }).filter((g) => g.all.length);
 }
 
@@ -7610,12 +7832,14 @@ function today_ghostAll(list) {
 
 function today_NeedsYou({ tasks, fresh, next }) {
   const [open, setOpen] = useState({});
+  const [review, setReview] = useState({});
   const [kbd, setKbd] = useState(false);
   const listRef = useRef(null);
   const last = useRef({ key: null, idx: 0 });
   const groups = today_groups(tasks, open);
-  const flat = groups.flatMap((g) => g.shown);
-  const kref = useRef({}); kref.current = { flat, groups };
+  // Keyboard order: shown items, with a batch's rows right after it while Review is open.
+  const flat = groups.flatMap((g) => g.shown.flatMap((it) => (it.kind === "ghostBatch" && review[g.id] ? [it, ...it.tasks] : [it])));
+  const kref = useRef({}); kref.current = { flat, groups, review };
   const primaryKey = flat.find((tk) => tk.kind !== "outcome")?.key;
 
   // Focus now when the row exists (so fast J J K stays in order), else after the render that adds it.
@@ -7654,7 +7878,7 @@ function today_NeedsYou({ tasks, fresh, next }) {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (k === "g") { lastG = now(); return; }
       if (lastG && now() - lastG < 1200) { lastG = 0; return; } // "G then S" etc. belong to the shell
-      const { flat, groups } = kref.current;
+      const { flat, groups, review } = kref.current;
       if (!flat.length) return;
       const row = e.target?.closest?.(".td-task");
       const curKey = row ? row.dataset.key : null;
@@ -7668,9 +7892,9 @@ function today_NeedsYou({ tasks, fresh, next }) {
         if (k === "k") return focusRow(flat[Math.max(0, idx - 1)].key);
         // J past the last shown row of a group with more: show the rest of that group.
         const g = groups.find((x) => x.shown.some((t) => t.key === curKey));
-        if (g && g.shown[g.shown.length - 1].key === curKey && g.all.length > g.shown.length) {
+        if (g && g.shown[g.shown.length - 1].key === curKey && g.items.length > g.shown.length && !(review[g.id] && g.shown[g.shown.length - 1].kind === "ghostBatch")) {
           setOpen((o) => ({ ...o, [g.id]: true }));
-          return focusRow(g.all[g.shown.length].key);
+          return focusRow(g.items[g.shown.length].key);
         }
         return focusRow(flat[Math.min(flat.length - 1, idx + 1)].key);
       }
@@ -7681,8 +7905,8 @@ function today_NeedsYou({ tasks, fresh, next }) {
         e.preventDefault();
         if (tk.kind === "outcome") return today_runTask(tk);
         row.querySelector("[data-primary]")?.click();
-      } else if (k === "d") { e.preventDefault(); today_dismiss(tk); }
-      else if (k === "s") { e.preventDefault(); today_snooze(tk, 1); }
+      } else if (k === "d") { e.preventDefault(); tk.kind === "ghostBatch" ? today_snoozeMany(tk.tasks, 0) : today_dismiss(tk); }
+      else if (k === "s") { e.preventDefault(); tk.kind === "ghostBatch" ? today_snoozeMany(tk.tasks, 1) : today_snooze(tk, 1); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -7698,20 +7922,24 @@ function today_NeedsYou({ tasks, fresh, next }) {
   let n = 0;
   return html`<section class="card" aria-labelledby="td-needs-h">
     <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}
-      ${tasks.length ? html`<span class="spacer"></span><span class=${cx("td-keys hide-sm", kbd && "on")} aria-hidden="true"><${Kbd}>J</${Kbd}><${Kbd}>K</${Kbd}> move<${Kbd}>Enter</${Kbd}> do it<${Kbd}>S</${Kbd}> snooze<${Kbd}>D</${Kbd}> dismiss</span>` : null}</div>
+      ${tasks.length ? html`<span class="spacer"></span><span class=${cx("td-keys hide-sm", kbd && "on")} aria-hidden="true"><${Kbd}>J</${Kbd}><${Kbd}>K</${Kbd}> move<${Kbd}>↵</${Kbd}> do it<${Kbd}>S</${Kbd}> snooze<${Kbd}>D</${Kbd}> dismiss</span>` : null}</div>
     ${tasks.length
-      ? html`<div class="td-groups" ref=${listRef} onfocusin=${onFocusIn} onfocusout=${onFocusOut}>${groups.map((g) => {
-          const ghosts = g.all.filter((tk) => tk.kind === "ghost");
+      ? html`<div class=${cx("td-groups", tasks.length <= TODAY_FLAT_MAX && "td-flat")} ref=${listRef} onfocusin=${onFocusIn} onfocusout=${onFocusOut}>${groups.map((g) => {
           const startIdx = n; n += g.shown.length;
-          const more = g.all.length - TODAY_GROUP_MAX;
+          const more = g.items.length - TODAY_GROUP_MAX;
+          const rows = [];
+          g.shown.forEach((it, i) => {
+            if (it.kind !== "ghostBatch") return rows.push(html`<${today_TaskRow} key=${it.key} tk=${it} idx=${startIdx + i} primary=${it.key === primaryKey} />`);
+            rows.push(html`<${today_BatchRow} key=${it.key} item=${it} idx=${startIdx + i} primary=${it.key === primaryKey} open=${!!review[g.id]} onToggle=${() => setReview((o) => ({ ...o, [g.id]: !o[g.id] }))} />`);
+            if (review[g.id]) rows.push(html`<div class="list td-batch-list" key=${it.key + ":list"} id=${"td-bl-" + g.id} role="group" aria-label="No-reply applications">
+              ${it.tasks.map((tk) => html`<${today_TaskRow} key=${tk.key} tk=${tk} idx=${startIdx + i} child=${true} />`)}</div>`);
+          });
           return html`<div class="td-group" key=${g.id} role="group" aria-labelledby=${"td-g-" + g.id}>
             <div class="td-group-h" data-key=${"group:" + g.id} data-fidx=${startIdx}>
               <h3 id=${"td-g-" + g.id}>${g.label}</h3><span class="td-count num">${g.all.length}</span>
-              <span class="spacer"></span>
-              ${ghosts.length >= 2 ? html`<${Btn} size="sm" kind="ghost" icon="ghost" cls="td-batch" onClick=${() => today_ghostAll(ghosts)}>Mark all ${ghosts.length} as ghosted</${Btn}>` : null}
             </div>
-            <div class="list">${g.shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} idx=${startIdx + i} primary=${tk.key === primaryKey} />`)}</div>
-            ${more > 0 ? html`<div class="td-group-more" data-key=${"more:" + g.id} data-fidx=${startIdx + g.shown.length - 1}><${Btn} size="sm" kind="ghost" iconRight=${open[g.id] ? undefined : "chevD"} onClick=${() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>${open[g.id] ? "Show fewer" : `Show ${more} more`}</${Btn}></div>` : null}
+            <div class="list">${rows}</div>
+            ${more > 0 ? html`<div class="td-group-more" data-key=${"more:" + g.id} data-fidx=${startIdx + g.shown.length - 1}><${Btn} size="sm" kind="ghost" iconRight="chevD" cls=${open[g.id] ? "td-less" : ""} onClick=${() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>${open[g.id] ? "Show fewer" : `Show ${more} more`}</${Btn}></div>` : null}
           </div>`;
         })}</div>`
       : html`<div class="td-caught">
@@ -7790,22 +8018,81 @@ function today_matches(jobs, profile, apps) {
   return { list: fresh.concat(older).slice(0, 6), recentCount: recent.length, noProfile: false };
 }
 
-function today_NewForYou({ jobs, m }) {
-  const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
-    <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
-  let body;
-  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
-  else if (!m) body = html`<${Skeleton} rows=${4} />`;
-  else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
-  else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
-  else body = html`<div class="list">${m.list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
+/* Newest listings with no ghost signals, inside whatever targets the profile sets (empty = everything, as in
+   onboarding). Used when there is no fit score yet (no skills) and on a first-run Today. `today` counts the ones
+   posted since midnight, so the heading never claims "today" for older roles. */
+function today_fresh(jobs, profile, apps, n = 5) {
+  if (jobs.status !== "ready") return null;
+  const tracked = new Set(Object.values(apps || {}).map((a) => a.jobId).filter(Boolean));
+  const lv = profile.levels || [], roles = profile.roles || [];
+  const locs = (profile.locations || []).slice();
+  if (profile.remote && locs.length && !locs.includes("remote")) locs.push("remote");
+  const okLoc = (j) => !locs.length || locs.some((l) => (l === "remote" ? jobRemoteUS(j) : jobInLoc(j, l)));
+  const day0 = fmt.startOfDay(now());
+  const list = [], seen = new Set(), seenCo = new Set();
+  for (const j of jobs.jobs) { // newest first
+    if ((j.g || 0) >= 25 || tracked.has(j.id)) continue;
+    if (lv.length && !lv.includes(j.lvl)) continue;
+    if (roles.length && !roles.includes(j.cat)) continue;
+    if (!okLoc(j)) continue;
+    const dk = j.co + "|" + norm(j.t);
+    if (seen.has(dk) || seenCo.has(j.co)) continue; // one per company keeps the list varied
+    seen.add(dk); seenCo.add(j.co);
+    const city = locs.length ? (j.l || []).find((l) => locs.some((id) => id !== "remote" && jobInLoc({ ...j, l: [l] }, id))) : null;
+    const loc = city || (j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0]) || "Location not listed";
+    list.push({ j, f: fitScore(j, profile), loc });
+    if (list.length >= n) break;
+  }
+  return { list, today: list.filter((x) => x.j.p >= day0).length, targets: !!(lv.length || roles.length || locs.length) };
+}
+
+function today_JobRows({ list }) {
+  return html`<div class="list">${list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
         ${today_meta([j.co, `${loc}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
-      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
-    </div>`)}</div>
+      <div class="job-side"><${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span>`}</div>
+    </div>`)}</div>`;
+}
+
+/* First run (nothing tracked yet): real roles up top and the two ways in, so Today is never an empty screen. */
+function today_Start({ jobs, fr }) {
+  const allToday = fr && fr.list.length && fr.today >= Math.min(3, fr.list.length);
+  const title = !fr || allToday ? "Fresh roles posted today" : "Newest roles";
+  let body;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (!fr) body = html`<${Skeleton} rows=${4} />`;
+  else if (!fr.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">Nothing new inside your targets right now. Find has every open listing.</span></div>`;
+  else body = html`<${today_JobRows} list=${fr.list} />`;
+  return html`<section class="card td-start" aria-labelledby="td-start-h">
+    <div class="card-head"><h2 id="td-start-h">${title}</h2>
+      <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all<${Icon} name="arrowR" size=${14} /></a></div>
+    <p class="td-start-sub muted td-small">${fr && fr.targets ? "Newest roles in your targets with no ghost-job signals." : "Showing the newest roles with no ghost signals. Set targets to narrow these."}</p>
+    ${body}
+    <div class="td-start-foot">
+      <span class="muted td-small td-grow">Applied somewhere already? Paste the confirmation email and Heardback starts tracking it.</span>
+      <div class="row td-start-acts">
+        <${Btn} kind="primary" icon="find" onClick=${() => go("find")}>Find jobs</${Btn}>
+        <${Btn} icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
+      </div>
+    </div>
+  </section>`;
+}
+
+function today_NewForYou({ jobs, m, fr }) {
+  const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
+    <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
+  let body;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (!m) body = html`<${Skeleton} rows=${4} />`;
+  else if (m.noProfile) body = fr && fr.list.length
+    ? html`<${today_JobRows} list=${fr.list} />
+      <div class="td-card-foot faint td-small">${fr.targets ? "Newest roles in your targets with no ghost signals. Add your resume in Settings to rank them by fit." : "Showing the newest roles with no ghost signals. Set targets to narrow these."}</div>`
+    : html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">Nothing new inside your targets right now. Find has every open listing.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
+  else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
+  else body = html`<${today_JobRows} list=${m.list} />
     <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer’s own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
 }
@@ -7903,6 +8190,7 @@ function today_View() {
   const st = useMemo(() => computeStats(s, apps), [s]);
   const up = useMemo(() => today_upcoming(apps), [s]);
   const m = useMemo(() => today_matches(jobs, s.profile, s.apps), [jobs.status, s.profile, s.apps]);
+  const fr = useMemo(() => (!apps.length || m?.noProfile ? today_fresh(jobs, s.profile, s.apps) : null), [jobs.status, s.profile, s.apps, apps.length, m]);
   const name = today_firstName(s.profile.name);
   const goal = s.profile.weeklyGoal || 10;
   const parts = [];
@@ -7912,12 +8200,12 @@ function today_View() {
     if (!tasks.length) parts.push("Nothing needs you right now");
     else {
       if (nT) parts.push(`${nT} for today`);
-      if (nQ) parts.push(pluralize(nQ, "quick win"));
-      if (!nT && !nQ) parts.push(`${nL} when you have time`);
+      if (nQ) parts.push(`${nQ}${nT ? " more" : ""} this week`);
+      if (!nT && !nQ) parts.push(`${nL} for later`);
     }
     const nx = up.items[0];
     if (nx && fmt.startOfDay(nx.r.at) === fmt.startOfDay(now())) parts.push(`Next: ${nx.a.company} ${(ROUND[nx.r.type]?.label || "interview").toLowerCase()} at ${fmt.time(nx.r.at)}`);
-    else if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
+    else if (up.week) parts.push(pluralize(up.week, "interview") + " in the next 7 days");
     else if (up.items.length) parts.push(`Next interview ${fmt.date(up.items[0].r.at, { weekday: "short", month: "short", day: "numeric" })}`);
     else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
   }
@@ -7933,9 +8221,10 @@ function today_View() {
     ${hasExamples(s) && s.settings.showExamples ? html`<${today_ExampleBanner} />` : null}
     <div class="split">
       <div class="stack td-col">
+        ${!apps.length ? html`<${today_Start} jobs=${jobs} fr=${fr} />` : null}
         <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
-        <${today_NewForYou} jobs=${jobs} m=${m} />
+        ${apps.length || (m && !m.noProfile) ? html`<${today_NewForYou} jobs=${jobs} m=${m} fr=${fr} />` : null}
       </div>
       <aside class="stack td-col" aria-label="Your week">
         <${today_ThisWeek} apps=${apps} goal=${goal} thisWeek=${st.thisWeek} />

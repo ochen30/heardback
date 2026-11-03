@@ -1,5 +1,5 @@
 {
-  "versions": 10,
+  "versions": 13,
   "score": "9.0",
   "checks": "2,428",
   "timeline": [
@@ -62,6 +62,21 @@
       "4:45 AM",
       "v10: accessibility + review 6",
       "Design review 6 scored 9.0. Zero axe-core WCAG 2 A/AA violations on every route and overlay in both themes. Silence respects scheduled rounds; share card opens on a meaningful period."
+    ],
+    [
+      "5:10 AM",
+      "v11: usability test 3 (power user)",
+      "A student five weeks in with 42 applications. Today grouped into Today / Quick wins / When you have time, one row per application, batch ghosting, inline outcomes; J/K everywhere; Online assessment rounds; takedown callouts; age-matched Insights."
+    ],
+    [
+      "5:40 AM",
+      "v12: calmer power-user UI",
+      "Review 7 (8.8) said the new UI was loud. One focus style, folded silent apps, two-button outcomes, one block for taken-down postings. End-to-end suite 2,428 / 2,428."
+    ],
+    [
+      "6:15 AM",
+      "v13: launch readiness",
+      "A cold-visitor test (someone tapping a LinkedIn link) and review 8. Degree-aware fit (PhD-only roles no longer top the list), fit only once skills exist, a one-glance first screen, Just browse jobs, See a sample tracker, an honest note for non-tech students."
     ]
   ],
   "qa": "Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. The end-to-end suite drives the real UI (onboarding, search, saving, drag and drop, keyboard, bulk actions, email logging with 11 realistic emails, rounds, nudges, Insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior) at phone and desktop widths, with and without Claude: __CHECKS__ checks, all passing in the final run. An axe-core scan finds zero WCAG 2 A/AA violations on every screen and overlay in both themes. Three usability tests (an intern hunter on desktop, a new grad on a phone, a power user with 42 applications) drove the last rounds of fixes.",

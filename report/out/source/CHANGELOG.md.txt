@@ -131,3 +131,20 @@ A third usability test played a student five weeks in, with 42 real applications
 - Insights comparisons are age-matched and name their sample; patterns that could mislead are gone.
 - Command palette: "Add an interview round" actually adds one; new actions for outcome, thank-you, note, mark ghosted, export.
 - Thank-you drafts don't say "today" for yesterday's call; at most two toasts at once.
+
+### 05:42 PT — v12 published (design review 7 on the new UI)
+Review 7 found the new power-user UI louder than the rest (8.8). Quieted it:
+- One keyboard-focus style everywhere (a slim accent edge and soft fill).
+- Today: silent applications fold into one row ("5 applications with no reply in 21+ days") with "Mark all as ghosted" and a Review list; outcome is two joined buttons (Passed / Didn't pass); groups sorted by urgency so the one primary button sits on the soonest item; 44px menu targets on phones.
+- Pipeline: the taken-down drawer shows one block with each action once; card footers match the next step on one line.
+- Calendar files fold lines by UTF-8 bytes per RFC 5545.
+- QA: end-to-end suite 2,428 / 2,428 checks passing; axe clean on every screen.
+
+### 06:15 PT — v13 published (launch readiness)
+A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, "ship once these land"). Fixed:
+- **Fit respects degree:** a PhD-only role no longer shows "Fit 92" to an undergrad (capped low, with "Asks for a PhD"). New degree setting in onboarding and Settings.
+- **Fit appears only once you've added skills or a resume**; before that every match would score the same.
+- **First run says what it is in one glance:** "Internship and new-grad listings, checked for ghost jobs. Track every application and interview in one calm place." plus "Free. Your data stays in this browser."
+- **"Just browse jobs →"** lands on Find; **"See a sample tracker first"** loads examples into the pipeline; a "Something else" option for non-tech students with an honest note.
+- Step 3 shows a flagged listing with its reason, and previews are tappable. Today is never empty for a brand-new user ("Fresh roles posted today").
+- Pipeline table fits tablets without hiding key columns; card footers never truncate; the methodology table stacks on phones.
