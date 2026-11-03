@@ -1,0 +1,1 @@
+module.exports = { ctx: async (page) => { await page.evaluate(() => { const a = Object.values(store.get().apps).find((x) => x.company === 'Lumen Robotics'); openApp(a.id); }); await page.waitForTimeout(400); await page.keyboard.press('Control+k'); await page.waitForTimeout(300); await page.keyboard.type('interv'); await page.waitForTimeout(200); } };

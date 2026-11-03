@@ -2676,6 +2676,26 @@ function Palette() {
       ...NAV.concat([{ id: "prefs", label: "Settings", icon: "prefs" }]).map((x, i) => ({ g: "Go to", icon: x.icon, label: x.label, sub: `G then ${"TFPCIS"[i] || ","}`, run: () => go(x.id) })),
     ];
     const res = [];
+    const d = ui.state.drawer;
+    if (d?.kind === "app" && Apps.get(d.id)) {
+      const a = Apps.get(d.id);
+      const ctx = [
+        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company}`, icon: "arrowR", label: `Move to ${st.label}`, sub: String(STAGE[st.id].i + 1), run: () => Apps.move(a.id, st.id) })),
+        { g: `${a.company}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
+        { g: `${a.company}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
+        ...(a.url ? [{ g: `${a.company}`, icon: "ext", label: "Open the posting", run: () => window.open(a.url, "_blank", "noopener") }] : []),
+      ];
+      res.push(...(n ? ctx.filter((x) => norm(x.label).includes(n)) : ctx.slice(0, 6)));
+    } else if (d?.kind === "job" && jobsStore.byId.get(d.id)) {
+      const j = jobsStore.byId.get(d.id);
+      const tracked = Apps.byJob(j.id);
+      const ctx = [
+        ...(!tracked ? [{ g: j.co, icon: "bookmark", label: "Save this job", run: () => { Apps.create({ company: j.co, title: j.t, location: (j.l || [])[0] || "", url: j.url, jobId: j.id, stage: "saved", source: "find" }); toast(`Saved ${j.co}`); } },
+          { g: j.co, icon: "check", label: "Mark as applied", run: () => { Apps.create({ company: j.co, title: j.t, location: (j.l || [])[0] || "", url: j.url, jobId: j.id, stage: "applied", source: "find" }); toast(`Marked ${j.co} as applied`); } }] : [{ g: j.co, icon: "pipeline", label: "Open in pipeline", run: () => openApp(tracked.id) }]),
+        { g: j.co, icon: "companies", label: `View ${j.co}`, run: () => openCompany(j.co) },
+      ];
+      res.push(...(n ? ctx.filter((x) => norm(x.label).includes(n)) : ctx));
+    }
     const actHits = n ? acts.filter((a) => norm(a.label).includes(n)) : acts.slice(0, 5);
     res.push(...actHits);
     if (n.length >= 2) {
@@ -2691,7 +2711,7 @@ function Palette() {
       }
     }
     return res;
-  }, [q, jobs.status, s]);
+  }, [q, jobs.status, s, ui.state.drawer]);
   useEffect(() => setSel(0), [q]);
   useEffect(() => { listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" }); }, [sel]);
   const onKey = (e) => {
