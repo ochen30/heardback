@@ -84,6 +84,7 @@ const STAGE = Object.fromEntries(STAGES.map((s, i) => [s.id, { ...s, i }]));
 const ACTIVE_STAGES = ["applied", "screen", "interview"];
 const ROUND_TYPES = [
   { id: "recruiter", label: "Recruiter call" },
+  { id: "assessment", label: "Online assessment" },
   { id: "technical", label: "Technical" },
   { id: "behavioral", label: "Behavioral" },
   { id: "case", label: "Case" },
@@ -232,6 +233,22 @@ const Apps = {
     if (stage === "offer" && !opts.silent) celebrate(a);
     if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}${stage === "applied" && !a.appliedAt ? " (applied today)" : ""}`, { undo: () => Apps.update(id, a), ...(stage === "applied" && !a.appliedAt ? { action: { label: "Change date", run: () => openApp(id, "overview") } } : {}) });
   },
+  moveMany(ids, stage) {
+    const t = now(); const before = {};
+    store.set((s) => {
+      const apps = { ...s.apps };
+      for (const id of ids) {
+        const a = apps[id]; if (!a || a.stage === stage) continue;
+        before[id] = a;
+        const ev = { id: uid("e_"), at: t, kind: "stage", from: a.stage, to: stage, text: `Moved to ${STAGE[stage].label}` };
+        apps[id] = { ...a, stage, lastActivityAt: t, events: [...a.events, ev], ...(stage !== "saved" && !a.appliedAt ? { appliedAt: t } : {}) };
+      }
+      return { ...s, apps };
+    });
+    const n = Object.keys(before).length;
+    if (n) toast(`Moved ${pluralize(n, "application")} to ${STAGE[stage].label}`, { undo: () => store.set((s) => ({ ...s, apps: { ...s.apps, ...before } })) });
+    return n;
+  },
   remove(id) {
     const a = Apps.get(id);
     store.set((s) => { const apps = { ...s.apps }; delete apps[id]; return { ...s, apps }; });
@@ -282,7 +299,7 @@ const closeModal = () => ui.set({ modal: null });
 
 function toast(text, opts = {}) {
   const id = uid("t");
-  ui.set((s) => ({ toasts: [...s.toasts.slice(-2), { id, text, ...opts }] }));
+  ui.set((s) => ({ toasts: [...s.toasts.slice(-1), { id, text, ...opts }] }));
   setTimeout(() => ui.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), opts.ms || 4200);
 }
 function celebrate(app) {

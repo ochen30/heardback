@@ -2052,6 +2052,7 @@ const STAGE = Object.fromEntries(STAGES.map((s, i) => [s.id, { ...s, i }]));
 const ACTIVE_STAGES = ["applied", "screen", "interview"];
 const ROUND_TYPES = [
   { id: "recruiter", label: "Recruiter call" },
+  { id: "assessment", label: "Online assessment" },
   { id: "technical", label: "Technical" },
   { id: "behavioral", label: "Behavioral" },
   { id: "case", label: "Case" },
@@ -2200,6 +2201,22 @@ const Apps = {
     if (stage === "offer" && !opts.silent) celebrate(a);
     if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}${stage === "applied" && !a.appliedAt ? " (applied today)" : ""}`, { undo: () => Apps.update(id, a), ...(stage === "applied" && !a.appliedAt ? { action: { label: "Change date", run: () => openApp(id, "overview") } } : {}) });
   },
+  moveMany(ids, stage) {
+    const t = now(); const before = {};
+    store.set((s) => {
+      const apps = { ...s.apps };
+      for (const id of ids) {
+        const a = apps[id]; if (!a || a.stage === stage) continue;
+        before[id] = a;
+        const ev = { id: uid("e_"), at: t, kind: "stage", from: a.stage, to: stage, text: `Moved to ${STAGE[stage].label}` };
+        apps[id] = { ...a, stage, lastActivityAt: t, events: [...a.events, ev], ...(stage !== "saved" && !a.appliedAt ? { appliedAt: t } : {}) };
+      }
+      return { ...s, apps };
+    });
+    const n = Object.keys(before).length;
+    if (n) toast(`Moved ${pluralize(n, "application")} to ${STAGE[stage].label}`, { undo: () => store.set((s) => ({ ...s, apps: { ...s.apps, ...before } })) });
+    return n;
+  },
   remove(id) {
     const a = Apps.get(id);
     store.set((s) => { const apps = { ...s.apps }; delete apps[id]; return { ...s, apps }; });
@@ -2250,7 +2267,7 @@ const closeModal = () => ui.set({ modal: null });
 
 function toast(text, opts = {}) {
   const id = uid("t");
-  ui.set((s) => ({ toasts: [...s.toasts.slice(-2), { id, text, ...opts }] }));
+  ui.set((s) => ({ toasts: [...s.toasts.slice(-1), { id, text, ...opts }] }));
   setTimeout(() => ui.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), opts.ms || 4200);
 }
 function celebrate(app) {
@@ -2771,7 +2788,7 @@ function parseEmail(raw) {
   }
   let roundType = null;
   if (kind === "screen") roundType = "recruiter";
-  else if (kind === "interview") roundType = /technical|coding|hackerrank|codesignal|leetcode|system design/i.test(text) ? "technical" : /behavioral/i.test(text) ? "behavioral" : /case/i.test(text) ? "case" : /onsite|final|superday/i.test(text) ? "onsite" : "other";
+  else if (kind === "interview") roundType = /hackerrank|codesignal|codility|online assessment|\bOA\b|take-home|assessment link/i.test(text) ? "assessment" : /technical|coding|leetcode|system design/i.test(text) ? "technical" : /behavioral/i.test(text) ? "behavioral" : /case/i.test(text) ? "case" : /onsite|final|superday/i.test(text) ? "onsite" : "other";
 
   const next = { confirmation: "Wait for a reply. Follow up in a week if you hear nothing.", screen: "Reply with your availability and prep a 60-second intro.", interview: "Confirm the time and start prep for this round.", rejection: "Log it and move on. Ask for feedback if you had interviews.", offer: "Ask for the offer in writing and the decision deadline.", other: "Review and decide whether anything changed." }[kind];
   return { kind, company, title, at, interviewAt, roundType, next, confidence: (company ? 1 : 0) + (title ? 1 : 0) + (kind !== "other" ? 1 : 0) };
@@ -2859,7 +2876,11 @@ function computeTasks(s = store.get()) {
       }    }
   }
   out.sort((x, y) => x.pri - y.pri);
-  return out;
+  // One row per application (the most urgent), grouped for Today.
+  const seen = new Set(); const one = [];
+  for (const tk of out) { if (seen.has(tk.app.id)) continue; seen.add(tk.app.id); one.push(tk); }
+  for (const tk of one) tk.group = tk.pri <= 1 ? "today" : ["outcome", "follow", "ghost", "nextround", "removed", "confirm", "thanks"].includes(tk.kind) ? "quick" : "later";
+  return one;
 }
 function dismissTask(key, days = 365) { store.set((s) => ({ ...s, dismissed: { ...s.dismissed, [key]: now() + days * DAY } })); }
 
@@ -2867,7 +2888,7 @@ function dismissTask(key, days = 365) { store.set((s) => ({ ...s, dismissed: { .
 function computeStats(s = store.get(), apps = Apps.list(s)) {
   const applied = apps.filter((a) => a.stage !== "saved" && a.appliedAt);
   const replied = applied.filter((a) => a.lastReplyAt || ["screen", "interview", "offer", "rejected"].includes(a.stage));
-  const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).length || a.events.some((e) => e.to === "interview"));
+  const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).some((r) => r.at && r.at <= now() && r.type !== "assessment") || a.events.some((e) => e.to === "interview"));
   const offers = applied.filter((a) => a.stage === "offer" || a.events.some((e) => e.to === "offer"));
   const replyDays = replied.filter((a) => !(a.source === "import" && firstReplyAt(a) && a.appliedAt && Math.abs(firstReplyAt(a) - a.appliedAt) < DAY)).map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
   const median = (arr) => { if (!arr.length) return null; const v = [...arr].sort((a, b) => a - b); const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
@@ -2937,7 +2958,7 @@ function followUpTemplate(a, profile) {
 }
 function thankYouTemplate(a, r, profile) {
   const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me today about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 
 /* --- js/30-shell.js --- */
@@ -3042,6 +3063,7 @@ function Palette() {
       { g: "Actions", icon: "doc", label: "Update your resume", run: () => openModal("resume") },
       { g: "Actions", icon: "send", label: "Share your progress", run: () => (MODALS.share ? openModal("share") : go("stats")) },
       { g: "Actions", icon: "info", label: "How we score listings", run: () => openModal("method") },
+      { g: "Actions", icon: "download", label: "Export your data", run: () => go("prefs") },
       { g: "Actions", icon: "moon", label: "Toggle dark mode", run: () => store.set((st) => ({ ...st, settings: { ...st.settings, theme: document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches) ? "light" : "dark" } })) },
       { g: "Actions", icon: "keyboard", label: "Keyboard shortcuts", sub: "?", run: () => openModal("shortcuts") },
       ...NAV.concat([{ id: "prefs", label: "Settings", icon: "prefs" }]).map((x, i) => ({ g: "Go to", icon: x.icon, label: x.label, sub: `G then ${"TFPCIS"[i] || ","}`, run: () => go(x.id) })),
@@ -3051,7 +3073,11 @@ function Palette() {
     if (d?.kind === "app" && Apps.get(d.id)) {
       const a = Apps.get(d.id);
       const ctx = [
-        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => { Apps.addRound(a.id, { type: "recruiter", at: null }); openApp(a.id, "rounds"); toast("Round added. Set the date and type."); } },
+        ...((a.rounds || []).some((r) => r.at && r.at <= now() && r.outcome === "pending") ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "flag", label: "Log a round outcome", run: () => openApp(a.id, "rounds") },
+          { g: `${a.company} · ${a.title || "Application"}`, icon: "send", label: "Draft a thank-you note", run: () => { const r = [...a.rounds].filter((x) => x.at && x.at <= now()).sort((x, y) => y.at - x.at)[0]; openModal("draft", { appId: a.id, roundId: r?.id, kind: "thanks" }); } }] : []),
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "edit", label: "Add a note", run: () => openApp(a.id, "timeline") },
+        ...(a.stage !== "ghosted" ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "ghost", label: "Mark as ghosted", run: () => Apps.move(a.id, "ghosted") }] : []),
         { g: `${a.company} · ${a.title || "Application"}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
         ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
       ];

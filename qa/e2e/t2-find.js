@@ -4,11 +4,16 @@ const W = +(process.env.W || 1440), MOCK = !!process.env.MOCK;
 const T = mk(`find-${W}${MOCK ? '-mock' : ''}`);
 const mobile = W < 700;
 const count = (page) => page.locator('.find-n strong').innerText().then((t) => +t.replace(/,/g, ''));
-// <=520px: two-line count bar ("Your preferences · Hiding N likely stale · Show"); desktop: one line
+// <=520px: two-line count bar ("Your preferences · Hiding N with strong ghost signals · Show"); desktop: one line.
+// The ghost wording comes from the app's own ghostLabel(100), so copy tweaks there don't break the check.
 const narrow = W <= 520;
 const fmtN = (n) => n.toLocaleString('en-US');
-const ghostLine = (page) => page.locator(narrow ? '.find-bar2-sub .find-bar-ghost' : '.find-ghost-note').innerText().then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
-const ghostBtn = (page, show) => narrow ? page.locator(`#find-bar-ghost:text-is("${show ? 'Show' : 'Hide'}")`) : page.locator(`.find-count button:has-text("${show ? 'Show them' : 'Hide them'}")`);
+// full text of the ghost note (narrow hides the word "Hiding" visually at <=410px, so read textContent there)
+const ghostLine = (page) => (narrow ? page.locator('.find-bar2-sub .find-bar-gl').textContent() : page.locator('.find-ghost-note').innerText()).then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
+// count-bar Show/Hide action: shown on phones and mid widths; at >=1101px the sidebar switch is the control
+const barAct = W < 1101;
+const ghostBtn = (page, show) => page.locator(`${narrow ? '.find-bar2-sub' : '.find-count'} button[aria-label^="${show ? 'Show' : 'Hide'} "][aria-label$=" listings with strong ghost signals"]:text-is("${show ? 'Show' : 'Hide'}")`);
+const GL = (page) => page.evaluate(() => ghostLabel(100).toLowerCase());
 (async () => {
   const { page, errors, close } = await open({ W, mock: MOCK, setup: 'onboarded', route: 'find' });
   try {
@@ -20,9 +25,11 @@ const ghostBtn = (page, show) => narrow ? page.locator(`#find-bar-ghost:text-is(
     // Show all
     T.check('hide-ghost on by default', await page.evaluate(() => find_getFilters(store.get()).hideGhost === true && store.get().ui.findHideGhost !== false));
     if (narrow) {
-      const sub = await page.locator('.find-bar2-sub').innerText().then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
+      const sub = await page.locator('.find-bar2-sub').textContent().then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
       const gh = await page.evaluate(() => { const f = find_getFilters(store.get()); return find_run(jobsStore.jobs, f, '', false).ghostHidden; });
-      T.check('narrow: second line "Your preferences · Hiding N likely stale · Show"', sub === `Your preferences · Hiding ${fmtN(gh)} likely stale · Show`, sub);
+      T.check('narrow: second line "Your preferences · Hiding N … · Show"', sub.replace(/\s*·\s*/g, ' · ') === `Your preferences · Hiding ${fmtN(gh)} with ${await GL(page)} · Show`, sub);
+      const vis = await page.locator('.find-bar2-sub .find-bar-gl').innerText().then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
+      T.check('narrow (<=410px): "Hiding" dropped visually, count kept', W <= 410 ? vis === `${fmtN(gh)} with ${await GL(page)}` : vis.startsWith('Hiding '), vis);
       T.check('narrow: no desktop .find-count line', !(await page.locator('.find-count').count()));
       // "Your preferences" opens the filter sheet; clearing there = show all
       await page.click('#find-bar-prefs'); await page.waitForSelector('.modal');
@@ -37,8 +44,10 @@ const ghostBtn = (page, show) => narrow ? page.locator(`#find-bar-ghost:text-is(
     const nGhost = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g >= 50).length);
     T.check('Show all = de-duplicated jobs minus strong ghost signals', nAll === nTot, `${nAll} vs ${nTot} (dedup ${dd.n}, raw incl dups ${dd.raw})`);
     const ghostNote = await ghostLine(page);
-    T.check('count bar: "Hiding N with strong ghost signals"', narrow ? ghostNote === `Hiding ${fmtN(nGhost)} likely stale · Show` : ghostNote === `Hiding ${fmtN(nGhost)} with strong ghost signals`, ghostNote);
-    T.check('count bar: "Show them" link', await ghostBtn(page, true).isVisible());
+    const gl = await GL(page);
+    T.check('count bar: "Hiding N with strong ghost signals"', ghostNote === `Hiding ${fmtN(nGhost)} with ${gl}`, ghostNote);
+    T.check(barAct ? 'count bar: "Show" action visible' : 'count bar: Show action hidden at >=1101px (sidebar switch instead)', barAct ? await ghostBtn(page, true).isVisible() : !(await ghostBtn(page, true).isVisible()) && (await ghostBtn(page, true).count()) === 1);
+    const toggleGhost = async (show) => { if (barAct) await ghostBtn(page, show).click(); else await page.click('.find-aside label[for="find-f-ghost"]'); await page.waitForTimeout(250); };
     // search
     await page.fill('#find-q', 'google software');
     await page.waitForTimeout(400);
@@ -98,13 +107,13 @@ const ghostBtn = (page, show) => narrow ? page.locator(`#find-bar-ghost:text-is(
     T.check('toggle Hide ghost off -> includes g>=50', n === e, `${n} vs ${e}`);
     const gShown = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen' && j.g >= 50).length);
     const ghostNote2 = await ghostLine(page);
-    T.check('count bar (off): "N with strong ghost signals · Hide them"', (narrow ? ghostNote2 === `${fmtN(gShown)} likely stale · Hide` : ghostNote2 === `${fmtN(gShown)} with strong ghost signals`) && await ghostBtn(page, false).isVisible(), ghostNote2);
+    T.check('count bar (off): "N with strong ghost signals · Hide them"', ghostNote2 === `${fmtN(gShown)} with ${gl}` && (!barAct || await ghostBtn(page, false).isVisible()), ghostNote2);
     T.check('hide-ghost off persisted in store', (await page.evaluate(() => store.get().ui.findHideGhost)) === false);
-    await ghostBtn(page, false).click(); await page.waitForTimeout(250);
+    await toggleGhost(false);
     n = await count(page);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen' && j.g < 50).length);
     T.check('"Hide them" re-enables hiding', n === e, `${n} vs ${e}`);
-    await ghostBtn(page, true).click(); await page.waitForTimeout(250);
+    await toggleGhost(true);
     n = await count(page);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
     T.check('"Show them" shows ghost listings again', n === e, `${n} vs ${e}`);

@@ -99,6 +99,7 @@ function Palette() {
       { g: "Actions", icon: "doc", label: "Update your resume", run: () => openModal("resume") },
       { g: "Actions", icon: "send", label: "Share your progress", run: () => (MODALS.share ? openModal("share") : go("stats")) },
       { g: "Actions", icon: "info", label: "How we score listings", run: () => openModal("method") },
+      { g: "Actions", icon: "download", label: "Export your data", run: () => go("prefs") },
       { g: "Actions", icon: "moon", label: "Toggle dark mode", run: () => store.set((st) => ({ ...st, settings: { ...st.settings, theme: document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches) ? "light" : "dark" } })) },
       { g: "Actions", icon: "keyboard", label: "Keyboard shortcuts", sub: "?", run: () => openModal("shortcuts") },
       ...NAV.concat([{ id: "prefs", label: "Settings", icon: "prefs" }]).map((x, i) => ({ g: "Go to", icon: x.icon, label: x.label, sub: `G then ${"TFPCIS"[i] || ","}`, run: () => go(x.id) })),
@@ -108,7 +109,11 @@ function Palette() {
     if (d?.kind === "app" && Apps.get(d.id)) {
       const a = Apps.get(d.id);
       const ctx = [
-        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => { Apps.addRound(a.id, { type: "recruiter", at: null }); openApp(a.id, "rounds"); toast("Round added. Set the date and type."); } },
+        ...((a.rounds || []).some((r) => r.at && r.at <= now() && r.outcome === "pending") ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "flag", label: "Log a round outcome", run: () => openApp(a.id, "rounds") },
+          { g: `${a.company} · ${a.title || "Application"}`, icon: "send", label: "Draft a thank-you note", run: () => { const r = [...a.rounds].filter((x) => x.at && x.at <= now()).sort((x, y) => y.at - x.at)[0]; openModal("draft", { appId: a.id, roundId: r?.id, kind: "thanks" }); } }] : []),
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "edit", label: "Add a note", run: () => openApp(a.id, "timeline") },
+        ...(a.stage !== "ghosted" ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "ghost", label: "Mark as ghosted", run: () => Apps.move(a.id, "ghosted") }] : []),
         { g: `${a.company} · ${a.title || "Application"}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
         ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
       ];

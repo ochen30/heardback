@@ -85,7 +85,8 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
     // Find uses prefs
     await page.evaluate(() => (location.hash = 'find')); await page.waitForTimeout(600);
     const usingPrefs = await page.locator(W <= 520 ? '.find-bar2-sub' : '.find-count').innerText().catch(() => '');
-    T.check('Find shows "Using your preferences"', W <= 520 ? /^Your preferences\b/.test(usingPrefs.trim()) : /Using your preferences/.test(usingPrefs), usingPrefs);
+    const prefEl = page.locator(W <= 520 ? '.find-bar2-sub #find-bar-prefs:text-is("Your preferences")' : '.find-count .find-prefs:text-is("Your preferences")');
+    T.check('Find shows "Your preferences" (filtered by prefs)', (await prefEl.count()) === 1 && (await page.evaluate(() => find_isPrefs(find_getFilters(store.get()), store.get().profile))), usingPrefs.replace(/\n/g, ' | '));
     // Skip setup path
     T.check('console errors', errors.length === 0, errors.join(' | '));
   } catch (e) { T.check('exception', false, e.message.split('\n')[0]); }

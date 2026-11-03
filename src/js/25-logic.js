@@ -69,7 +69,11 @@ function computeTasks(s = store.get()) {
       }    }
   }
   out.sort((x, y) => x.pri - y.pri);
-  return out;
+  // One row per application (the most urgent), grouped for Today.
+  const seen = new Set(); const one = [];
+  for (const tk of out) { if (seen.has(tk.app.id)) continue; seen.add(tk.app.id); one.push(tk); }
+  for (const tk of one) tk.group = tk.pri <= 1 ? "today" : ["outcome", "follow", "ghost", "nextround", "removed", "confirm", "thanks"].includes(tk.kind) ? "quick" : "later";
+  return one;
 }
 function dismissTask(key, days = 365) { store.set((s) => ({ ...s, dismissed: { ...s.dismissed, [key]: now() + days * DAY } })); }
 
@@ -77,7 +81,7 @@ function dismissTask(key, days = 365) { store.set((s) => ({ ...s, dismissed: { .
 function computeStats(s = store.get(), apps = Apps.list(s)) {
   const applied = apps.filter((a) => a.stage !== "saved" && a.appliedAt);
   const replied = applied.filter((a) => a.lastReplyAt || ["screen", "interview", "offer", "rejected"].includes(a.stage));
-  const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).length || a.events.some((e) => e.to === "interview"));
+  const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).some((r) => r.at && r.at <= now() && r.type !== "assessment") || a.events.some((e) => e.to === "interview"));
   const offers = applied.filter((a) => a.stage === "offer" || a.events.some((e) => e.to === "offer"));
   const replyDays = replied.filter((a) => !(a.source === "import" && firstReplyAt(a) && a.appliedAt && Math.abs(firstReplyAt(a) - a.appliedAt) < DAY)).map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
   const median = (arr) => { if (!arr.length) return null; const v = [...arr].sort((a, b) => a - b); const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
@@ -147,5 +151,5 @@ function followUpTemplate(a, profile) {
 }
 function thankYouTemplate(a, r, profile) {
   const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me today about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }

@@ -132,8 +132,8 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     const nr = await page.evaluate(() => {
       const d = (n) => Date.now() - n * 864e5, st = store.get().settings;
       const mid = Math.max(st.followUpDays, st.ghostDays) + 1, late = st.ghostDays * 2 + 1;
-      const a1 = Apps.create({ company: 'Midway Screen Co', title: 'SWE Intern', stage: 'screen', appliedAt: d(mid), createdAt: d(mid), lastActivityAt: d(mid) });
-      const a2 = Apps.create({ company: 'Long Quiet Co', title: 'SWE Intern', stage: 'interview', appliedAt: d(late), createdAt: d(late), lastActivityAt: d(late) });
+      const a1 = Apps.create({ company: 'Midway Screen Co', title: 'SWE Intern', stage: 'screen', appliedAt: d(mid), createdAt: d(mid), lastActivityAt: d(mid), lastReplyAt: d(mid) });
+      const a2 = Apps.create({ company: 'Long Quiet Co', title: 'SWE Intern', stage: 'interview', appliedAt: d(late), createdAt: d(late), lastActivityAt: d(late), lastReplyAt: d(late) });
       ui.set({ toasts: [] });
       const ts = computeTasks(); const k = (id) => ts.filter((t) => t.app.id === id).map((t) => `${t.kind}:${t.title}`);
       return { mid: k(a1.id), late: k(a2.id), lateDays: late };

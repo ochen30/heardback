@@ -247,7 +247,7 @@ function parseEmail(raw) {
   }
   let roundType = null;
   if (kind === "screen") roundType = "recruiter";
-  else if (kind === "interview") roundType = /technical|coding|hackerrank|codesignal|leetcode|system design/i.test(text) ? "technical" : /behavioral/i.test(text) ? "behavioral" : /case/i.test(text) ? "case" : /onsite|final|superday/i.test(text) ? "onsite" : "other";
+  else if (kind === "interview") roundType = /hackerrank|codesignal|codility|online assessment|\bOA\b|take-home|assessment link/i.test(text) ? "assessment" : /technical|coding|leetcode|system design/i.test(text) ? "technical" : /behavioral/i.test(text) ? "behavioral" : /case/i.test(text) ? "case" : /onsite|final|superday/i.test(text) ? "onsite" : "other";
 
   const next = { confirmation: "Wait for a reply. Follow up in a week if you hear nothing.", screen: "Reply with your availability and prep a 60-second intro.", interview: "Confirm the time and start prep for this round.", rejection: "Log it and move on. Ask for feedback if you had interviews.", offer: "Ask for the offer in writing and the decision deadline.", other: "Review and decide whether anything changed." }[kind];
   return { kind, company, title, at, interviewAt, roundType, next, confidence: (company ? 1 : 0) + (title ? 1 : 0) + (kind !== "other" ? 1 : 0) };
