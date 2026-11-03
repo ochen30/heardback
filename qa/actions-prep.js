@@ -104,6 +104,7 @@ module.exports = {
     await page.locator('textarea[id^="prep-notes-"]').scrollIntoViewIfNeeded();
   },
   async prepPractice(page) {
+    await resetMock(page); // a finished mock (mockEnd) leaves the workspace mid-flow; start clean so chaining works
     await page.click('#prep-practice'); await wait(page);
     await page.click('#prep-timer-toggle'); await wait(page, 2200);
     await page.fill('#prep-outline', 'Clarify input size, then BFS from the start with a visited set. O(rows*cols).');

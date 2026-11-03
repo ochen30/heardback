@@ -635,6 +635,15 @@ const actions = {
     const txt = await page.evaluate(() => document.body.innerText);
     assert(!/[A-Za-z]'[A-Za-z]/.test(txt), 'no straight apostrophes in visible UI text');
   },
+  // UX B3: drawer header + Last reply follow the editable applied date, not createdAt or stage events
+  async appliedEdit(page) {
+    await page.evaluate(() => { const a = Apps.create({ company: 'Stripe', title: 'Software Engineer Intern', stage: 'applied', appliedAt: Date.now() }); Apps.update(a.id, { appliedAt: new Date(2026, 9, 1, 12).getTime() }); openApp(a.id); });
+    await wait(page, 300);
+    const head = await page.locator('.drawer .pl-stage-line').innerText();
+    assert(/since Oct 1/.test(head), `header reads the applied date ("${head.split('\n')[0]}")`);
+    const kv = await page.locator('.drawer .pl-kv').innerText();
+    assert(/No reply in \d{2} days/.test(kv) && !/No reply in 0 days/.test(kv), 'Last reply counts days since the applied date');
+  },
   async scrollBoard(page) { await page.evaluate(() => document.querySelector('.pl-board').scrollBy({ left: 300, behavior: 'instant' })); await wait(page, 300); },
 };
 // Every action starts from a clean board (no overlays left from a previous action).

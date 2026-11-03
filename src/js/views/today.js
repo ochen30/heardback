@@ -25,14 +25,17 @@ function today_undismiss(key, prev) {
   store.set((s) => { const d = { ...s.dismissed }; if (prev) d[key] = prev; else delete d[key]; return { ...s, dismissed: d }; });
 }
 
-/* Rounds in the next 7 days (anything starting less than an hour ago still counts as upcoming). */
+/* The next scheduled rounds, whatever the date (up to 5; anything starting less than an hour ago still
+   counts as upcoming). `week` counts the ones in the next 7 days, for the greeting line. */
 function today_upcoming(apps) {
   const t = now(), end = fmt.startOfDay(t) + 7 * DAY;
-  const items = [];
+  let items = [];
   for (const a of apps) for (const r of a.rounds || []) {
-    if (r.at && r.at >= t - 3600000 && r.at < end && r.outcome !== "cancelled") items.push({ a, r });
+    if (r.at && r.at >= t - 3600000 && r.outcome !== "cancelled" && !["rejected", "ghosted"].includes(a.stage)) items.push({ a, r });
   }
   items.sort((x, y) => x.r.at - y.r.at);
+  const total = items.length, week = items.filter((x) => x.r.at < end).length;
+  items = items.slice(0, 5);
   const groups = [];
   for (const it of items) {
     const k = fmt.startOfDay(it.r.at);
@@ -40,7 +43,7 @@ function today_upcoming(apps) {
     if (!g || g.day !== k) { g = { day: k, label: today_dayLabel(it.r.at), items: [] }; groups.push(g); }
     g.items.push(it);
   }
-  return { items, groups };
+  return { items, groups, total, week };
 }
 
 /* Run a task's primary action. */
@@ -57,6 +60,10 @@ function today_runTask(tk) {
   }
   else if (tk.kind === "ghost") Apps.move(a.id, "ghosted");
   else if (tk.kind === "outcome") openApp(a.id, "rounds");
+  else if (tk.kind === "confirm") {
+    if (MODALS.draft) openModal("draft", { appId: a.id, roundId: tk.round?.id, kind: "confirm" });
+    else openApp(a.id, "rounds");
+  }
   else openApp(a.id);
 }
 
@@ -153,7 +160,7 @@ function today_TaskRow({ tk, first }) {
   </div>`;
 }
 
-function today_NeedsYou({ tasks, fresh }) {
+function today_NeedsYou({ tasks, fresh, next }) {
   const [all, setAll] = useState(false);
   const shown = all ? tasks : tasks.slice(0, 5);
   return html`<section class="card" aria-labelledby="td-needs-h">
@@ -164,13 +171,15 @@ function today_NeedsYou({ tasks, fresh }) {
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
-            <strong>${fresh ? "Nothing to do yet" : "You’re all caught up"}</strong>
+            <strong>${fresh ? "Nothing to do yet" : next ? "Nothing due before your next round" : "You’re all caught up"}</strong>
             <span class="muted td-small">${fresh
               ? "Follow-ups, interview prep and thank-you notes show up here once you track applications."
+              : next ? `${next.a.company} ${(ROUND[next.r.type]?.label || "interview").toLowerCase()}, ${fmt.date(next.r.at, { weekday: "short", month: "short", day: "numeric" })} at ${fmt.time(next.r.at)}. Prep reminders show up here the day before.`
               : "Nothing needs a reply, prep or follow-up right now."}</span>
           </div>
           ${fresh
             ? html`<${Btn} size="sm" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}>`
+            : next ? html`<${Btn} size="sm" icon="prep" onClick=${() => { today_setPrepFocus({ appId: next.a.id, roundId: next.r.id }); go("prep"); }}>Prep now</${Btn}>`
             : html`<${Btn} size="sm" icon="find" onClick=${() => go("find")}>Find new roles</${Btn}>`}
         </div>`}
   </section>`;
@@ -178,10 +187,10 @@ function today_NeedsYou({ tasks, fresh }) {
 
 function today_Upcoming({ up }) {
   return html`<section class="card" aria-labelledby="td-up-h">
-    <div class="card-head"><h2 id="td-up-h">Upcoming</h2>${up.items.length ? html`<span class="td-count num">${up.items.length}</span>` : null}</div>
+    <div class="card-head"><h2 id="td-up-h">Upcoming</h2>${up.total ? html`<span class="td-count num">${up.total}</span>` : null}</div>
     ${up.items.length
       ? html`<div class="td-up">${up.groups.map((g) => html`<div class="td-up-day" key=${g.day}>
-          <div class=${cx("td-up-label", g.label === "Today" && "is-today")}>${g.label}</div>
+          <div class=${cx("td-up-label", g.label === "Today" && "is-today")}>${g.label}${g.day >= fmt.startOfDay(now()) + 2 * DAY ? html`<span class="td-up-in"> · ${fmt.until(g.items[0].r.at)}</span>` : null}</div>
           <div class="list">${g.items.map(({ a, r }) => html`<button type="button" class="td-up-row" key=${r.id} onClick=${() => openApp(a.id, "rounds")}>
             <span class="td-up-time num">${fmt.time(r.at)}</span>
             <${Logo} name=${a.company} size="sm" />
@@ -195,7 +204,7 @@ function today_Upcoming({ up }) {
         </div>`)}</div>`
       : html`<div class="td-mini-empty">
           <${Icon} name="cal" cls="faint" />
-          <span class="muted td-small td-grow">No interviews in the next 7 days. Paste an invite email and the round shows up here.</span>
+          <span class="muted td-small td-grow">No interviews scheduled. Paste an invite email and the round shows up here.</span>
           <${Btn} size="sm" kind="ghost" icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
         </div>`}
   </section>`;
@@ -303,7 +312,7 @@ function today_Response({ st }) {
     <div class="card-head"><h2 id="td-resp-h">Response so far</h2><span class="spacer"></span><a href="#stats" class="td-link" onClick=${(e) => { e.preventDefault(); go("stats"); }}>Insights<${Icon} name="arrowR" size=${14} /></a></div>
     ${st.applied
       ? html`<div class="td-resp">
-          <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num">${st.replied} of ${st.applied} replied</span></div>
+          <div class="stat"><span class="stat-label">Response rate</span>${st.applied < 5 ? html`<span class="stat-value td-early">Too early to tell</span>` : html`<span class="stat-value">${fmt.pct(st.responseRate)}</span>`}<span class="stat-sub num">${st.replied} of ${st.applied} replied</span></div>
           <div class="stat"><span class="stat-label">First reply</span><span class="stat-value">${days == null ? "—" : html`${days < 10 && days % 1 ? days.toFixed(1) : Math.round(days)}<span class="td-unit">days</span>`}</span><span class="stat-sub num">${days == null ? "No replies yet" : `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}`}</span></div>
         </div>
         ${small ? html`<div class="td-card-foot faint td-small">Small sample. Rates settle after about 10 applications.</div>` : null}`
@@ -342,7 +351,8 @@ function today_View() {
   if (!apps.length) parts.push("Start with a few roles worth applying to.");
   else {
     parts.push(tasks.length ? `${tasks.length} ${tasks.length === 1 ? "thing needs" : "things need"} you today` : "Nothing needs you right now");
-    if (up.items.length) parts.push(pluralize(up.items.length, "interview") + " this week");
+    if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
+    else if (up.items.length) parts.push(`Next interview ${fmt.date(up.items[0].r.at, { weekday: "short", month: "short", day: "numeric" })}`);
     else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
   }
   return html`<div class="page td-page">
@@ -357,7 +367,7 @@ function today_View() {
     ${hasExamples(s) && s.settings.showExamples ? html`<${today_ExampleBanner} />` : null}
     <div class="split">
       <div class="stack td-col">
-        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} />
+        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
         <${today_NewForYou} jobs=${jobs} m=${m} />
       </div>

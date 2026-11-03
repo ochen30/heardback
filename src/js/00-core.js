@@ -293,7 +293,7 @@ function applyTheme(t) {
 /* ---------- Capabilities (design for absence) ---------- */
 const caps = { sample: null, db: null, user: null, downloads: null, mcp: null, ready: false };
 const capSubs = new Set();
-function useCaps() { const [v, setV] = useState({ ...caps }); useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); return () => capSubs.delete(f); }, []); return v; }
+function useCaps() { const [v, setV] = useState({ ...caps }); useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); f(); return () => capSubs.delete(f); }, []); return v; }
 async function initCaps() {
   const c = window.claude;
   if (!c || typeof c.use !== "function") { caps.ready = true; capSubs.forEach((f) => f()); return; }

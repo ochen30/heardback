@@ -76,7 +76,7 @@ const stages = (page, ids) => page.evaluate((ids) => ids.map((id) => Apps.get(id
     await clearToasts(page);
     // Mark ghosted
     for (const id of pick) await page.locator(`tr[data-row="${id}"] td.pl-chk-cell`).click();
-    await page.click('.pl-bulk button[aria-label="Mark ghosted"]'); await page.waitForTimeout(250);
+    await page.click('.pl-bulk button[aria-label="Mark as ghosted"]'); await page.waitForTimeout(250);
     st = await stages(page, pick);
     T.check('mark ghosted: all ghosted', st.every((s) => s === 'ghosted'), st.join(','));
     T.check('mark ghosted toast', /ghosted/i.test(await page.locator('.toast').first().innerText().catch(() => '')));

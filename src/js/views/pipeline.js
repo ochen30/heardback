@@ -31,6 +31,8 @@ function plStageAt(a, stage) {
   const ev = [...(a.events || [])].reverse().find((e) => e.kind === "stage" && e.to === stage);
   return ev ? ev.at : null;
 }
+/* Whole calendar days since ts (an applied date stored as noon yesterday is 1 day ago at 3 AM) */
+function plDaysSince(ts) { return Math.max(0, Math.round((fmt.startOfDay(now()) - fmt.startOfDay(ts)) / DAY)); }
 function plHref(u) { const x = (u || "").trim(); if (!x) return ""; return /^https?:\/\//i.test(x) ? x : `https://${x}`; }
 function plFromDate(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).getTime() : null; }
 function plFurthest(a) {
@@ -204,7 +206,8 @@ VIEWS.pipeline = function PipelineView() {
   const apps = n ? all.filter((a) => norm(`${a.company} ${a.title} ${a.location}`).includes(n)) : all;
   const active = all.filter((a) => ACTIVE_STAGES.includes(a.stage)).length;
   const offers = all.filter((a) => a.stage === "offer").length;
-  const sub = [pluralize(all.length, "application"), `${active} active`, offers ? pluralize(offers, "offer") : null].filter(Boolean).join(" · ");
+  const savedN = all.filter((a) => a.stage === "saved").length;
+  const sub = [`${all.length} tracked`, savedN ? `${savedN} saved` : null, `${active} active`, offers ? pluralize(offers, "offer") : null].filter(Boolean).join(" · ");
   const examples = hasExamples(s) && s.settings.showExamples;
   const closedOpen = plClosedOpen(s);
   /* Closed opened by a move folds back when you return to the page */
@@ -680,7 +683,8 @@ function PlStepper({ a }) {
   const cur = STAGE[a.stage].i;
   const far = plFurthest(a);
   const closed = PL_CLOSED.includes(a.stage);
-  const since = plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
+  /* Applied reads the editable applied date, so editing it updates the header */
+  const since = a.stage === "applied" && a.appliedAt ? a.appliedAt : plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
   return html`<div class="pl-stepper" role="group" aria-label="Stage">
     <div class="pl-steps">
       ${PL_MAIN.map((id, i) => {
@@ -740,7 +744,8 @@ function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.repl
 function PlOverview({ a, ns, settings, jobs, setTab }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${fmt.days(a.lastReplyAt) < 1 ? "Today" : `${pluralize(fmt.days(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
+  const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
+    : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
     thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
@@ -959,20 +964,28 @@ function PlNotes({ a }) {
 
 /* ---------- Draft modal (follow-up / thank-you) ----------
    openModal(kind, props) spreads props over {kind}, so a `kind` prop replaces the modal kind.
-   Supported: openModal("draft", {appId, roundId, mode: "follow"|"thanks"}) and, for callers that pass
-   {kind: "thanks"|"follow"}, the aliases MODALS.thanks / MODALS.follow below. */
-MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${(p.mode || p.kind) === "thanks" ? "thanks" : "follow"} />`;
+   Supported: openModal("draft", {appId, roundId, mode: "follow"|"thanks"|"confirm"}) and, for callers that pass
+   {kind: "thanks"|"follow"|"confirm"}, the aliases MODALS.thanks / MODALS.follow below.
+   "confirm" replies to an invite to confirm the round's time; Mark as sent sets round.confirmed = true. */
+MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${["thanks", "confirm"].includes(p.mode || p.kind) ? p.mode || p.kind : "follow"} />`;
 MODALS.thanks = (p) => html`<${PlDraft} ...${p} kind="thanks" />`;
 MODALS.follow = (p) => html`<${PlDraft} ...${p} kind="follow" />`;
 /* Template text with a real greeting and a complete subject line */
-function plDraftText(a, r, thanks, profile) {
+function plDraftText(a, r, thanks, profile, confirm) {
   const first = (s) => plFirstName(s).split(/\s+/)[0] || "";
+  if (confirm) {
+    const who = first(a.contacts?.[0]?.name) || first(r?.interviewers);
+    const label = (ROUND[r?.type]?.label || "interview").toLowerCase();
+    const when = r?.at ? `${fmt.date(r.at, { weekday: "long", month: "long", day: "numeric" })} at ${fmt.time(r.at)}` : "the proposed time";
+    return `Subject: Re: ${ROUND[r?.type]?.label || "Interview"}${a.title ? ` for ${a.title}` : ""}\n\nHi ${who || `${a.company} team`},\n\nThank you for the invitation. ${when[0].toUpperCase() + when.slice(1)} works for me, and I'm looking forward to the ${label}${r?.interviewers ? ` with ${r.interviewers}` : ""}.\n\nPlease let me know if there's anything I should prepare beforehand.\n\nBest,\n${profile.name || "[Your name]"}`;
+  }
   const who = first(thanks && r?.interviewers) || first(a.contacts?.[0]?.name);
   const greet = `Hi ${who || `${a.company} team`},`;
   let t = thanks ? thankYouTemplate(a, r ? { ...r, interviewers: "", reflection: "" } : r, profile) : followUpTemplate(a, profile);
   t = t.replace(/^Hi [^\n]*,$/m, greet);
   if (!thanks && a.title) t = t.replace(/^(Subject: Following up on my .+?)(?: application)?$/m, "$1 application");
   if (thanks) t = t.replace(/^Subject: .*$/m, `Subject: Thank you for your time${a.title ? ` · ${a.title}` : ""}`);
+  if (a.title && !/\b(role|position)$/i.test(a.title)) t = t.split(`about the ${a.title} at `).join(`about the ${a.title} role at `);
   return t;
 }
 function PlDraft({ appId, roundId, kind = "follow" }) {
@@ -980,8 +993,8 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
   const profile = useStore((s) => s.profile);
   const c = useCaps();
   const r = a && roundId ? (a.rounds || []).find((x) => x.id === roundId) : null;
-  const thanks = kind === "thanks";
-  const tpl = a ? plDraftText(a, r, thanks, profile) : "";
+  const thanks = kind === "thanks", confirm = kind === "confirm";
+  const tpl = a ? plDraftText(a, r, thanks, profile, confirm) : "";
   const [text, setText] = useState(tpl);
   const [busy, setBusy] = useState(false);
   const [ai, setAi] = useState(false);
@@ -1003,7 +1016,7 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
       r && `Interview round: ${ROUND[r.type]?.label || "interview"}${r.at ? " on " + fmt.dateY(r.at) : ""}${r.interviewers ? " with " + r.interviewers : ""}.`,
       r?.reflection && `The candidate's notes on how it went: ${r.reflection}`,
     ].filter(Boolean).join("\n");
-    const prompt = `Rewrite this ${thanks ? "thank-you email to send after a job interview" : "follow-up email about a job application that hasn't had a reply"}.
+    const prompt = `Rewrite this ${confirm ? "short reply confirming a scheduled job interview time" : thanks ? "thank-you email to send after a job interview" : "follow-up email about a job application that hasn't had a reply"}.
 Make it concise, specific, warm and not generic. Under 120 words including the subject line. Keep "Subject:" as the first line. Use only the facts below and in the draft; do not invent experience, projects, names or details. Keep "[Your name]" as the sign-off placeholder. Return only the email text, no commentary.
 
 Facts:
@@ -1025,17 +1038,25 @@ ${draft}
   };
   const stop = () => ctrl.current?.abort();
   const sent = () => {
-    if (thanks && r) { Apps.updateRound(a.id, r.id, { thanked: true }); Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "thanks", text: `Sent thank-you for ${ROUND[r.type]?.label || "interview"}` }] })); toast("Marked the thank-you as sent"); }
+    if (confirm && r) { Apps.updateRound(a.id, r.id, { confirmed: true }); Apps.addEvent(a.id, { kind: "note", text: `Confirmed the ${(ROUND[r.type]?.label || "interview").toLowerCase()} time` }); toast(`Marked the ${(ROUND[r.type]?.label || "interview").toLowerCase()} time as confirmed`); }
+    else if (confirm) { Apps.addEvent(a.id, { kind: "note", text: "Confirmed the interview time" }); toast("Marked the time as confirmed"); }
+    else if (thanks && r) { Apps.updateRound(a.id, r.id, { thanked: true }); Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "thanks", text: `Sent thank-you for ${ROUND[r.type]?.label || "interview"}` }] })); toast("Marked the thank-you as sent"); }
     else if (thanks) { Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "thanks", text: "Sent a thank-you note" }] })); toast("Marked the thank-you as sent"); }
     else { Apps.update(a.id, { followedUpAt: now() }); Apps.addEvent(a.id, { kind: "followup", text: "Followed up" }); toast(`Logged your follow-up to ${a.company}`); }
     closeModal();
   };
-  const title = thanks ? `Thank-you note · ${a.company}` : `Follow-up · ${a.company}`;
+  const title = confirm ? `Confirm the time · ${a.company}` : thanks ? `Thank-you note · ${a.company}` : `Follow-up · ${a.company}`;
+  /* "Open in email": a prefilled mailto when the application has a contact email */
+  const to = (a.contacts || []).map((x) => x.email).find((e) => e && /@/.test(e));
+  const subj = (text.match(/^Subject: *(.*)$/m) || [])[1] || "";
+  const body = text.replace(/^Subject:.*\n+/, "");
+  const mailto = to ? `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}` : null;
   return html`<${Modal} title=${title} onClose=${closeModal} size="lg" foot=${html`
     <${Btn} icon="copy" onClick=${() => copyText(text, "Draft copied")} disabled=${busy}>Copy</${Btn}>
+    ${mailto && !busy && html`<a class="btn" href=${mailto} target="_blank" rel="noopener" title=${`Opens your email app, addressed to ${to}`}><${Icon} name="mail" />Open in email</a>`}
     <${Btn} kind="primary" icon="check" onClick=${sent} disabled=${busy}>Mark as sent</${Btn}>`}>
     <div class="field">
-      <label for="pl-draft" class="sr">${thanks ? "Thank-you note" : "Follow-up email"}</label>
+      <label for="pl-draft" class="sr">${confirm ? "Reply confirming the time" : thanks ? "Thank-you note" : "Follow-up email"}</label>
       ${ai && !busy && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude. Review before sending.</span>`}
       <textarea id="pl-draft" class=${cx("textarea pl-draft", busy && "busy")} value=${text} readOnly=${busy} onInput=${(e) => setText(e.currentTarget.value)} aria-busy=${busy ? "true" : "false"}></textarea>
       <span class="hint">Send it from your inbox, then mark as sent.</span>

@@ -181,4 +181,28 @@ module.exports = {
     await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; const el = document.querySelector('.st-out-rows'); w.scrollTop = el.getBoundingClientRect().top + w.scrollTop - 200; });
     await page.waitForTimeout(200);
   },
+  // UX B2: a round 7+ days out still shows in Upcoming, and Today never says "caught up" while one exists
+  async upcomingFar(page) {
+    await page.evaluate(() => {
+      clearExamples();
+      const a = Apps.create({ company: 'Roku', title: 'Software Engineer Intern - AI Engineering', stage: 'screen', appliedAt: Date.now() - 86400000, contacts: [{ name: 'Megan Torres', role: 'Recruiter', email: 'mtorres@roku.example' }] });
+      Apps.addRound(a.id, { id: uid('r_'), type: 'recruiter', at: Date.now() + 7 * 86400000 + 10 * 3600000, interviewers: 'Megan Torres', outcome: 'pending' });
+    });
+    await page.waitForTimeout(300);
+    const up = await page.locator('section[aria-labelledby="td-up-h"]').innerText();
+    assert(/Roku/.test(up) && !/No interviews/.test(up), 'Upcoming lists a round 7+ days out');
+    const needs = await page.locator('section[aria-labelledby="td-needs-h"]').innerText();
+    assert(!/caught up/i.test(needs), 'Needs you does not say "caught up" while a round is coming');
+  },
+  async draftConfirm(page) {
+    await module.exports.upcomingFar(page);
+    await page.evaluate(() => { const a = Apps.list().find((x) => x.company === 'Roku'); openModal('draft', { appId: a.id, roundId: a.rounds[0].id, kind: 'confirm' }); });
+    await page.waitForTimeout(300);
+    const v = await page.inputValue('#pl-draft');
+    assert(/Hi Megan,/.test(v) && /works for me/.test(v), 'confirm draft greets the recruiter and confirms the time');
+    assert(await page.$('.modal a[href^="mailto:"]'), 'Open in email link is offered when a contact email exists');
+    await page.click('.modal .btn.primary'); await page.waitForTimeout(200);
+    const ok = await page.evaluate(() => Apps.list().find((x) => x.company === 'Roku').rounds[0].confirmed === true);
+    assert(ok, 'Mark as sent sets round.confirmed');
+  },
 };

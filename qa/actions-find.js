@@ -67,6 +67,19 @@ module.exports = {
   async coOpen(p) { await ready(p); await p.click('.find-cotable tbody tr'); await wait(p); },
   async coOpenMobile(p) { await ready(p); await p.click('.find-corow'); await wait(p); },
   async markApplied(p) { await ready(p); await p.click('.find-results .find-row'); await wait(p); await p.click('.drawer-foot button:has-text("Mark as applied")'); await wait(p); },
+  // onboarding draft survives a reload (SETUP=fresh)
+  async onbDraft(p) {
+    await p.click('.onb-card .chip:has-text("Internship")'); await p.click('.onb-card .chip:has-text("Software")');
+    await p.fill('#onb-name', 'Sam Lee'); await p.click('#onb-next'); await wait(p, 300);
+    await p.fill('#onb-res-text', 'Built a Flask API in Python. SQL and React.'); await wait(p, 600);
+    await p.reload(); await wait(p, 1200);
+    console.log('after reload', await p.evaluate(() => document.querySelector('#onb-title')?.textContent + ' | ' + (document.querySelector('#onb-res-text')?.value || '') + ' | ' + JSON.stringify(store.get().ui.onboardDraft?.d)));
+  },
+  async onbDraftFinish(p) {
+    await p.click('#onb-next'); await wait(p, 300); await p.click('#onb-finish'); await wait(p, 500);
+    console.log('draft after finish', await p.evaluate(() => JSON.stringify(store.get().ui.onboardDraft || null) + ' ' + JSON.stringify(store.get().profile.levels)));
+  },
+  async ghostToggle(p) { await ready(p); await p.click('.find-count button:has-text("Show them")'); await wait(p, 300); },
   async perf(p) {
     await ready(p);
     const t = await p.evaluate(async () => {

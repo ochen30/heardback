@@ -105,11 +105,19 @@ const PREP_ASK = {
 const PREP_CAT_KEY = { Software: "software", "Data & AI": "data", Product: "product", Quant: "quant", Hardware: "hardware" };
 const PREP_PRACTICE_TYPES = [{ id: "recruiter", label: "Recruiter" }, { id: "behavioral", label: "Behavioral" }, { id: "technical", label: "Technical" }, { id: "case", label: "Case" }];
 
+/* Caps that never miss the moment Claude connects: core's useCaps subscribes after the first paint, so a
+   connection that lands in between (reload or deep link to #prep) was lost. Re-read on subscribe. */
+function prep_useCaps() {
+  const [v, setV] = useState(() => ({ ...caps }));
+  useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); f(); return () => capSubs.delete(f); }, []);
+  return v;
+}
 function prepCatOf(app) {
   const job = app && app.jobId ? jobsStore.byId.get(app.jobId) : null;
   if (job && job.cat) return job.cat;
   const t = (app && app.title) || "";
   if (/quant|trad(ing|er)/i.test(t)) return "Quant";
+  if (/software|developer|\bswe\b|full[- ]?stack|front[- ]?end|back[- ]?end/i.test(t)) return "Software";
   if (/data|machine learning|\bml\b|\bai\b|analytic|scien/i.test(t)) return "Data & AI";
   if (/product manag|\bapm\b|\bpm\b|product analyst/i.test(t)) return "Product";
   if (/hardware|embedded|firmware|fpga|asic|electrical|silicon|robot|mechanical/i.test(t)) return "Hardware";
@@ -214,7 +222,7 @@ function prepSetOutline(k, v) {
 }
 
 function PrepPractice({ questions, ctx, onExit }) {
-  const c = useCaps();
+  const c = prep_useCaps();
   const [i, setI] = useState(0);
   const notes = useStore((s) => s.ui.prepPractice) || {};
   const [fb, setFb] = useState({});
@@ -289,7 +297,7 @@ function PrepNotes({ a, r }) {
 }
 
 function PrepTailored({ ctx, skills }) {
-  const c = useCaps();
+  const c = prep_useCaps();
   const [qs, setQs] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -657,7 +665,7 @@ function PrepMockScore({ card }) {
 function PrepWorkspace({ a, r }) {
   const resume = useStore((s) => s.profile.resume);
   const skills = useStore((s) => s.profile.skills);
-  const pc = useCaps();
+  const pc = prep_useCaps();
   const [practice, setPractice] = useState(false);
   const [mockPhase, setMockPhase] = useState("start");
   const [notesRev, setNotesRev] = useState(0);
@@ -716,6 +724,9 @@ function PrepWorkspace({ a, r }) {
 
 VIEWS.prep = function PrepView() {
   const s = useStore();
+  /* Re-render once job data (role type comes from the linked listing) and the Claude connection resolve */
+  const jobs = useJobs();
+  const pc = prep_useCaps();
   const { up, past } = useMemo(() => prepRounds(s), [s.apps, s.settings.showExamples]);
   const focus = s.ui.prepFocus;
   const all = [...up, ...past];
@@ -760,7 +771,7 @@ VIEWS.prep = function PrepView() {
           </button>
         </div>
       </aside>
-      ${sel?.practice ? html`<${PrepWorkspace} key="practice" />` : html`<${PrepWorkspace} key=${sel.r.id} a=${sel.a} r=${sel.r} />`}
+      ${sel?.practice ? html`<${PrepWorkspace} key="practice" />` : html`<${PrepWorkspace} key=${sel.r.id} a=${sel.a} r=${sel.r} jobsStatus=${jobs.status} ai=${!!pc.sample} />`}
     </div>
   </div>`;
 };

@@ -199,7 +199,7 @@ function OnbGroup({ title, hint, children, id }) {
 function OnbStepTargets({ d, set }) {
   const locs = d.locations;
   return html`<div class="card onb-card">
-    <${OnbGroup} id="onb-g-level" title="Level" hint="Pick one or both.">
+    <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-role" title="Roles" hint="Leave empty to see every role.">
@@ -231,7 +231,7 @@ function OnbStepMatches({ d, examples, setExamples }) {
           ? html`<div class="onb-count"><div class="skel" style="height:28px;width:120px"></div><div class="skel" style="height:12px;width:70%"></div></div><${Skeleton} rows=${5} />`
           : html`<div class="onb-count">
               <div class="row wrap" style="align-items:baseline;gap:10px"><span class="onb-big num">${fmt.num(list.length)}</span><span class="onb-big-label">${list.length === 1 ? "open role matches" : "open roles match"}</span></div>
-              <span class="hint">${onbSummary(d).map((x, i) => (i ? html` <span class="sep-item" key=${i}>· ${x}</span>` : html`<span key=${i}>${x}</span>`))}</span>
+              <${find_Meta} cls="hint onb-summary" parts=${onbSummary(d)} />
               ${list.length > 0 && html`<span class="hint num">${fmt.num(low)} of them show no ghost-job signals.</span>`}
             </div>
             ${list.length === 0
@@ -241,9 +241,9 @@ function OnbStepMatches({ d, examples, setExamples }) {
                   <${Logo} name=${j.co} />
                   <div class="stack-sm" style="gap:2px">
                     <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-                    <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+                    <${find_Meta} cls="job-meta find-row-meta" parts=${[j.co, j.r && !(j.l || []).length ? "Remote" : find_locText(j)]} />
                   </div>
-                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", find_fitHi(f.score, j) && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
             <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
@@ -261,21 +261,41 @@ const ONB_STEPS = [
   { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first." },
 ];
 
+/* Draft of the choices so far, kept in store.ui.onboardDraft so a reload resumes at the same step. */
+function onbReadDraft() {
+  const x = store.get().ui?.onboardDraft;
+  if (!x || typeof x !== "object" || !x.d || !x.res) return null;
+  return { step: Math.min(2, Math.max(0, x.step | 0)), d: x.d, res: { text: x.res.text || "", added: x.res.added || [], removed: x.res.removed || [] }, examples: !!x.examples };
+}
+const onbSaveDraft = (draft) => store.set((s) => ({ ...s, ui: { ...s.ui, onboardDraft: draft } }));
+
 VIEWS.__onboarding = function Onboarding() {
   const start = useMemo(() => store.get().profile, []);
-  const [step, setStep] = useState(0);
-  const [d, setD] = useState(() => ({
-    levels: start.levels?.length ? start.levels : ["intern", "newgrad"], roles: start.roles || [], locations: start.locations || [],
+  const saved = useMemo(onbReadDraft, []);
+  const [step, setStep] = useState(saved ? saved.step : 0);
+  const [d, setD] = useState(() => saved ? { ...saved.d } : ({
+    // no level pre-picked: empty means both, like Roles and Locations
+    levels: !start.onboarded && (start.levels || []).length === LEVELS.length ? [] : start.levels || [], roles: start.roles || [], locations: start.locations || [],
     remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "",
   }));
-  const [res, setRes] = useState(() => onbEditorInit(start));
-  const [examples, setExamples] = useState(false);
+  const [res, setRes] = useState(() => (saved ? saved.res : onbEditorInit(start)));
+  const [examples, setExamples] = useState(saved ? saved.examples : false);
+  // save as the user goes (debounced, since the resume text can be long)
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; } // nothing chosen yet: no draft, no "picking up" line
+    const t = setTimeout(() => onbSaveDraft({ step, d, res, examples, at: Date.now() }), 300);
+    return () => clearTimeout(t);
+  }, [step, d, res, examples]);
   const top = useRef(null);
   const set = (patch) => setD((x) => ({ ...x, ...patch }));
   const draft = useMemo(() => ({ ...d, skills: onbEditorSkills(res) }), [d, res]);
   useEffect(() => { top.current?.scrollTo?.({ top: 0 }); const h = document.getElementById("onb-title"); h && h.focus({ preventScroll: true }); }, [step]);
   const commit = (done) => {
-    store.set((s) => ({ ...s, profile: { ...s.profile, ...d, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } }));
+    store.set((s) => {
+      const { onboardDraft, ...ui } = s.ui || {};
+      return { ...s, ui: done ? ui : s.ui, profile: { ...s.profile, ...d, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } };
+    });
   };
   const finish = () => {
     commit(true);
@@ -291,7 +311,8 @@ VIEWS.__onboarding = function Onboarding() {
         <span class="spacer"></span>
         <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
       </header>
-      ${step === 0 && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
+      ${saved && html`<p class="onb-resumed" role="status"><${Icon} name="check" size=${14} />Picking up where you left off.</p>`}
+      ${step === 0 && !saved && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
       ${step === 0 && typeof storage !== "undefined" && storage.corrupt && html`<div class="callout wait onb-corrupt" role="alert"><${Icon} name="alert" />
         <span class="onb-corrupt-text">Your saved data couldn’t be read, so setup started over. A copy was kept in this browser. If you exported a backup, restore it now.</span>
         <label class="btn sm onb-restore"><${Icon} name="upload" />Restore from backup<input id="onb-restore" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; if (typeof pfImportFile === "function") pfImportFile(f); }} /></label>

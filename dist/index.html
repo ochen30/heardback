@@ -855,6 +855,16 @@ a.find-link { cursor: pointer; }
 .find-results-tight .find-g-l { white-space: nowrap; }
 .find-results-tight .find-row-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 @container (max-width: 640px) { .find-results-tight .find-g-l { display: none; } }
+/* ghost switch leads the filters: the product's headline promise sits above the fold */
+.find-ghost-group .switch { align-self: flex-start; }
+.find-ghost-group .hint { line-height: 1.4; }
+/* onboarding bits that reuse the Find meta pattern */
+.meta-list.job-meta { gap: 0 var(--ml-dot); }
+.onb-summary { color: var(--fg-2); }
+.onb-resumed { display: inline-flex; align-items: center; gap: 6px; margin-top: -12px; font-size: var(--fs-sm); color: var(--fg-2); }
+.onb-resumed .ico { color: var(--ok); }
+.meta-list > .find-ghost-note { white-space: normal; }
+.find-fgroups:focus, .find-fgroups:focus-visible { outline: none; box-shadow: none; }
 
 /* ===== Pipeline ===== */
 .pl-page.wide { max-width: 1680px; }
@@ -1062,6 +1072,8 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 .pl-inline .ico { flex: none; color: var(--fg-3); opacity: 0; transition: opacity var(--t-fast); }
 .pl-inline:hover { background: var(--surface-2); }
 .pl-inline:hover .ico, .pl-inline:focus-visible .ico { opacity: 1; }
+#pl-applied-v .ico { opacity: 1; }
+@media (hover: none) { .pl-inline .ico { opacity: 1; } }
 .pl-inline.is-empty { color: var(--fg-3); }
 .pl-inline-wrap { min-width: 0; width: 100%; }
 .pl-inline-input { width: 100%; height: 34px; }
@@ -1884,6 +1896,8 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .td-page .card-head h2, .st-page .card-head h2 { white-space: nowrap; }
 @media (max-width: 640px) { .card-head .td-link { min-height: 44px; margin: -8px 0; } }
 @media (max-width: 860px) { .st-page .page-head { align-items: center; } .st-page .page-head p { margin-top: 0; } }
+.td-up-in { font-weight: 400; }
+.stat-value.td-early { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); letter-spacing: 0; line-height: 1.3; padding: 6px 0 4px; }
 
 </style>
 <div id="app"><div style="display:grid;place-items:center;height:100vh;color:#6b7482;font:14px system-ui">Loading Heardback…</div></div>
@@ -2187,7 +2201,7 @@ function applyTheme(t) {
 /* ---------- Capabilities (design for absence) ---------- */
 const caps = { sample: null, db: null, user: null, downloads: null, mcp: null, ready: false };
 const capSubs = new Set();
-function useCaps() { const [v, setV] = useState({ ...caps }); useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); return () => capSubs.delete(f); }, []); return v; }
+function useCaps() { const [v, setV] = useState({ ...caps }); useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); f(); return () => capSubs.delete(f); }, []); return v; }
 async function initCaps() {
   const c = window.claude;
   if (!c || typeof c.use !== "function") { caps.ready = true; capSubs.forEach((f) => f()); return; }
@@ -3120,7 +3134,7 @@ const FIND_DEG = { BS: "Bachelor’s", MS: "Master’s", PhD: "PhD", AS: "Associ
 const FIND_LV = { intern: "Internship", newgrad: "New grad" };
 
 /* ---------- filter state ---------- */
-const find_blank = () => ({ lv: [], roles: [], locs: [], posted: "any", visa: "any", hideGhost: false });
+const find_blank = () => ({ lv: [], roles: [], locs: [], posted: "any", visa: "any" });
 function find_prefFilters(p) {
   const known = (id) => LOC_OPTIONS.some((o) => o.id === id);
   const locs = (p.locations || []).filter(known);
@@ -3128,14 +3142,30 @@ function find_prefFilters(p) {
   return { ...find_blank(), lv: [...(p.levels || [])], roles: [...(p.roles || [])], locs };
 }
 const find_hasPrefs = (p) => !!((p.roles || []).length || (p.locations || []).filter((id) => LOC_OPTIONS.some((o) => o.id === id)).length || ((p.levels || []).length === 1));
+/* "Hide strong ghost signals" is its own setting (store.ui.findHideGhost), on until the user turns it off,
+   so "Clear filters", "Show all" and "Use my preferences" never quietly flip it. */
+const find_hideGhostOn = (s) => s.ui.findHideGhost !== false;
 const find_pfC = { p: null, f: null };
-function find_getFilters(s) {
+const find_fC = { base: null, hg: null, f: null };
+function find_baseFilters(s) {
   if (s.ui.findFilters) return s.ui.findFilters;
   if (find_pfC.p !== s.profile) { find_pfC.p = s.profile; find_pfC.f = find_prefFilters(s.profile); }
   return find_pfC.f;
 }
+function find_getFilters(s) {
+  const base = find_baseFilters(s), hg = find_hideGhostOn(s);
+  if (find_fC.base !== base || find_fC.hg !== hg) Object.assign(find_fC, { base, hg, f: { ...base, hideGhost: hg } });
+  return find_fC.f;
+}
 function find_setFilters(patch) {
-  store.set((s) => ({ ...s, ui: { ...s.ui, findFilters: patch === null ? null : { ...find_getFilters(s), ...patch } } }));
+  store.set((s) => {
+    const { hideGhost, ...rest } = patch || {};
+    const ui = { ...s.ui };
+    if (patch && "hideGhost" in patch) ui.findHideGhost = !!hideGhost;
+    if (patch === null) ui.findFilters = null;
+    else if (Object.keys(rest).length) { const { hideGhost: _h, ...b } = find_baseFilters(s); ui.findFilters = { ...b, ...rest }; }
+    return { ...s, ui };
+  });
 }
 function find_clearAll() { store.set((s) => ({ ...s, ui: { ...s.ui, findFilters: find_blank() } })); }
 const find_sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
@@ -3144,7 +3174,8 @@ function find_isPrefs(f, p) {
   return find_sameSet(f.lv, pf.lv) && find_sameSet(f.roles, pf.roles) && find_sameSet(f.locs, pf.locs);
 }
 function find_activeCount(f) {
-  return (f.lv.length ? 1 : 0) + (f.roles.length ? 1 : 0) + (f.locs.length ? 1 : 0) + (f.posted !== "any" ? 1 : 0) + (f.visa !== "any" ? 1 : 0) + (f.hideGhost ? 1 : 0);
+  // the ghost switch is a standing setting with its own line in the count bar, so it isn't counted here
+  return (f.lv.length ? 1 : 0) + (f.roles.length ? 1 : 0) + (f.locs.length ? 1 : 0) + (f.posted !== "any" ? 1 : 0) + (f.visa !== "any" ? 1 : 0);
 }
 const find_toggle = (arr, v) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 const find_state = { q: "" }; // mirrors the debounced search so the mobile filter modal can count matches
@@ -3175,24 +3206,28 @@ function find_run(jobs, f, q, facets) {
   const locMask = f.locs.reduce((b, id) => b | find_locBit(id), 0);
   const minP = f.posted === "any" ? 0 : f.posted === "since" ? (visit.since || 0) : now() - +f.posted * DAY;
   const res = [];
+  let ghostHidden = 0, ghostShown = 0;
   const cLv = {}, cRole = {}, cLoc = new Array(LOC_OPTIONS.length).fill(0);
   for (const j of jobs) {
     if (j.p < minP) continue;
     if (f.visa === "yes" && j.sp !== "yes") continue;
     if (f.visa === "nocit" && j.sp === "citizen") continue;
-    if (f.hideGhost && j.g >= 50) continue;
     if (words.length) { let ok = true; for (const w of words) if (!j._s.includes(w)) { ok = false; break; } if (!ok) continue; }
     const m = masks.get(j.id) || 0;
     const okLv = !f.lv.length || f.lv.includes(j.lvl);
     const okRole = !f.roles.length || f.roles.includes(j.cat);
     const okLoc = !locMask || (m & locMask) !== 0;
+    if (j.g >= 50) {
+      if (f.hideGhost) { if (okLv && okRole && okLoc) ghostHidden++; continue; }
+      if (okLv && okRole && okLoc) ghostShown++;
+    }
     if (okLv && okRole && okLoc) res.push(j);
     if (!facets) continue;
     if (okRole && okLoc) cLv[j.lvl] = (cLv[j.lvl] || 0) + 1;
     if (okLv && okLoc) cRole[j.cat] = (cRole[j.cat] || 0) + 1;
     if (okLv && okRole && m) for (let i = 0; i < cLoc.length; i++) if (m & (1 << i)) cLoc[i]++;
   }
-  return { res, cLv, cRole, cLoc };
+  return { res, cLv, cRole, cLoc, ghostHidden, ghostShown };
 }
 
 /* fit cache (one map per profile object) */
@@ -3354,7 +3389,7 @@ function find_FacetChip({ on, n, onClick, children }) {
   const dead = !on && !n;
   return html`<button type="button" class="chip find-chip" aria-pressed=${on ? "true" : "false"} disabled=${dead} title=${dead ? "No matches with the current search and filters" : null} onClick=${onClick}>${on && html`<${Icon} name="check" size=${13} />`}${children}<span class="find-chip-n">${fmt.num(n || 0)}</span></button>`;
 }
-function find_FilterControls({ px, f, counts, jobs }) {
+function find_FilterControls({ px, f, counts, jobs, inModal }) {
   const [moreLocs, setMoreLocs] = useState(false);
   const roles = CATS.concat(counts.cRole.Other ? ["Other"] : []);
   // Locations by count; the top few always show, plus anything selected.
@@ -3364,7 +3399,13 @@ function find_FilterControls({ px, f, counts, jobs }) {
   const rest = locs.slice(FIND_LOC_TOP);
   const shownLocs = moreLocs ? locs : top.concat(rest.filter((o) => f.locs.includes(o.id)));
   const hidden = locs.length - shownLocs.length;
-  return html`<div class="find-fgroups">
+  // in the sheet, focus lands on the top of the list (not the first radio further down, which scrolled it)
+  return html`<div class="find-fgroups" tabindex=${inModal ? "-1" : null} data-autofocus=${inModal ? "" : null}>
+    <div class="filter-group find-ghost-group">
+      <h4>Ghost signals</h4>
+      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong ghost signals" />
+      <span class="hint">${f.hideGhost ? "On by default. Listings with several warning signs are left out." : "Listings with several warning signs show a red marker."}</span>
+    </div>
     <div class="filter-group" role="group" aria-labelledby=${px + "-lv"}>
       <h4 id=${px + "-lv"}>Level</h4>
       <div class="chips">${LEVELS.map((l) => html`<${find_FacetChip} key=${l.id} on=${f.lv.includes(l.id)} n=${counts.cLv[l.id]} onClick=${() => find_setFilters({ lv: find_toggle(f.lv, l.id) })}>${l.label}</${find_FacetChip}>`)}</div>
@@ -3388,11 +3429,7 @@ function find_FilterControls({ px, f, counts, jobs }) {
       <div class="find-opts">${FIND_VISA.map((v) => html`<${find_CheckRow} key=${v.id} type="radio" name=${px + "-visa"} id=${`${px}-visa-${v.id}`} checked=${f.visa === v.id} onChange=${() => find_setFilters({ visa: v.id })} label=${v.label} />`)}</div>
       ${f.visa === "yes" && html`<span class="hint">Few listings say either way, so this hides most jobs.</span>`}
     </div>
-    <div class="filter-group">
-      <h4>Ghost signals</h4>
-      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong ghost signals" />
-    </div>
-    ${find_activeCount(f) > 0 && html`<div><${Btn} kind="ghost" size="sm" icon="x" onClick=${find_clearAll}>Clear filters</${Btn}></div>`}
+    ${!inModal && find_activeCount(f) > 0 && html`<div><${Btn} kind="ghost" size="sm" icon="x" onClick=${find_clearAll}>Clear filters</${Btn}></div>`}
   </div>`;
 }
 
@@ -3405,7 +3442,7 @@ MODALS.findFilters = () => {
     <${Btn} kind="ghost" onClick=${find_clearAll} disabled=${!find_activeCount(f)}>Clear filters</${Btn}>
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="primary" onClick=${closeModal}>Show ${fmt.num(counts.res.length)} ${counts.res.length === 1 ? "match" : "matches"}</${Btn}>`}>
-    <${find_FilterControls} px="find-m" f=${f} counts=${counts} jobs=${jobs.jobs} />
+    <${find_FilterControls} px="find-m" f=${f} counts=${counts} jobs=${jobs.jobs} inModal />
   </${Modal}>`;
 };
 
@@ -3535,6 +3572,8 @@ VIEWS.find = function FindView() {
             ${find_hasPrefs(profile) && (usingPrefs
               ? [html`<span class="find-prefs" key="up">Using your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
               : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
+            ${f.hideGhost && counts.ghostHidden > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">Hiding ${fmt.num(counts.ghostHidden)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: false })}>Show them</button></span>`]}
+            ${!f.hideGhost && counts.ghostShown > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">${fmt.num(counts.ghostShown)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: true })}>Hide them</button></span>`]}
           </div>
           <span class="spacer"></span>
           <div class="find-sort hide-sm"><${Seg} label="Sort by" value=${sort} options=${FIND_SORTS} onChange=${(v) => store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } }))} /></div>
@@ -4210,7 +4249,7 @@ function OnbGroup({ title, hint, children, id }) {
 function OnbStepTargets({ d, set }) {
   const locs = d.locations;
   return html`<div class="card onb-card">
-    <${OnbGroup} id="onb-g-level" title="Level" hint="Pick one or both.">
+    <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-role" title="Roles" hint="Leave empty to see every role.">
@@ -4242,7 +4281,7 @@ function OnbStepMatches({ d, examples, setExamples }) {
           ? html`<div class="onb-count"><div class="skel" style="height:28px;width:120px"></div><div class="skel" style="height:12px;width:70%"></div></div><${Skeleton} rows=${5} />`
           : html`<div class="onb-count">
               <div class="row wrap" style="align-items:baseline;gap:10px"><span class="onb-big num">${fmt.num(list.length)}</span><span class="onb-big-label">${list.length === 1 ? "open role matches" : "open roles match"}</span></div>
-              <span class="hint">${onbSummary(d).map((x, i) => (i ? html` <span class="sep-item" key=${i}>· ${x}</span>` : html`<span key=${i}>${x}</span>`))}</span>
+              <${find_Meta} cls="hint onb-summary" parts=${onbSummary(d)} />
               ${list.length > 0 && html`<span class="hint num">${fmt.num(low)} of them show no ghost-job signals.</span>`}
             </div>
             ${list.length === 0
@@ -4252,9 +4291,9 @@ function OnbStepMatches({ d, examples, setExamples }) {
                   <${Logo} name=${j.co} />
                   <div class="stack-sm" style="gap:2px">
                     <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-                    <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+                    <${find_Meta} cls="job-meta find-row-meta" parts=${[j.co, j.r && !(j.l || []).length ? "Remote" : find_locText(j)]} />
                   </div>
-                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", find_fitHi(f.score, j) && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
             <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
@@ -4272,21 +4311,41 @@ const ONB_STEPS = [
   { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first." },
 ];
 
+/* Draft of the choices so far, kept in store.ui.onboardDraft so a reload resumes at the same step. */
+function onbReadDraft() {
+  const x = store.get().ui?.onboardDraft;
+  if (!x || typeof x !== "object" || !x.d || !x.res) return null;
+  return { step: Math.min(2, Math.max(0, x.step | 0)), d: x.d, res: { text: x.res.text || "", added: x.res.added || [], removed: x.res.removed || [] }, examples: !!x.examples };
+}
+const onbSaveDraft = (draft) => store.set((s) => ({ ...s, ui: { ...s.ui, onboardDraft: draft } }));
+
 VIEWS.__onboarding = function Onboarding() {
   const start = useMemo(() => store.get().profile, []);
-  const [step, setStep] = useState(0);
-  const [d, setD] = useState(() => ({
-    levels: start.levels?.length ? start.levels : ["intern", "newgrad"], roles: start.roles || [], locations: start.locations || [],
+  const saved = useMemo(onbReadDraft, []);
+  const [step, setStep] = useState(saved ? saved.step : 0);
+  const [d, setD] = useState(() => saved ? { ...saved.d } : ({
+    // no level pre-picked: empty means both, like Roles and Locations
+    levels: !start.onboarded && (start.levels || []).length === LEVELS.length ? [] : start.levels || [], roles: start.roles || [], locations: start.locations || [],
     remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "",
   }));
-  const [res, setRes] = useState(() => onbEditorInit(start));
-  const [examples, setExamples] = useState(false);
+  const [res, setRes] = useState(() => (saved ? saved.res : onbEditorInit(start)));
+  const [examples, setExamples] = useState(saved ? saved.examples : false);
+  // save as the user goes (debounced, since the resume text can be long)
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; } // nothing chosen yet: no draft, no "picking up" line
+    const t = setTimeout(() => onbSaveDraft({ step, d, res, examples, at: Date.now() }), 300);
+    return () => clearTimeout(t);
+  }, [step, d, res, examples]);
   const top = useRef(null);
   const set = (patch) => setD((x) => ({ ...x, ...patch }));
   const draft = useMemo(() => ({ ...d, skills: onbEditorSkills(res) }), [d, res]);
   useEffect(() => { top.current?.scrollTo?.({ top: 0 }); const h = document.getElementById("onb-title"); h && h.focus({ preventScroll: true }); }, [step]);
   const commit = (done) => {
-    store.set((s) => ({ ...s, profile: { ...s.profile, ...d, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } }));
+    store.set((s) => {
+      const { onboardDraft, ...ui } = s.ui || {};
+      return { ...s, ui: done ? ui : s.ui, profile: { ...s.profile, ...d, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } };
+    });
   };
   const finish = () => {
     commit(true);
@@ -4302,7 +4361,8 @@ VIEWS.__onboarding = function Onboarding() {
         <span class="spacer"></span>
         <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
       </header>
-      ${step === 0 && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
+      ${saved && html`<p class="onb-resumed" role="status"><${Icon} name="check" size=${14} />Picking up where you left off.</p>`}
+      ${step === 0 && !saved && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
       ${step === 0 && typeof storage !== "undefined" && storage.corrupt && html`<div class="callout wait onb-corrupt" role="alert"><${Icon} name="alert" />
         <span class="onb-corrupt-text">Your saved data couldn’t be read, so setup started over. A copy was kept in this browser. If you exported a backup, restore it now.</span>
         <label class="btn sm onb-restore"><${Icon} name="upload" />Restore from backup<input id="onb-restore" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; if (typeof pfImportFile === "function") pfImportFile(f); }} /></label>
@@ -4364,6 +4424,8 @@ function plStageAt(a, stage) {
   const ev = [...(a.events || [])].reverse().find((e) => e.kind === "stage" && e.to === stage);
   return ev ? ev.at : null;
 }
+/* Whole calendar days since ts (an applied date stored as noon yesterday is 1 day ago at 3 AM) */
+function plDaysSince(ts) { return Math.max(0, Math.round((fmt.startOfDay(now()) - fmt.startOfDay(ts)) / DAY)); }
 function plHref(u) { const x = (u || "").trim(); if (!x) return ""; return /^https?:\/\//i.test(x) ? x : `https://${x}`; }
 function plFromDate(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).getTime() : null; }
 function plFurthest(a) {
@@ -4537,7 +4599,8 @@ VIEWS.pipeline = function PipelineView() {
   const apps = n ? all.filter((a) => norm(`${a.company} ${a.title} ${a.location}`).includes(n)) : all;
   const active = all.filter((a) => ACTIVE_STAGES.includes(a.stage)).length;
   const offers = all.filter((a) => a.stage === "offer").length;
-  const sub = [pluralize(all.length, "application"), `${active} active`, offers ? pluralize(offers, "offer") : null].filter(Boolean).join(" · ");
+  const savedN = all.filter((a) => a.stage === "saved").length;
+  const sub = [`${all.length} tracked`, savedN ? `${savedN} saved` : null, `${active} active`, offers ? pluralize(offers, "offer") : null].filter(Boolean).join(" · ");
   const examples = hasExamples(s) && s.settings.showExamples;
   const closedOpen = plClosedOpen(s);
   /* Closed opened by a move folds back when you return to the page */
@@ -5013,7 +5076,8 @@ function PlStepper({ a }) {
   const cur = STAGE[a.stage].i;
   const far = plFurthest(a);
   const closed = PL_CLOSED.includes(a.stage);
-  const since = plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
+  /* Applied reads the editable applied date, so editing it updates the header */
+  const since = a.stage === "applied" && a.appliedAt ? a.appliedAt : plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
   return html`<div class="pl-stepper" role="group" aria-label="Stage">
     <div class="pl-steps">
       ${PL_MAIN.map((id, i) => {
@@ -5073,7 +5137,8 @@ function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.repl
 function PlOverview({ a, ns, settings, jobs, setTab }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${fmt.days(a.lastReplyAt) < 1 ? "Today" : `${pluralize(fmt.days(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
+  const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
+    : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
     thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
@@ -5292,20 +5357,28 @@ function PlNotes({ a }) {
 
 /* ---------- Draft modal (follow-up / thank-you) ----------
    openModal(kind, props) spreads props over {kind}, so a `kind` prop replaces the modal kind.
-   Supported: openModal("draft", {appId, roundId, mode: "follow"|"thanks"}) and, for callers that pass
-   {kind: "thanks"|"follow"}, the aliases MODALS.thanks / MODALS.follow below. */
-MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${(p.mode || p.kind) === "thanks" ? "thanks" : "follow"} />`;
+   Supported: openModal("draft", {appId, roundId, mode: "follow"|"thanks"|"confirm"}) and, for callers that pass
+   {kind: "thanks"|"follow"|"confirm"}, the aliases MODALS.thanks / MODALS.follow below.
+   "confirm" replies to an invite to confirm the round's time; Mark as sent sets round.confirmed = true. */
+MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${["thanks", "confirm"].includes(p.mode || p.kind) ? p.mode || p.kind : "follow"} />`;
 MODALS.thanks = (p) => html`<${PlDraft} ...${p} kind="thanks" />`;
 MODALS.follow = (p) => html`<${PlDraft} ...${p} kind="follow" />`;
 /* Template text with a real greeting and a complete subject line */
-function plDraftText(a, r, thanks, profile) {
+function plDraftText(a, r, thanks, profile, confirm) {
   const first = (s) => plFirstName(s).split(/\s+/)[0] || "";
+  if (confirm) {
+    const who = first(a.contacts?.[0]?.name) || first(r?.interviewers);
+    const label = (ROUND[r?.type]?.label || "interview").toLowerCase();
+    const when = r?.at ? `${fmt.date(r.at, { weekday: "long", month: "long", day: "numeric" })} at ${fmt.time(r.at)}` : "the proposed time";
+    return `Subject: Re: ${ROUND[r?.type]?.label || "Interview"}${a.title ? ` for ${a.title}` : ""}\n\nHi ${who || `${a.company} team`},\n\nThank you for the invitation. ${when[0].toUpperCase() + when.slice(1)} works for me, and I'm looking forward to the ${label}${r?.interviewers ? ` with ${r.interviewers}` : ""}.\n\nPlease let me know if there's anything I should prepare beforehand.\n\nBest,\n${profile.name || "[Your name]"}`;
+  }
   const who = first(thanks && r?.interviewers) || first(a.contacts?.[0]?.name);
   const greet = `Hi ${who || `${a.company} team`},`;
   let t = thanks ? thankYouTemplate(a, r ? { ...r, interviewers: "", reflection: "" } : r, profile) : followUpTemplate(a, profile);
   t = t.replace(/^Hi [^\n]*,$/m, greet);
   if (!thanks && a.title) t = t.replace(/^(Subject: Following up on my .+?)(?: application)?$/m, "$1 application");
   if (thanks) t = t.replace(/^Subject: .*$/m, `Subject: Thank you for your time${a.title ? ` · ${a.title}` : ""}`);
+  if (a.title && !/\b(role|position)$/i.test(a.title)) t = t.split(`about the ${a.title} at `).join(`about the ${a.title} role at `);
   return t;
 }
 function PlDraft({ appId, roundId, kind = "follow" }) {
@@ -5313,8 +5386,8 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
   const profile = useStore((s) => s.profile);
   const c = useCaps();
   const r = a && roundId ? (a.rounds || []).find((x) => x.id === roundId) : null;
-  const thanks = kind === "thanks";
-  const tpl = a ? plDraftText(a, r, thanks, profile) : "";
+  const thanks = kind === "thanks", confirm = kind === "confirm";
+  const tpl = a ? plDraftText(a, r, thanks, profile, confirm) : "";
   const [text, setText] = useState(tpl);
   const [busy, setBusy] = useState(false);
   const [ai, setAi] = useState(false);
@@ -5336,7 +5409,7 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
       r && `Interview round: ${ROUND[r.type]?.label || "interview"}${r.at ? " on " + fmt.dateY(r.at) : ""}${r.interviewers ? " with " + r.interviewers : ""}.`,
       r?.reflection && `The candidate's notes on how it went: ${r.reflection}`,
     ].filter(Boolean).join("\n");
-    const prompt = `Rewrite this ${thanks ? "thank-you email to send after a job interview" : "follow-up email about a job application that hasn't had a reply"}.
+    const prompt = `Rewrite this ${confirm ? "short reply confirming a scheduled job interview time" : thanks ? "thank-you email to send after a job interview" : "follow-up email about a job application that hasn't had a reply"}.
 Make it concise, specific, warm and not generic. Under 120 words including the subject line. Keep "Subject:" as the first line. Use only the facts below and in the draft; do not invent experience, projects, names or details. Keep "[Your name]" as the sign-off placeholder. Return only the email text, no commentary.
 
 Facts:
@@ -5358,17 +5431,25 @@ ${draft}
   };
   const stop = () => ctrl.current?.abort();
   const sent = () => {
-    if (thanks && r) { Apps.updateRound(a.id, r.id, { thanked: true }); Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "thanks", text: `Sent thank-you for ${ROUND[r.type]?.label || "interview"}` }] })); toast("Marked the thank-you as sent"); }
+    if (confirm && r) { Apps.updateRound(a.id, r.id, { confirmed: true }); Apps.addEvent(a.id, { kind: "note", text: `Confirmed the ${(ROUND[r.type]?.label || "interview").toLowerCase()} time` }); toast(`Marked the ${(ROUND[r.type]?.label || "interview").toLowerCase()} time as confirmed`); }
+    else if (confirm) { Apps.addEvent(a.id, { kind: "note", text: "Confirmed the interview time" }); toast("Marked the time as confirmed"); }
+    else if (thanks && r) { Apps.updateRound(a.id, r.id, { thanked: true }); Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "thanks", text: `Sent thank-you for ${ROUND[r.type]?.label || "interview"}` }] })); toast("Marked the thank-you as sent"); }
     else if (thanks) { Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "thanks", text: "Sent a thank-you note" }] })); toast("Marked the thank-you as sent"); }
     else { Apps.update(a.id, { followedUpAt: now() }); Apps.addEvent(a.id, { kind: "followup", text: "Followed up" }); toast(`Logged your follow-up to ${a.company}`); }
     closeModal();
   };
-  const title = thanks ? `Thank-you note · ${a.company}` : `Follow-up · ${a.company}`;
+  const title = confirm ? `Confirm the time · ${a.company}` : thanks ? `Thank-you note · ${a.company}` : `Follow-up · ${a.company}`;
+  /* "Open in email": a prefilled mailto when the application has a contact email */
+  const to = (a.contacts || []).map((x) => x.email).find((e) => e && /@/.test(e));
+  const subj = (text.match(/^Subject: *(.*)$/m) || [])[1] || "";
+  const body = text.replace(/^Subject:.*\n+/, "");
+  const mailto = to ? `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}` : null;
   return html`<${Modal} title=${title} onClose=${closeModal} size="lg" foot=${html`
     <${Btn} icon="copy" onClick=${() => copyText(text, "Draft copied")} disabled=${busy}>Copy</${Btn}>
+    ${mailto && !busy && html`<a class="btn" href=${mailto} target="_blank" rel="noopener" title=${`Opens your email app, addressed to ${to}`}><${Icon} name="mail" />Open in email</a>`}
     <${Btn} kind="primary" icon="check" onClick=${sent} disabled=${busy}>Mark as sent</${Btn}>`}>
     <div class="field">
-      <label for="pl-draft" class="sr">${thanks ? "Thank-you note" : "Follow-up email"}</label>
+      <label for="pl-draft" class="sr">${confirm ? "Reply confirming the time" : thanks ? "Thank-you note" : "Follow-up email"}</label>
       ${ai && !busy && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude. Review before sending.</span>`}
       <textarea id="pl-draft" class=${cx("textarea pl-draft", busy && "busy")} value=${text} readOnly=${busy} onInput=${(e) => setText(e.currentTarget.value)} aria-busy=${busy ? "true" : "false"}></textarea>
       <span class="hint">Send it from your inbox, then mark as sent.</span>
@@ -5987,11 +6068,19 @@ const PREP_ASK = {
 const PREP_CAT_KEY = { Software: "software", "Data & AI": "data", Product: "product", Quant: "quant", Hardware: "hardware" };
 const PREP_PRACTICE_TYPES = [{ id: "recruiter", label: "Recruiter" }, { id: "behavioral", label: "Behavioral" }, { id: "technical", label: "Technical" }, { id: "case", label: "Case" }];
 
+/* Caps that never miss the moment Claude connects: core's useCaps subscribes after the first paint, so a
+   connection that lands in between (reload or deep link to #prep) was lost. Re-read on subscribe. */
+function prep_useCaps() {
+  const [v, setV] = useState(() => ({ ...caps }));
+  useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); f(); return () => capSubs.delete(f); }, []);
+  return v;
+}
 function prepCatOf(app) {
   const job = app && app.jobId ? jobsStore.byId.get(app.jobId) : null;
   if (job && job.cat) return job.cat;
   const t = (app && app.title) || "";
   if (/quant|trad(ing|er)/i.test(t)) return "Quant";
+  if (/software|developer|\bswe\b|full[- ]?stack|front[- ]?end|back[- ]?end/i.test(t)) return "Software";
   if (/data|machine learning|\bml\b|\bai\b|analytic|scien/i.test(t)) return "Data & AI";
   if (/product manag|\bapm\b|\bpm\b|product analyst/i.test(t)) return "Product";
   if (/hardware|embedded|firmware|fpga|asic|electrical|silicon|robot|mechanical/i.test(t)) return "Hardware";
@@ -6096,7 +6185,7 @@ function prepSetOutline(k, v) {
 }
 
 function PrepPractice({ questions, ctx, onExit }) {
-  const c = useCaps();
+  const c = prep_useCaps();
   const [i, setI] = useState(0);
   const notes = useStore((s) => s.ui.prepPractice) || {};
   const [fb, setFb] = useState({});
@@ -6171,7 +6260,7 @@ function PrepNotes({ a, r }) {
 }
 
 function PrepTailored({ ctx, skills }) {
-  const c = useCaps();
+  const c = prep_useCaps();
   const [qs, setQs] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -6539,7 +6628,7 @@ function PrepMockScore({ card }) {
 function PrepWorkspace({ a, r }) {
   const resume = useStore((s) => s.profile.resume);
   const skills = useStore((s) => s.profile.skills);
-  const pc = useCaps();
+  const pc = prep_useCaps();
   const [practice, setPractice] = useState(false);
   const [mockPhase, setMockPhase] = useState("start");
   const [notesRev, setNotesRev] = useState(0);
@@ -6598,6 +6687,9 @@ function PrepWorkspace({ a, r }) {
 
 VIEWS.prep = function PrepView() {
   const s = useStore();
+  /* Re-render once job data (role type comes from the linked listing) and the Claude connection resolve */
+  const jobs = useJobs();
+  const pc = prep_useCaps();
   const { up, past } = useMemo(() => prepRounds(s), [s.apps, s.settings.showExamples]);
   const focus = s.ui.prepFocus;
   const all = [...up, ...past];
@@ -6642,7 +6734,7 @@ VIEWS.prep = function PrepView() {
           </button>
         </div>
       </aside>
-      ${sel?.practice ? html`<${PrepWorkspace} key="practice" />` : html`<${PrepWorkspace} key=${sel.r.id} a=${sel.a} r=${sel.r} />`}
+      ${sel?.practice ? html`<${PrepWorkspace} key="practice" />` : html`<${PrepWorkspace} key=${sel.r.id} a=${sel.a} r=${sel.r} jobsStatus=${jobs.status} ai=${!!pc.sample} />`}
     </div>
   </div>`;
 };
@@ -6823,12 +6915,14 @@ function stats_WeeklyChart({ weeks }) {
 
 function stats_Kpis({ st, saved }) {
   const small = st.applied < 10;
+  /* Under 5 applications a rate is noise (one reply = 100%); show the counts, not a percentage */
+  const early = st.applied < 5;
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span>${today_meta([`${st.applied} sent`, `${saved} saved`, `${st.thisWeek} this week`], "stat-sub num")}</div>
-    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span>${today_meta([`${st.replied} of ${st.applied} replied`, smallTag], "stat-sub num")}</div>
-    <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
+    <div class="stat"><span class="stat-label">Tracked</span><span class="stat-value">${st.total}</span>${today_meta([`${st.applied} applied`, `${saved} saved`, `${st.thisWeek} this week`], "stat-sub num")}</div>
+    <div class="stat"><span class="stat-label">Response rate</span>${early ? html`<span class="stat-value td-early">Too early to tell</span>` : html`<span class="stat-value">${fmt.pct(st.responseRate)}</span>`}${today_meta([`${st.replied} of ${st.applied} replied`, !early && smallTag], "stat-sub num")}</div>
+    <div class="stat"><span class="stat-label">Interview rate</span>${early ? html`<span class="stat-value td-early">Too early to tell</span>` : html`<span class="stat-value">${fmt.pct(st.interviewRate)}</span>`}<span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
   </section>`;
 }
@@ -7002,14 +7096,17 @@ function today_undismiss(key, prev) {
   store.set((s) => { const d = { ...s.dismissed }; if (prev) d[key] = prev; else delete d[key]; return { ...s, dismissed: d }; });
 }
 
-/* Rounds in the next 7 days (anything starting less than an hour ago still counts as upcoming). */
+/* The next scheduled rounds, whatever the date (up to 5; anything starting less than an hour ago still
+   counts as upcoming). `week` counts the ones in the next 7 days, for the greeting line. */
 function today_upcoming(apps) {
   const t = now(), end = fmt.startOfDay(t) + 7 * DAY;
-  const items = [];
+  let items = [];
   for (const a of apps) for (const r of a.rounds || []) {
-    if (r.at && r.at >= t - 3600000 && r.at < end && r.outcome !== "cancelled") items.push({ a, r });
+    if (r.at && r.at >= t - 3600000 && r.outcome !== "cancelled" && !["rejected", "ghosted"].includes(a.stage)) items.push({ a, r });
   }
   items.sort((x, y) => x.r.at - y.r.at);
+  const total = items.length, week = items.filter((x) => x.r.at < end).length;
+  items = items.slice(0, 5);
   const groups = [];
   for (const it of items) {
     const k = fmt.startOfDay(it.r.at);
@@ -7017,7 +7114,7 @@ function today_upcoming(apps) {
     if (!g || g.day !== k) { g = { day: k, label: today_dayLabel(it.r.at), items: [] }; groups.push(g); }
     g.items.push(it);
   }
-  return { items, groups };
+  return { items, groups, total, week };
 }
 
 /* Run a task's primary action. */
@@ -7034,6 +7131,10 @@ function today_runTask(tk) {
   }
   else if (tk.kind === "ghost") Apps.move(a.id, "ghosted");
   else if (tk.kind === "outcome") openApp(a.id, "rounds");
+  else if (tk.kind === "confirm") {
+    if (MODALS.draft) openModal("draft", { appId: a.id, roundId: tk.round?.id, kind: "confirm" });
+    else openApp(a.id, "rounds");
+  }
   else openApp(a.id);
 }
 
@@ -7130,7 +7231,7 @@ function today_TaskRow({ tk, first }) {
   </div>`;
 }
 
-function today_NeedsYou({ tasks, fresh }) {
+function today_NeedsYou({ tasks, fresh, next }) {
   const [all, setAll] = useState(false);
   const shown = all ? tasks : tasks.slice(0, 5);
   return html`<section class="card" aria-labelledby="td-needs-h">
@@ -7141,13 +7242,15 @@ function today_NeedsYou({ tasks, fresh }) {
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
-            <strong>${fresh ? "Nothing to do yet" : "You’re all caught up"}</strong>
+            <strong>${fresh ? "Nothing to do yet" : next ? "Nothing due before your next round" : "You’re all caught up"}</strong>
             <span class="muted td-small">${fresh
               ? "Follow-ups, interview prep and thank-you notes show up here once you track applications."
+              : next ? `${next.a.company} ${(ROUND[next.r.type]?.label || "interview").toLowerCase()}, ${fmt.date(next.r.at, { weekday: "short", month: "short", day: "numeric" })} at ${fmt.time(next.r.at)}. Prep reminders show up here the day before.`
               : "Nothing needs a reply, prep or follow-up right now."}</span>
           </div>
           ${fresh
             ? html`<${Btn} size="sm" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}>`
+            : next ? html`<${Btn} size="sm" icon="prep" onClick=${() => { today_setPrepFocus({ appId: next.a.id, roundId: next.r.id }); go("prep"); }}>Prep now</${Btn}>`
             : html`<${Btn} size="sm" icon="find" onClick=${() => go("find")}>Find new roles</${Btn}>`}
         </div>`}
   </section>`;
@@ -7155,10 +7258,10 @@ function today_NeedsYou({ tasks, fresh }) {
 
 function today_Upcoming({ up }) {
   return html`<section class="card" aria-labelledby="td-up-h">
-    <div class="card-head"><h2 id="td-up-h">Upcoming</h2>${up.items.length ? html`<span class="td-count num">${up.items.length}</span>` : null}</div>
+    <div class="card-head"><h2 id="td-up-h">Upcoming</h2>${up.total ? html`<span class="td-count num">${up.total}</span>` : null}</div>
     ${up.items.length
       ? html`<div class="td-up">${up.groups.map((g) => html`<div class="td-up-day" key=${g.day}>
-          <div class=${cx("td-up-label", g.label === "Today" && "is-today")}>${g.label}</div>
+          <div class=${cx("td-up-label", g.label === "Today" && "is-today")}>${g.label}${g.day >= fmt.startOfDay(now()) + 2 * DAY ? html`<span class="td-up-in"> · ${fmt.until(g.items[0].r.at)}</span>` : null}</div>
           <div class="list">${g.items.map(({ a, r }) => html`<button type="button" class="td-up-row" key=${r.id} onClick=${() => openApp(a.id, "rounds")}>
             <span class="td-up-time num">${fmt.time(r.at)}</span>
             <${Logo} name=${a.company} size="sm" />
@@ -7172,7 +7275,7 @@ function today_Upcoming({ up }) {
         </div>`)}</div>`
       : html`<div class="td-mini-empty">
           <${Icon} name="cal" cls="faint" />
-          <span class="muted td-small td-grow">No interviews in the next 7 days. Paste an invite email and the round shows up here.</span>
+          <span class="muted td-small td-grow">No interviews scheduled. Paste an invite email and the round shows up here.</span>
           <${Btn} size="sm" kind="ghost" icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
         </div>`}
   </section>`;
@@ -7280,7 +7383,7 @@ function today_Response({ st }) {
     <div class="card-head"><h2 id="td-resp-h">Response so far</h2><span class="spacer"></span><a href="#stats" class="td-link" onClick=${(e) => { e.preventDefault(); go("stats"); }}>Insights<${Icon} name="arrowR" size=${14} /></a></div>
     ${st.applied
       ? html`<div class="td-resp">
-          <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num">${st.replied} of ${st.applied} replied</span></div>
+          <div class="stat"><span class="stat-label">Response rate</span>${st.applied < 5 ? html`<span class="stat-value td-early">Too early to tell</span>` : html`<span class="stat-value">${fmt.pct(st.responseRate)}</span>`}<span class="stat-sub num">${st.replied} of ${st.applied} replied</span></div>
           <div class="stat"><span class="stat-label">First reply</span><span class="stat-value">${days == null ? "—" : html`${days < 10 && days % 1 ? days.toFixed(1) : Math.round(days)}<span class="td-unit">days</span>`}</span><span class="stat-sub num">${days == null ? "No replies yet" : `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}`}</span></div>
         </div>
         ${small ? html`<div class="td-card-foot faint td-small">Small sample. Rates settle after about 10 applications.</div>` : null}`
@@ -7319,7 +7422,8 @@ function today_View() {
   if (!apps.length) parts.push("Start with a few roles worth applying to.");
   else {
     parts.push(tasks.length ? `${tasks.length} ${tasks.length === 1 ? "thing needs" : "things need"} you today` : "Nothing needs you right now");
-    if (up.items.length) parts.push(pluralize(up.items.length, "interview") + " this week");
+    if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
+    else if (up.items.length) parts.push(`Next interview ${fmt.date(up.items[0].r.at, { weekday: "short", month: "short", day: "numeric" })}`);
     else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
   }
   return html`<div class="page td-page">
@@ -7334,7 +7438,7 @@ function today_View() {
     ${hasExamples(s) && s.settings.showExamples ? html`<${today_ExampleBanner} />` : null}
     <div class="split">
       <div class="stack td-col">
-        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} />
+        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
         <${today_NewForYou} jobs=${jobs} m=${m} />
       </div>

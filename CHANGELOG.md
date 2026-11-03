@@ -91,3 +91,13 @@ Design review 4 scored v6 at 8.6/10 (from 8.1). QA round 2: 2,280 automated chec
 - Unreadable saved data now shows a notice with a Restore action on launch (not only in Settings).
 - Imported dates are validated to a sane range.
 - Job data refreshed (8,245 open roles).
+
+### 04:00 PT — v8 published (usability test + design pass 5)
+A fresh-eyes usability test (an agent playing a stressed CS student doing 8 real tasks) and design review 5 (8.9/10). Fixed:
+- **Silence is counted from the applied date** (and the last reply), so old applications correctly go stale and get "Mark as ghosted?" prompts. Editing the applied date updates the drawer header and "last reply" everywhere.
+- **Marking something applied says "applied today" with a Change date action.**
+- **Logged interviews always show in Upcoming** (not only within 7 days), and Today never says "caught up" while a round is scheduled. After logging an invite email, a **"Confirm your interview"** task appears.
+- **Strong ghost signals hidden by default** in Find, with an honest "Hiding 230 with strong ghost signals · Show them".
+- Onboarding keeps your choices if you reload mid-way; Prep re-renders correctly on reload or deep link.
+- Mobile: the + button offers "Add an application" or "Log an email".
+- Typography: no line ever starts with a "·" separator; Insights outcomes sum to 100%; consistent "Mark as ghosted" wording; Fit highlight only on clean top matches.

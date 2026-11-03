@@ -240,3 +240,13 @@ a.find-link { cursor: pointer; }
 .find-results-tight .find-g-l { white-space: nowrap; }
 .find-results-tight .find-row-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 @container (max-width: 640px) { .find-results-tight .find-g-l { display: none; } }
+/* ghost switch leads the filters: the product's headline promise sits above the fold */
+.find-ghost-group .switch { align-self: flex-start; }
+.find-ghost-group .hint { line-height: 1.4; }
+/* onboarding bits that reuse the Find meta pattern */
+.meta-list.job-meta { gap: 0 var(--ml-dot); }
+.onb-summary { color: var(--fg-2); }
+.onb-resumed { display: inline-flex; align-items: center; gap: 6px; margin-top: -12px; font-size: var(--fs-sm); color: var(--fg-2); }
+.onb-resumed .ico { color: var(--ok); }
+.meta-list > .find-ghost-note { white-space: normal; }
+.find-fgroups:focus, .find-fgroups:focus-visible { outline: none; box-shadow: none; }

@@ -173,12 +173,14 @@ function stats_WeeklyChart({ weeks }) {
 
 function stats_Kpis({ st, saved }) {
   const small = st.applied < 10;
+  /* Under 5 applications a rate is noise (one reply = 100%); show the counts, not a percentage */
+  const early = st.applied < 5;
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span>${today_meta([`${st.applied} sent`, `${saved} saved`, `${st.thisWeek} this week`], "stat-sub num")}</div>
-    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span>${today_meta([`${st.replied} of ${st.applied} replied`, smallTag], "stat-sub num")}</div>
-    <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
+    <div class="stat"><span class="stat-label">Tracked</span><span class="stat-value">${st.total}</span>${today_meta([`${st.applied} applied`, `${saved} saved`, `${st.thisWeek} this week`], "stat-sub num")}</div>
+    <div class="stat"><span class="stat-label">Response rate</span>${early ? html`<span class="stat-value td-early">Too early to tell</span>` : html`<span class="stat-value">${fmt.pct(st.responseRate)}</span>`}${today_meta([`${st.replied} of ${st.applied} replied`, !early && smallTag], "stat-sub num")}</div>
+    <div class="stat"><span class="stat-label">Interview rate</span>${early ? html`<span class="stat-value td-early">Too early to tell</span>` : html`<span class="stat-value">${fmt.pct(st.interviewRate)}</span>`}<span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
   </section>`;
 }

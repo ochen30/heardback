@@ -14,7 +14,7 @@ const FIND_DEG = { BS: "Bachelor’s", MS: "Master’s", PhD: "PhD", AS: "Associ
 const FIND_LV = { intern: "Internship", newgrad: "New grad" };
 
 /* ---------- filter state ---------- */
-const find_blank = () => ({ lv: [], roles: [], locs: [], posted: "any", visa: "any", hideGhost: false });
+const find_blank = () => ({ lv: [], roles: [], locs: [], posted: "any", visa: "any" });
 function find_prefFilters(p) {
   const known = (id) => LOC_OPTIONS.some((o) => o.id === id);
   const locs = (p.locations || []).filter(known);
@@ -22,14 +22,30 @@ function find_prefFilters(p) {
   return { ...find_blank(), lv: [...(p.levels || [])], roles: [...(p.roles || [])], locs };
 }
 const find_hasPrefs = (p) => !!((p.roles || []).length || (p.locations || []).filter((id) => LOC_OPTIONS.some((o) => o.id === id)).length || ((p.levels || []).length === 1));
+/* "Hide strong ghost signals" is its own setting (store.ui.findHideGhost), on until the user turns it off,
+   so "Clear filters", "Show all" and "Use my preferences" never quietly flip it. */
+const find_hideGhostOn = (s) => s.ui.findHideGhost !== false;
 const find_pfC = { p: null, f: null };
-function find_getFilters(s) {
+const find_fC = { base: null, hg: null, f: null };
+function find_baseFilters(s) {
   if (s.ui.findFilters) return s.ui.findFilters;
   if (find_pfC.p !== s.profile) { find_pfC.p = s.profile; find_pfC.f = find_prefFilters(s.profile); }
   return find_pfC.f;
 }
+function find_getFilters(s) {
+  const base = find_baseFilters(s), hg = find_hideGhostOn(s);
+  if (find_fC.base !== base || find_fC.hg !== hg) Object.assign(find_fC, { base, hg, f: { ...base, hideGhost: hg } });
+  return find_fC.f;
+}
 function find_setFilters(patch) {
-  store.set((s) => ({ ...s, ui: { ...s.ui, findFilters: patch === null ? null : { ...find_getFilters(s), ...patch } } }));
+  store.set((s) => {
+    const { hideGhost, ...rest } = patch || {};
+    const ui = { ...s.ui };
+    if (patch && "hideGhost" in patch) ui.findHideGhost = !!hideGhost;
+    if (patch === null) ui.findFilters = null;
+    else if (Object.keys(rest).length) { const { hideGhost: _h, ...b } = find_baseFilters(s); ui.findFilters = { ...b, ...rest }; }
+    return { ...s, ui };
+  });
 }
 function find_clearAll() { store.set((s) => ({ ...s, ui: { ...s.ui, findFilters: find_blank() } })); }
 const find_sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
@@ -38,7 +54,8 @@ function find_isPrefs(f, p) {
   return find_sameSet(f.lv, pf.lv) && find_sameSet(f.roles, pf.roles) && find_sameSet(f.locs, pf.locs);
 }
 function find_activeCount(f) {
-  return (f.lv.length ? 1 : 0) + (f.roles.length ? 1 : 0) + (f.locs.length ? 1 : 0) + (f.posted !== "any" ? 1 : 0) + (f.visa !== "any" ? 1 : 0) + (f.hideGhost ? 1 : 0);
+  // the ghost switch is a standing setting with its own line in the count bar, so it isn't counted here
+  return (f.lv.length ? 1 : 0) + (f.roles.length ? 1 : 0) + (f.locs.length ? 1 : 0) + (f.posted !== "any" ? 1 : 0) + (f.visa !== "any" ? 1 : 0);
 }
 const find_toggle = (arr, v) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 const find_state = { q: "" }; // mirrors the debounced search so the mobile filter modal can count matches
@@ -69,24 +86,28 @@ function find_run(jobs, f, q, facets) {
   const locMask = f.locs.reduce((b, id) => b | find_locBit(id), 0);
   const minP = f.posted === "any" ? 0 : f.posted === "since" ? (visit.since || 0) : now() - +f.posted * DAY;
   const res = [];
+  let ghostHidden = 0, ghostShown = 0;
   const cLv = {}, cRole = {}, cLoc = new Array(LOC_OPTIONS.length).fill(0);
   for (const j of jobs) {
     if (j.p < minP) continue;
     if (f.visa === "yes" && j.sp !== "yes") continue;
     if (f.visa === "nocit" && j.sp === "citizen") continue;
-    if (f.hideGhost && j.g >= 50) continue;
     if (words.length) { let ok = true; for (const w of words) if (!j._s.includes(w)) { ok = false; break; } if (!ok) continue; }
     const m = masks.get(j.id) || 0;
     const okLv = !f.lv.length || f.lv.includes(j.lvl);
     const okRole = !f.roles.length || f.roles.includes(j.cat);
     const okLoc = !locMask || (m & locMask) !== 0;
+    if (j.g >= 50) {
+      if (f.hideGhost) { if (okLv && okRole && okLoc) ghostHidden++; continue; }
+      if (okLv && okRole && okLoc) ghostShown++;
+    }
     if (okLv && okRole && okLoc) res.push(j);
     if (!facets) continue;
     if (okRole && okLoc) cLv[j.lvl] = (cLv[j.lvl] || 0) + 1;
     if (okLv && okLoc) cRole[j.cat] = (cRole[j.cat] || 0) + 1;
     if (okLv && okRole && m) for (let i = 0; i < cLoc.length; i++) if (m & (1 << i)) cLoc[i]++;
   }
-  return { res, cLv, cRole, cLoc };
+  return { res, cLv, cRole, cLoc, ghostHidden, ghostShown };
 }
 
 /* fit cache (one map per profile object) */
@@ -248,7 +269,7 @@ function find_FacetChip({ on, n, onClick, children }) {
   const dead = !on && !n;
   return html`<button type="button" class="chip find-chip" aria-pressed=${on ? "true" : "false"} disabled=${dead} title=${dead ? "No matches with the current search and filters" : null} onClick=${onClick}>${on && html`<${Icon} name="check" size=${13} />`}${children}<span class="find-chip-n">${fmt.num(n || 0)}</span></button>`;
 }
-function find_FilterControls({ px, f, counts, jobs }) {
+function find_FilterControls({ px, f, counts, jobs, inModal }) {
   const [moreLocs, setMoreLocs] = useState(false);
   const roles = CATS.concat(counts.cRole.Other ? ["Other"] : []);
   // Locations by count; the top few always show, plus anything selected.
@@ -258,7 +279,13 @@ function find_FilterControls({ px, f, counts, jobs }) {
   const rest = locs.slice(FIND_LOC_TOP);
   const shownLocs = moreLocs ? locs : top.concat(rest.filter((o) => f.locs.includes(o.id)));
   const hidden = locs.length - shownLocs.length;
-  return html`<div class="find-fgroups">
+  // in the sheet, focus lands on the top of the list (not the first radio further down, which scrolled it)
+  return html`<div class="find-fgroups" tabindex=${inModal ? "-1" : null} data-autofocus=${inModal ? "" : null}>
+    <div class="filter-group find-ghost-group">
+      <h4>Ghost signals</h4>
+      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong ghost signals" />
+      <span class="hint">${f.hideGhost ? "On by default. Listings with several warning signs are left out." : "Listings with several warning signs show a red marker."}</span>
+    </div>
     <div class="filter-group" role="group" aria-labelledby=${px + "-lv"}>
       <h4 id=${px + "-lv"}>Level</h4>
       <div class="chips">${LEVELS.map((l) => html`<${find_FacetChip} key=${l.id} on=${f.lv.includes(l.id)} n=${counts.cLv[l.id]} onClick=${() => find_setFilters({ lv: find_toggle(f.lv, l.id) })}>${l.label}</${find_FacetChip}>`)}</div>
@@ -282,11 +309,7 @@ function find_FilterControls({ px, f, counts, jobs }) {
       <div class="find-opts">${FIND_VISA.map((v) => html`<${find_CheckRow} key=${v.id} type="radio" name=${px + "-visa"} id=${`${px}-visa-${v.id}`} checked=${f.visa === v.id} onChange=${() => find_setFilters({ visa: v.id })} label=${v.label} />`)}</div>
       ${f.visa === "yes" && html`<span class="hint">Few listings say either way, so this hides most jobs.</span>`}
     </div>
-    <div class="filter-group">
-      <h4>Ghost signals</h4>
-      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong ghost signals" />
-    </div>
-    ${find_activeCount(f) > 0 && html`<div><${Btn} kind="ghost" size="sm" icon="x" onClick=${find_clearAll}>Clear filters</${Btn}></div>`}
+    ${!inModal && find_activeCount(f) > 0 && html`<div><${Btn} kind="ghost" size="sm" icon="x" onClick=${find_clearAll}>Clear filters</${Btn}></div>`}
   </div>`;
 }
 
@@ -299,7 +322,7 @@ MODALS.findFilters = () => {
     <${Btn} kind="ghost" onClick=${find_clearAll} disabled=${!find_activeCount(f)}>Clear filters</${Btn}>
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="primary" onClick=${closeModal}>Show ${fmt.num(counts.res.length)} ${counts.res.length === 1 ? "match" : "matches"}</${Btn}>`}>
-    <${find_FilterControls} px="find-m" f=${f} counts=${counts} jobs=${jobs.jobs} />
+    <${find_FilterControls} px="find-m" f=${f} counts=${counts} jobs=${jobs.jobs} inModal />
   </${Modal}>`;
 };
 
@@ -429,6 +452,8 @@ VIEWS.find = function FindView() {
             ${find_hasPrefs(profile) && (usingPrefs
               ? [html`<span class="find-prefs" key="up">Using your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
               : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
+            ${f.hideGhost && counts.ghostHidden > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">Hiding ${fmt.num(counts.ghostHidden)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: false })}>Show them</button></span>`]}
+            ${!f.hideGhost && counts.ghostShown > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">${fmt.num(counts.ghostShown)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: true })}>Hide them</button></span>`]}
           </div>
           <span class="spacer"></span>
           <div class="find-sort hide-sm"><${Seg} label="Sort by" value=${sort} options=${FIND_SORTS} onChange=${(v) => store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } }))} /></div>

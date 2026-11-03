@@ -229,3 +229,5 @@
 .td-page .card-head h2, .st-page .card-head h2 { white-space: nowrap; }
 @media (max-width: 640px) { .card-head .td-link { min-height: 44px; margin: -8px 0; } }
 @media (max-width: 860px) { .st-page .page-head { align-items: center; } .st-page .page-head p { margin-top: 0; } }
+.td-up-in { font-weight: 400; }
+.stat-value.td-early { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); letter-spacing: 0; line-height: 1.3; padding: 6px 0 4px; }
