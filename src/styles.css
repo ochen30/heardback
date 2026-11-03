@@ -242,7 +242,7 @@ p { margin: 0; }
 .badge.ghost { background: var(--ghost-soft); color: var(--ghost); }
 .badge.info { background: var(--info-soft); color: var(--info); }
 .badge.example { background: transparent; border: 1px solid var(--line-strong); color: var(--fg-3); display: none; }
-.drawer-head .badge.example { display: inline-flex; }
+.drawer-head .badge.example { display: none; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--fg-3); }
 .dot.saved { background: var(--fg-3); }
 .dot.applied { background: var(--accent); }
@@ -584,3 +584,7 @@ input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; borde
 .meth-table td { vertical-align: top; padding-block: 10px; height: auto; }
 .modal-body > * { flex-shrink: 0; }
 .meth-pts { white-space: nowrap; min-width: 140px; }
+
+.task-ico.ok, .task-ico.accent, .task-ico.ghost { background: var(--surface-2); color: var(--fg-2); }
+.palette-item .sub .kbd { background: var(--surface); }
+@media (max-width: 860px) { .search-trigger { background: transparent; border-color: transparent; } }

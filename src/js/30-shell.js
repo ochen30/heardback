@@ -100,10 +100,10 @@ function Palette() {
     if (d?.kind === "app" && Apps.get(d.id)) {
       const a = Apps.get(d.id);
       const ctx = [
-        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company}`, icon: "arrowR", label: `Move to ${st.label}`, sub: String(STAGE[st.id].i + 1), run: () => Apps.move(a.id, st.id) })),
-        { g: `${a.company}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
-        { g: `${a.company}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
-        ...(a.url ? [{ g: `${a.company}`, icon: "ext", label: "Open the posting", run: () => window.open(a.url, "_blank", "noopener") }] : []),
+        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
+        ...(a.url ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "ext", label: "Open the posting", run: () => window.open(a.url, "_blank", "noopener") }] : []),
       ];
       res.push(...(n ? ctx.filter((x) => norm(x.label).includes(n)) : ctx.slice(0, 6)));
     } else if (d?.kind === "job" && jobsStore.byId.get(d.id)) {
@@ -149,7 +149,7 @@ function Palette() {
         ${items.map((it, i) => {
           const head = it.g !== lastG ? html`<div class="palette-group">${it.g}</div>` : null; lastG = it.g;
           return html`${head}<button type="button" class="palette-item" role="option" aria-selected=${i === sel ? "true" : "false"} onMouseMove=${() => setSel(i)} onClick=${() => { close(); setTimeout(it.run, 0); }}>
-            ${it.logo ? html`<${Logo} name=${it.logo} size="sm" />` : html`<${Icon} name=${it.icon} />`}<span class="truncate" style="flex:1">${it.label}</span>${it.sub && html`<span class="sub">${it.sub}</span>`}
+            ${it.logo ? html`<${Logo} name=${it.logo} size="sm" />` : html`<${Icon} name=${it.icon} />`}<span class="truncate" style="flex:1">${it.label}</span>${it.sub && html`<span class="sub">${/^(?:[A-Z?]|G then [A-Z,])$/.test(it.sub) ? it.sub.split(" then ").map((k, i) => html`${i ? " " : ""}<span class="kbd">${k}</span>`) : it.sub}</span>`}
           </button>`;
         })}
       </div>
