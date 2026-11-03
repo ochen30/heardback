@@ -368,20 +368,23 @@ const WRAP = () => {
   {
     const r = await open({ W, mock: MOCK, setup: 'onboarded', route: 'find' });
     const page = r.page;
+    // <=520px the count bar shows a short "N new" button on its first line
+    const newSel = W <= 520 ? '.find-bar2-top button.find-bar-new' : '.find-count button:has-text("new since your last visit")';
     try {
-      T.check('first visit: no "new since" link', !(await page.locator('.find-count button:has-text("new since your last visit")').count()));
+      T.check('first visit: no "new since" link', !(await page.locator(newSel).count()));
       await page.evaluate(() => localStorage.setItem('heardback:lastVisit', JSON.stringify({ last: Date.now() - 2 * 864e5 })));
       await page.reload(); await page.waitForFunction(() => jobsStore.status === 'ready', null, { timeout: 15000 }); await page.waitForTimeout(500);
       const since = await page.evaluate(() => visit.since);
       T.check('lastVisit 2 days ago -> visit.since set', since && Math.abs(Date.now() - 2 * 864e5 - since) < 120000, since);
-      const link = page.locator('.find-count button:has-text("new since your last visit")');
+      const link = page.locator(newSel);
       T.check('Find shows "N new since your last visit"', await link.count() === 1);
       const lt = await link.innerText().catch(() => '0');
+      { const l2 = lt.replace(/\s+/g, ' ').trim(); T.check('"new since" label', W <= 520 ? /^[\d,]+ new$/.test(l2) : /^[\d,]+ new since your last visit$/.test(l2), l2); }
       const n = +lt.replace(/\D/g, '');
       const exp = await page.evaluate(() => { const f = find_getFilters(store.get()); return find_run(jobsStore.jobs, f, '', false).res.filter((j) => j.p > visit.since).length; });
       T.check('"new since" count = listings in current filters posted after last visit', n === exp, `${n} vs ${exp}`);
       await link.click(); await page.waitForTimeout(300);
-      const cnt = +(await page.locator('.find-count strong').innerText()).replace(/,/g, '');
+      const cnt = +(await page.locator('.find-n strong').innerText()).replace(/,/g, '');
       T.check('clicking it filters to those listings', cnt === exp, `${cnt} vs ${exp}`);
       T.check('filter state posted=since', (await page.evaluate(() => find_getFilters(store.get()).posted)) === 'since');
       if (!mobile) T.check('"New since your last visit" chip on in sidebar', (await page.locator('.find-aside .chip:has-text("New since")').getAttribute('aria-pressed')) === 'true');
@@ -391,7 +394,7 @@ const WRAP = () => {
       // garbage lastVisit must not crash
       await page.evaluate(() => localStorage.setItem('heardback:lastVisit', '"oops"'));
       await page.reload(); await page.waitForTimeout(800);
-      T.check('garbage lastVisit: page still renders', await page.locator('.find-row').count() > 0 || await page.locator('.find-count').count() > 0);
+      T.check('garbage lastVisit: page still renders', await page.locator('.find-row').count() > 0 || await page.locator('.find-n').count() > 0);
       await page.evaluate(() => localStorage.setItem('heardback:lastVisit', '{"last":"yesterday"}'));
       await page.reload(); await page.waitForTimeout(800);
       const sv = await page.evaluate(() => visit.since);

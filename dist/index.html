@@ -2184,7 +2184,13 @@ const Apps = {
   updateRound(id, rid, patch) { Apps.update(id, (a) => ({ rounds: a.rounds.map((r) => (r.id === rid ? { ...r, ...patch } : r)) })); },
   removeRound(id, rid) { Apps.update(id, (a) => ({ rounds: a.rounds.filter((r) => r.id !== rid) })); },
   byJob(jobId) { return Object.values(store.get().apps).find((a) => a.jobId === jobId); },
-  daysSilent(a) { const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0) || a.createdAt || 0; return ref ? Math.max(0, Math.floor((now() - ref) / DAY)) : 0; },
+  daysSilent(a) {
+    const t = now();
+    if ((a.rounds || []).some((r) => r.at && r.at > t)) return 0;
+    const lastRound = (a.rounds || []).reduce((m, r) => (r.at && r.at <= t && r.at > m ? r.at : m), 0);
+    const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0, lastRound) || a.createdAt || 0;
+    return ref ? Math.max(0, Math.floor((t - ref) / DAY)) : 0;
+  },
 };
 
 /* ---------- Router (plain #name hashes only) ---------- */
@@ -2833,7 +2839,7 @@ function computeStats(s = store.get(), apps = Apps.list(s)) {
   const replied = applied.filter((a) => a.lastReplyAt || ["screen", "interview", "offer", "rejected"].includes(a.stage));
   const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).length || a.events.some((e) => e.to === "interview"));
   const offers = applied.filter((a) => a.stage === "offer" || a.events.some((e) => e.to === "offer"));
-  const replyDays = replied.filter((a) => !(a.source === "import" && a.lastReplyAt && a.lastReplyAt === a.appliedAt && !(a.events || []).some((e) => e.kind === "stage"))).map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
+  const replyDays = replied.filter((a) => !(a.source === "import" && firstReplyAt(a) && a.appliedAt && Math.abs(firstReplyAt(a) - a.appliedAt) < DAY)).map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
   const median = (arr) => { if (!arr.length) return null; const v = [...arr].sort((a, b) => a - b); const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   const weekStart = startOfWeek(now());
   const thisWeek = applied.filter((a) => a.appliedAt >= weekStart).length;
@@ -2957,7 +2963,7 @@ function Topbar({ route }) {
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
       </button>
       <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Log an email (E)">Log an email</${Btn}>
-      <${Btn} kind="primary" icon="plus" onClick=${() => openModal(matchMedia("(max-width: 860px)").matches ? "quickadd" : "add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
+      <${Btn} kind="primary" icon="plus" onClick=${() => openModal(matchMedia("(max-width: 860px)").matches ? "quickadd" : "add")} aria-label="Add an application or log an email" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
     </div>
   </header>`;
 }
@@ -8118,7 +8124,7 @@ function share_initialTheme(s) {
 MODALS.share = function ShareModal() {
   const s = useStore();
   const caps = useCaps();
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState(() => { try { for (const p of ["week", "month"]) { const d = share_data(store.get(), p); if (d && (d.st?.applied || 0) >= 3) return p; } } catch {} return "all"; });
   const [theme, setTheme] = useState(() => share_initialTheme(store.get()));
   const [showCompanies, setShowCompanies] = useState(false);
   const [img, setImg] = useState(null); // { url, blob }

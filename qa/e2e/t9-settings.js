@@ -65,7 +65,15 @@ async function grabExport(page, btn) {
     // CSV import into another fresh profile
     const r3 = await open({ W, mock: MOCK, setup: 'onboarded', route: 'prefs', browser });
     await r3.page.setInputFiles('#pf-import', { name: 'apps.csv', mimeType: 'text/csv', buffer: Buffer.from(csv.text) });
-    await r3.page.waitForTimeout(400);
+    await r3.page.waitForSelector('.modal .pf-imp', { timeout: 5000 }).catch(() => {});
+    // preview sheet first: one row per application with a stage select, nothing imported yet
+    const nSnap = Object.keys(snap.apps).length;
+    T.check('CSV import: preview sheet before importing', (await r3.page.locator('.modal .pf-imp-row').count()) === nSnap && (await r3.page.evaluate(() => Object.keys(store.get().apps).length)) === 0, await r3.page.locator('.modal .pf-imp-row').count());
+    T.check('CSV import: button says "Import N"', (await r3.page.locator('#pf-imp-go').innerText().catch(() => '')).trim() === `Import ${nSnap}`, await r3.page.locator('#pf-imp-go').innerText().catch(() => ''));
+    const prevSt = await r3.page.evaluate(() => [...document.querySelectorAll('.modal .pf-imp-row')].map((r) => `${r.querySelector('.pf-imp-co').textContent}|${r.querySelector('.pf-imp-sub').textContent}:${r.querySelector('select').value}`));
+    const expSt = Object.values(snap.apps).map((a) => `${a.company}|${a.title}:${a.stage}`);
+    T.check('CSV import: preview stage selects match exported stages', prevSt.length === expSt.length && expSt.every((x) => prevSt.includes(x)), prevSt.filter((x) => !expSt.includes(x)).join(','));
+    await r3.page.click('#pf-imp-go'); await r3.page.waitForTimeout(400);
     const c3 = await r3.page.evaluate(() => Object.values(store.get().apps));
     T.check('CSV import count', c3.length === Object.keys(snap.apps).length, `${c3.length} vs ${Object.keys(snap.apps).length}`);
     const stageDiff = Object.values(snap.apps).filter((a) => { const m = c3.find((b) => b.company === a.company && b.title === a.title); return !m || m.stage !== a.stage; }).map((a) => `${a.company}:${a.stage}`);
@@ -74,9 +82,22 @@ async function grabExport(page, btn) {
     const dateDiff = Object.values(snap.apps).filter((a) => a.appliedAt).filter((a) => { const m = c3.find((b) => b.company === a.company && b.title === a.title); return !m || new Date(m.appliedAt).toDateString() !== new Date(a.appliedAt).toDateString(); }).map((a) => a.company);
     T.check('CSV import applied dates preserved', !dateDiff.length, dateDiff.join(','));
     // CSV re-import dedupe
+    await r3.page.evaluate(() => ui.set({ toasts: [] }));
     await r3.page.setInputFiles('#pf-import', { name: 'apps.csv', mimeType: 'text/csv', buffer: Buffer.from(csv.text) });
     await r3.page.waitForTimeout(300);
-    T.check('CSV re-import dedupes', (await r3.page.evaluate(() => Object.keys(store.get().apps).length)) === c3.length);
+    T.check('CSV re-import dedupes', (await r3.page.evaluate(() => Object.keys(store.get().apps).length)) === c3.length && !(await r3.page.locator('.modal .pf-imp').count()) && /Nothing new to import/.test(await r3.page.locator('.toast').last().innerText().catch(() => '')));
+    // spreadsheet status words: OA/assessment -> Screen, Interviewing -> Interviews; the select overrides
+    await r3.page.setInputFiles('#pf-import', { name: 'sheet.csv', mimeType: 'text/csv', buffer: Buffer.from('Company,Role,Status,Date applied\nOA Corp,SWE Intern,OA,2026-10-01\nAssess Inc,Data Intern,Online assessment,2026-10-02\nLoop LLC,PM Intern,Interviewing,2026-10-03\nPick Co,ML Intern,Interviewing,2026-10-04\n') });
+    await r3.page.waitForSelector('.modal .pf-imp', { timeout: 5000 }).catch(() => {});
+    const sheetSt = await r3.page.evaluate(() => [...document.querySelectorAll('.modal .pf-imp-row')].map((r) => `${r.querySelector('.pf-imp-co').textContent}:${r.querySelector('select').value}`));
+    T.check('CSV import: OA/assessment -> Screen, Interviewing -> Interviews', sheetSt.join(',') === 'OA Corp:screen,Assess Inc:screen,Loop LLC:interview,Pick Co:interview', sheetSt.join(','));
+    const pickI = sheetSt.findIndex((x) => x.startsWith('Pick Co'));
+    if (pickI >= 0) await r3.page.selectOption(`#pf-imp-st-${pickI}`, 'offer');
+    T.check('CSV import: button says "Import 4"', (await r3.page.locator('#pf-imp-go').innerText().catch(() => '')).trim() === 'Import 4');
+    await r3.page.click('#pf-imp-go').catch(() => {}); await r3.page.waitForTimeout(300);
+    const sheetApps = await r3.page.evaluate(() => Object.fromEntries(Object.values(store.get().apps).filter((a) => ['OA Corp', 'Assess Inc', 'Loop LLC', 'Pick Co'].includes(a.company)).map((a) => [a.company, a.stage])));
+    T.check('CSV import: imported with previewed stages, select override kept', Object.keys(sheetApps).length === 4 && sheetApps['OA Corp'] === 'screen' && sheetApps['Assess Inc'] === 'screen' && sheetApps['Loop LLC'] === 'interview' && sheetApps['Pick Co'] === 'offer', JSON.stringify(sheetApps));
+    await r3.page.evaluate(() => ui.set({ toasts: [] }));
     // bad files
     await r3.page.setInputFiles('#pf-import', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{not json') });
     await r3.page.waitForTimeout(300);

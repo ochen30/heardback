@@ -3,7 +3,12 @@ const { open, mk, dump, overflow, shot, clearToasts } = require('./lib');
 const W = +(process.env.W || 1440), MOCK = !!process.env.MOCK;
 const T = mk(`find-${W}${MOCK ? '-mock' : ''}`);
 const mobile = W < 700;
-const count = (page) => page.locator('.find-count strong').innerText().then((t) => +t.replace(/,/g, ''));
+const count = (page) => page.locator('.find-n strong').innerText().then((t) => +t.replace(/,/g, ''));
+// <=520px: two-line count bar ("Your preferences · Hiding N likely stale · Show"); desktop: one line
+const narrow = W <= 520;
+const fmtN = (n) => n.toLocaleString('en-US');
+const ghostLine = (page) => page.locator(narrow ? '.find-bar2-sub .find-bar-ghost' : '.find-ghost-note').innerText().then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
+const ghostBtn = (page, show) => narrow ? page.locator(`#find-bar-ghost:text-is("${show ? 'Show' : 'Hide'}")`) : page.locator(`.find-count button:has-text("${show ? 'Show them' : 'Hide them'}")`);
 (async () => {
   const { page, errors, close } = await open({ W, mock: MOCK, setup: 'onboarded', route: 'find' });
   try {
@@ -14,7 +19,15 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     T.check('initial count uses prefs filters', n0 === expPrefs, `${n0} vs ${expPrefs}`);
     // Show all
     T.check('hide-ghost on by default', await page.evaluate(() => find_getFilters(store.get()).hideGhost === true && store.get().ui.findHideGhost !== false));
-    await page.click('.find-prefs button:has-text("Show all")');
+    if (narrow) {
+      const sub = await page.locator('.find-bar2-sub').innerText().then((t) => t.replace(/\s+/g, ' ').trim()).catch(() => '');
+      const gh = await page.evaluate(() => { const f = find_getFilters(store.get()); return find_run(jobsStore.jobs, f, '', false).ghostHidden; });
+      T.check('narrow: second line "Your preferences · Hiding N likely stale · Show"', sub === `Your preferences · Hiding ${fmtN(gh)} likely stale · Show`, sub);
+      T.check('narrow: no desktop .find-count line', !(await page.locator('.find-count').count()));
+      // "Your preferences" opens the filter sheet; clearing there = show all
+      await page.click('#find-bar-prefs'); await page.waitForSelector('.modal');
+      await page.click('.modal-foot button:has-text("Clear filters")'); await page.click('.modal-foot .btn.primary');
+    } else await page.click('.find-prefs button:has-text("Show all")');
     await page.waitForTimeout(250);
     const nAll = await count(page);
     // identical repeats (company + title + first 3 locations) are collapsed into one listing
@@ -23,9 +36,9 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     const nTot = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50).length);
     const nGhost = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g >= 50).length);
     T.check('Show all = de-duplicated jobs minus strong ghost signals', nAll === nTot, `${nAll} vs ${nTot} (dedup ${dd.n}, raw incl dups ${dd.raw})`);
-    const ghostNote = await page.locator('.find-ghost-note').innerText().catch(() => '');
-    T.check('count bar: "Hiding N with strong ghost signals"', ghostNote === `Hiding ${nGhost.toLocaleString('en-US')} with strong ghost signals`, ghostNote);
-    T.check('count bar: "Show them" link', await page.locator('.find-count button:has-text("Show them")').isVisible());
+    const ghostNote = await ghostLine(page);
+    T.check('count bar: "Hiding N with strong ghost signals"', narrow ? ghostNote === `Hiding ${fmtN(nGhost)} likely stale · Show` : ghostNote === `Hiding ${fmtN(nGhost)} with strong ghost signals`, ghostNote);
+    T.check('count bar: "Show them" link', await ghostBtn(page, true).isVisible());
     // search
     await page.fill('#find-q', 'google software');
     await page.waitForTimeout(400);
@@ -84,14 +97,14 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
     T.check('toggle Hide ghost off -> includes g>=50', n === e, `${n} vs ${e}`);
     const gShown = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen' && j.g >= 50).length);
-    const ghostNote2 = await page.locator('.find-ghost-note').innerText().catch(() => '');
-    T.check('count bar (off): "N with strong ghost signals · Hide them"', ghostNote2 === `${gShown.toLocaleString('en-US')} with strong ghost signals` && await page.locator('.find-count button:has-text("Hide them")').isVisible(), ghostNote2);
+    const ghostNote2 = await ghostLine(page);
+    T.check('count bar (off): "N with strong ghost signals · Hide them"', (narrow ? ghostNote2 === `${fmtN(gShown)} likely stale · Hide` : ghostNote2 === `${fmtN(gShown)} with strong ghost signals`) && await ghostBtn(page, false).isVisible(), ghostNote2);
     T.check('hide-ghost off persisted in store', (await page.evaluate(() => store.get().ui.findHideGhost)) === false);
-    await page.click('.find-count button:has-text("Hide them")'); await page.waitForTimeout(250);
+    await ghostBtn(page, false).click(); await page.waitForTimeout(250);
     n = await count(page);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen' && j.g < 50).length);
     T.check('"Hide them" re-enables hiding', n === e, `${n} vs ${e}`);
-    await page.click('.find-count button:has-text("Show them")'); await page.waitForTimeout(250);
+    await ghostBtn(page, true).click(); await page.waitForTimeout(250);
     n = await count(page);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
     T.check('"Show them" shows ghost listings again', n === e, `${n} vs ${e}`);
@@ -140,10 +153,11 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     // keyboard J/K/Enter/S
     await page.evaluate(() => document.activeElement.blur());
     await page.keyboard.press('j'); await page.keyboard.press('j'); await page.waitForTimeout(100);
-    let selI = await page.evaluate(() => document.querySelector('.find-row[aria-selected="true"]')?.dataset.findI);
-    T.check('J J selects row 1', selI === '1', selI);
+    let selI = await page.evaluate(() => document.querySelector('.find-row[aria-current="true"]')?.dataset.findI);
+    T.check('J J selects row 1 (aria-current)', selI === '1', selI);
+    T.check('J moves focus to the selected row', (await page.evaluate(() => document.activeElement?.closest('.find-row')?.dataset.findI)) === '1');
     await page.keyboard.press('k'); await page.waitForTimeout(100);
-    selI = await page.evaluate(() => document.querySelector('.find-row[aria-selected="true"]')?.dataset.findI);
+    selI = await page.evaluate(() => document.querySelector('.find-row[aria-current="true"]')?.dataset.findI);
     T.check('K moves up to row 0', selI === '0', selI);
     await page.keyboard.press('j');
     await page.keyboard.press('s'); await page.waitForTimeout(200);

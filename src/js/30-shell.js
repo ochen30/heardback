@@ -50,7 +50,7 @@ function Topbar({ route }) {
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
       </button>
       <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Log an email (E)">Log an email</${Btn}>
-      <${Btn} kind="primary" icon="plus" onClick=${() => openModal(matchMedia("(max-width: 860px)").matches ? "quickadd" : "add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
+      <${Btn} kind="primary" icon="plus" onClick=${() => openModal(matchMedia("(max-width: 860px)").matches ? "quickadd" : "add")} aria-label="Add an application or log an email" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
     </div>
   </header>`;
 }

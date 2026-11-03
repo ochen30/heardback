@@ -228,7 +228,7 @@ function share_initialTheme(s) {
 MODALS.share = function ShareModal() {
   const s = useStore();
   const caps = useCaps();
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState(() => { try { for (const p of ["week", "month"]) { const d = share_data(store.get(), p); if (d && (d.st?.applied || 0) >= 3) return p; } } catch {} return "all"; });
   const [theme, setTheme] = useState(() => share_initialTheme(store.get()));
   const [showCompanies, setShowCompanies] = useState(false);
   const [img, setImg] = useState(null); // { url, blob }

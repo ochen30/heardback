@@ -246,7 +246,13 @@ const Apps = {
   updateRound(id, rid, patch) { Apps.update(id, (a) => ({ rounds: a.rounds.map((r) => (r.id === rid ? { ...r, ...patch } : r)) })); },
   removeRound(id, rid) { Apps.update(id, (a) => ({ rounds: a.rounds.filter((r) => r.id !== rid) })); },
   byJob(jobId) { return Object.values(store.get().apps).find((a) => a.jobId === jobId); },
-  daysSilent(a) { const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0) || a.createdAt || 0; return ref ? Math.max(0, Math.floor((now() - ref) / DAY)) : 0; },
+  daysSilent(a) {
+    const t = now();
+    if ((a.rounds || []).some((r) => r.at && r.at > t)) return 0;
+    const lastRound = (a.rounds || []).reduce((m, r) => (r.at && r.at <= t && r.at > m ? r.at : m), 0);
+    const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0, lastRound) || a.createdAt || 0;
+    return ref ? Math.max(0, Math.floor((t - ref) / DAY)) : 0;
+  },
 };
 
 /* ---------- Router (plain #name hashes only) ---------- */
