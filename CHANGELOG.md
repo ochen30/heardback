@@ -120,3 +120,14 @@ A second usability test played a graduating senior on a phone, looking for new-g
 - Imported applications never produce a fake "first reply in 0 days".
 - Share card opens on the shortest period with real activity.
 - Find says "Hiding N with strong ghost signals" consistently at every width; sort stays on the count row on tablets; Settings locations in two columns.
+
+### 05:10 PT — v11 published (usability test 3: power user with 42 applications)
+A third usability test played a student five weeks in, with 42 real applications, working fast with the keyboard. Fixed:
+- **Today scales:** one row per application, grouped into Today / Quick wins / When you have time, with "Show N more", and a batch "Mark all N as ghosted". Inline outcome buttons (Passed / Didn't pass / Still waiting) on outcome tasks.
+- **Keyboard everywhere:** J/K + Enter on Today (D dismiss, S snooze) and Pipeline (board and table); focus never drops to the page after an action.
+- **Online assessment** is its own round type ("Due Thu, 11 PM"), not counted as an interview.
+- Taken-down postings are called out in the application drawer for Applied/Screen too, with "Draft a last follow-up", "Mark as ghosted", "See open roles".
+- Interview cards say "Log outcome · Technical, 3d ago" when an outcome is pending.
+- Insights comparisons are age-matched and name their sample; patterns that could mislead are gone.
+- Command palette: "Add an interview round" actually adds one; new actions for outcome, thank-you, note, mark ghosted, export.
+- Thank-you drafts don't say "today" for yesterday's call; at most two toasts at once.

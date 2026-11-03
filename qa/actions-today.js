@@ -4,7 +4,97 @@ const log = (...a) => console.log('[today]', ...a);
 const assert = (c, msg) => { if (!c) { console.log('[today] FAIL', msg); process.exitCode = 1; } else log('ok', msg); };
 const taskKeys = (page) => page.$$eval('.td-task', (els) => els.map((e) => e.dataset.key));
 
+
+// Power-user state from the UX3 study (qa/ux3/seed.js): ~42 real applications. Reuses that script's page.evaluate body.
+function today_seedSrc() {
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'ux3', 'seed.js'), 'utf8');
+  const a = src.indexOf('page.evaluate(') + 'page.evaluate('.length, b = src.indexOf('console.log(JSON.stringify(res');
+  return src.slice(a, src.lastIndexOf(');', b));
+}
+const visibleKeys = (page) => page.$$eval('.td-task', (els) => els.map((e) => e.dataset.key));
+const focusKey = (page) => page.evaluate(() => { const r = document.activeElement && document.activeElement.closest && document.activeElement.closest('.td-task'); return r ? r.dataset.key : (document.activeElement || {}).tagName; });
+
 module.exports = {
+  // UX3: J/K focus ring, S/D/Enter act, focus always lands on the next row (never <body>).
+  async kbdFlow(page) {
+    await module.exports.seed(page);
+    const keys0 = await visibleKeys(page);
+    await page.keyboard.press('j'); await page.waitForTimeout(80);
+    assert((await focusKey(page)) === keys0[0], `J focuses the first row (${await focusKey(page)})`);
+    await page.keyboard.press('j'); await page.waitForTimeout(80);
+    assert((await focusKey(page)) === keys0[1], 'J again moves to the second row');
+    await page.keyboard.press('k'); await page.keyboard.press('j'); await page.waitForTimeout(80);
+    const ring = await page.evaluate(() => document.activeElement.matches('.td-task:focus-visible'));
+    assert(ring, 'focused row shows a focus ring');
+    await page.keyboard.press('s'); await page.waitForTimeout(300);
+    let ks = await visibleKeys(page);
+    assert(!ks.includes(keys0[1]), 'S snoozes the focused row');
+    assert((await focusKey(page)) === keys0[2], `focus moves to the next row after S (${await focusKey(page)})`);
+    await page.keyboard.press('d'); await page.waitForTimeout(300);
+    assert((await focusKey(page)) === keys0[3], `focus moves to the next row after D (${await focusKey(page)})`);
+    // jump to a ghost row and press Enter
+    const ghostKey = await page.evaluate(() => computeTasks().find((t) => t.kind === 'ghost').key);
+    for (let i = 0; i < 30 && (await focusKey(page)) !== ghostKey; i++) { await page.keyboard.press('j'); await page.waitForTimeout(40); }
+    assert((await focusKey(page)) === ghostKey, 'J reaches a row hidden behind Show more (group expands)');
+    const ki = (await visibleKeys(page)).indexOf(ghostKey);
+    const nextKey = (await visibleKeys(page))[ki + 1];
+    await page.keyboard.press('Enter'); await page.waitForTimeout(350);
+    assert(!(await visibleKeys(page)).includes(ghostKey), 'Enter on a ghost row marks it ghosted');
+    assert((await focusKey(page)) === nextKey, `focus moves on after Enter (${await focusKey(page)} vs ${nextKey})`);
+    const toasts = await page.$$eval('.toast', (els) => els.length);
+    assert(toasts <= 2, `at most two toasts (${toasts})`);
+    // typing in an input must not trigger shortcuts
+    await page.evaluate(() => { const i = document.createElement('input'); i.id = 'qa-tmp'; document.querySelector('.td-page').prepend(i); i.focus(); });
+    const before = (await visibleKeys(page)).length;
+    await page.keyboard.press('d'); await page.waitForTimeout(200);
+    assert((await visibleKeys(page)).length === before, 'D in an input does nothing');
+    await page.evaluate(() => document.getElementById('qa-tmp').remove());
+    await page.keyboard.press('j'); await page.waitForTimeout(150);
+  },
+  async outcomeInline(page) {
+    await module.exports.seed(page);
+    const k = (await visibleKeys(page)).find((x) => x.startsWith('outcome:'));
+    const row = page.locator(`.td-task[data-key="${k}"]`);
+    await row.locator('button:has-text("Passed")').click(); await page.waitForTimeout(350);
+    const [, aid, rid] = k.split(':');
+    const out = await page.evaluate(([a, r]) => Apps.get(a).rounds.find((x) => x.id === r).outcome, [aid, rid]);
+    assert(out === 'passed', 'Passed logs the round outcome');
+    assert(await page.evaluate(() => !!document.activeElement.closest('.td-task')), 'focus stays in the list after Passed');
+    const k2 = (await visibleKeys(page)).find((x) => x.startsWith('outcome:'));
+    await page.locator(`.td-task[data-key="${k2}"] button:has-text("Still waiting")`).click(); await page.waitForTimeout(300);
+    const until = await page.evaluate((x) => store.get().dismissed[x], k2);
+    assert(until && Math.abs(until - Date.now() - 2 * 86400000) < 60000, 'Still waiting snoozes 2 days');
+  },
+  async ghostAll(page) {
+    await module.exports.seed(page);
+    const n = await page.evaluate(() => computeTasks().filter((t) => t.kind === 'ghost').length);
+    await page.click('.td-batch'); await page.waitForTimeout(250);
+    await page.screenshot({ path: require('path').join(process.env.OUT || 'qa/out', `today-ghostAll-confirm-${page.viewportSize().width}.png`) });
+    await page.click('.modal .btn.primary'); await page.waitForTimeout(350);
+    const after = await page.evaluate(() => computeTasks().filter((t) => t.kind === 'ghost').length);
+    assert(n >= 2 && after === 0, `Mark all ${n} as ghosted clears them (${after} left)`);
+    const toasts = await page.$$eval('.toast', (els) => els.map((e) => e.innerText));
+    assert(toasts.length === 1 && /Undo/.test(toasts[0]), `one toast with Undo (${toasts.join(' / ')})`);
+    assert(await page.evaluate(() => document.activeElement !== document.body), `focus not on body after batch (${await focusKey(page)})`);
+  },
+  async scrollUpcoming(page) {
+    await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; const el = document.querySelector('#td-up-h'); w.scrollTop = el.getBoundingClientRect().top + w.scrollTop - 80; });
+    await page.waitForTimeout(200);
+    const wrap = await page.$$eval('.td-up-time', (els) => els.filter((e) => e.getBoundingClientRect().height > 24).map((e) => e.textContent));
+    assert(wrap.length === 0, `Upcoming times stay on one line (${wrap.join(',')})`);
+  },
+  async scrollQuick(page) {
+    await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; const el = document.querySelector('#td-g-quick'); w.scrollTop = el.getBoundingClientRect().top + w.scrollTop - 80; });
+    await page.waitForTimeout(200);
+  },
+  async seedQuick(page) { await module.exports.seed(page); await module.exports.scrollQuick(page); },
+  async seedUpcoming(page) { await module.exports.seed(page); await module.exports.scrollUpcoming(page); },
+  async seed(page) {
+    await page.waitForFunction(() => jobsStore.status === 'ready', null, { timeout: 15000 }).catch(() => null);
+    const res = await page.evaluate('(' + today_seedSrc() + ')()');
+    log('seeded', res.n, JSON.stringify(res.by));
+    await page.waitForTimeout(400);
+  },
   async openSnooze(page) {
     await page.hover('.td-task');
     await page.click('.td-task button[aria-haspopup="menu"]');

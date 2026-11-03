@@ -18,9 +18,14 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     const tasks = await page.evaluate(() => computeTasks().map((t) => ({ key: t.key, kind: t.kind, co: t.app.company })));
     const kinds = [...new Set(tasks.map((t) => t.kind))];
     T.note('task kinds', kinds.join(','));
+    // Needs you is grouped (Today / Quick wins / When you have time), each group showing up to TODAY_GROUP_MAX
+    const grp = await page.evaluate(() => { const by = {}; for (const t of computeTasks()) { const g = t.group || 'later'; by[g] = (by[g] || 0) + 1; } return { by, max: TODAY_GROUP_MAX }; });
+    const expShown = Object.values(grp.by).reduce((n, c) => n + Math.min(c, grp.max), 0);
     const shownTitles = await page.locator('.td-task').count();
-    T.check('Needs you shows up to 5 tasks', shownTitles === Math.min(5, tasks.length), `${shownTitles} of ${tasks.length}`);
-    if (tasks.length > 5) { await page.click('#td-needs-h >> xpath=../.. >> button:has-text("more")'); await page.waitForTimeout(150); }
+    T.check('Needs you shows up to TODAY_GROUP_MAX tasks per group', shownTitles === expShown, `${shownTitles} of ${tasks.length} (groups ${JSON.stringify(grp.by)})`);
+    const domGroups = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.td-group')].map((g) => [g.querySelector('h3').id.replace('td-g-', ''), +g.querySelector('.td-group-h .td-count').textContent])));
+    T.check('Needs you group counts match computeTasks groups', JSON.stringify(Object.keys(domGroups).sort().map((k) => [k, domGroups[k]])) === JSON.stringify(Object.keys(grp.by).sort().map((k) => [k, grp.by[k]])), JSON.stringify(domGroups));
+    for (const b of await page.locator('.td-group-more button').all()) { await b.click(); await page.waitForTimeout(100); }
     T.check('all tasks visible after Show more', (await page.locator('.td-task').count()) === tasks.length);
     const rail = await page.locator('.rail .nav-item[href="#today"] .nav-count').innerText().catch(() => '');
     T.check('rail Today count = tasks', W < 700 || rail === String(tasks.length), `${rail} vs ${tasks.length}`);
@@ -110,8 +115,8 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     // weekly goal (v4+: one widget on Today, edited in Settings)
     const tw = await page.evaluate(() => computeStats().thisWeek);
     const goal = await page.evaluate(() => store.get().profile.weeklyGoal);
-    const wk = await page.locator('.td-week .td-count').innerText().catch(() => '');
-    T.check('This week "N of goal" = computeStats.thisWeek', tw === 0 ? wk === '' : wk === `${tw} of ${goal}`, `${wk} vs ${tw} of ${goal}`);
+    const wk = await page.locator('.td-week .td-week-n').innerText().catch(() => '');
+    T.check('This week "N / goal applied" = computeStats.thisWeek', wk.trim() === `${tw} / ${goal} applied`, `${wk} vs ${tw} / ${goal}`);
     await page.click('.td-goal-edit'); await page.waitForTimeout(400);
     T.check('Edit goal -> Settings', (await page.evaluate(() => location.hash)) === '#prefs');
     await page.evaluate(() => (location.hash = 'today')); await page.waitForTimeout(400);

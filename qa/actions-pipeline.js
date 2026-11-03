@@ -646,5 +646,114 @@ const actions = {
   },
   async scrollBoard(page) { await page.evaluate(() => document.querySelector('.pl-board').scrollBy({ left: 300, behavior: 'instant' })); await wait(page, 300); },
 };
+// ---------- UX3 fix round: seeded 42-application account (qa/ux3/seed.js), actions named seed* ----------
+// Reuses the seed's page.evaluate body verbatim, so the state matches the study.
+async function seedReset(page, view = 'board') {
+  await page.waitForFunction(() => jobsStore.status === 'ready' || jobsStore.status === 'error', null, { timeout: 20000 });
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'ux3', 'seed.js'), 'utf8');
+  const body = src.slice(src.indexOf('page.evaluate(') + 'page.evaluate('.length, src.indexOf('\n  console.log(JSON.stringify(res'));
+  const fnSrc = body.replace(/\);\s*$/, '');
+  await page.evaluate((v) => { ui.set({ drawer: null, modal: null, palette: false, toasts: [] }); store.set((s) => ({ ...s, apps: {}, dismissed: {}, ui: { ...s.ui, pipelineView: v, pipelineClosedOpen: false, pipelineHintDone: true, pipelineSort: undefined } })); }, view);
+  await page.evaluate(`(${fnSrc})()`);
+  await page.evaluate(() => { ui.set({ toasts: [] }); if (location.hash !== '#pipeline') location.hash = 'pipeline'; });
+  await page.waitForTimeout(400);
+}
+const focusId = (page) => page.evaluate(() => { const e = document.activeElement; const c = e && e.closest && e.closest('[data-card], tr[data-row]'); return c ? (c.dataset.card || c.dataset.row) : (e ? e.tagName.toLowerCase() : 'none'); });
+const appId = (page, company) => page.evaluate((c) => Object.values(store.get().apps).find((a) => a.company === c)?.id, company);
+const seeded = {
+  // B4: Figma (applied) + Ramp (screen) postings taken down
+  async seedRemoved(page) {
+    const id = await appId(page, 'Figma');
+    await page.evaluate((i) => openApp(i), id); await page.waitForTimeout(400);
+    const txt = await page.locator('.drawer').innerText();
+    assert(/This posting was taken down/.test(txt) && /It may be filled/.test(txt), 'Figma drawer shows the takedown callout');
+    assert(/Draft a last follow-up/.test(txt) && /Mark as ghosted/.test(txt), 'callout offers follow-up + ghost');
+    assert(!/Open posting/.test(txt) && /Posting removed/.test(txt), 'footer says "Posting removed" instead of "Open posting"');
+    const dis = await page.locator('.drawer .pl-removed-btn').isDisabled(); assert(dis, 'Posting removed button is disabled');
+    log('callout:', (await page.locator('.drawer .pl-removed').innerText()).replace(/\n+/g, ' | '));
+  },
+  async seedRemovedScreen(page) {
+    const id = await appId(page, 'Ramp');
+    await page.evaluate((i) => openApp(i), id); await page.waitForTimeout(400);
+    const txt = await page.locator('.drawer .pl-removed').innerText();
+    assert(/process with Ramp/.test(txt), 'Ramp (screen) callout softens the copy');
+    const roles = page.locator('.drawer .pl-removed button:has-text("open role")');
+    if (await roles.count()) { await roles.first().click(); await page.waitForTimeout(400); const k = await page.evaluate(() => ui.state.drawer?.kind); assert(k === 'company', 'See open roles opens the company drawer'); await page.keyboard.press('Escape'); await page.waitForTimeout(300); await page.evaluate((i) => openApp(i), id); await page.waitForTimeout(300); }
+    else log('no company data for Ramp: open-roles button hidden');
+  },
+  // B9: Interviews cards with a past pending round
+  async seedStatus(page) {
+    const sc = await page.locator('.pl-card:has-text("Scale AI") .pl-status').innerText();
+    const ts = await page.locator('.pl-card:has-text("Two Sigma") .pl-status').innerText();
+    assert(/^Log outcome · Onsite \/ Final, \dd ago$/.test(sc.trim()), `Scale AI card: "${sc.trim()}"`);
+    assert(/^Log outcome · Technical, \dd ago$/.test(ts.trim()), `Two Sigma card: "${ts.trim()}"`);
+    await page.evaluate(() => document.querySelector('.pl-col[data-col="interview"]').scrollIntoView({ inline: 'center' }));
+  },
+  // B10: online assessment round
+  async seedOA(page) {
+    await page.evaluate(() => { const a = Object.values(store.get().apps).find((x) => x.company === 'Point72'); Apps.updateRound(a.id, a.rounds[0].id, { type: 'assessment' }); });
+    await page.waitForTimeout(250);
+    const st = await page.locator('.pl-card:has-text("Point72") .pl-status').innerText();
+    assert(/^Due today, 11 PM$/i.test(st.trim()) || /^Due /.test(st.trim()), `Point72 card reads "${st.trim()}"`);
+    const label = await page.locator('.pl-card:has-text("Point72") .pl-status').getAttribute('title');
+    assert(/^Online assessment · due /.test(label), `card title "${label}"`);
+    const id = await appId(page, 'Point72');
+    await page.evaluate((i) => openApp(i, 'rounds'), id); await page.waitForTimeout(400);
+    const opts = await page.$$eval('.drawer .pl-round-type option', (os) => os.map((o) => o.textContent));
+    assert(opts.includes('Online assessment'), 'round type select includes Online assessment');
+    const t = await page.locator('.drawer').innerText();
+    assert(/Due/.test(t) && /Platform/.test(t) && !/Thank-you sent/.test(t), 'OA editor: Due + Platform, no thank-you');
+    const foot = await page.locator('.drawer-foot').innerText(); log('footer:', foot.replace(/\n+/g, ' | '));
+    await page.click('.drawer #pl-tab-overview'); await page.waitForTimeout(250);
+    log('next step:', (await page.locator('.drawer .pl-next-card').innerText()).replace(/\n+/g, ' | '));
+  },
+  // Keyboard: J/K column-major on the board, focus survives moves, menus and drawer close
+  async seedKeys(page) {
+    await page.locator('#pl-filter').click(); await page.keyboard.press('Escape'); await page.click('.pl-page h1'); await page.evaluate(() => document.activeElement.blur());
+    await page.keyboard.press('j'); await page.waitForTimeout(100);
+    const order = await page.evaluate(() => [...document.querySelectorAll('.pl-page [data-card]')].map((e) => e.dataset.card));
+    let f = await focusId(page); assert(f === order[0], 'J from nothing focuses the first card');
+    for (let i = 0; i < 3; i++) await page.keyboard.press('j');
+    f = await focusId(page); assert(f === order[3], 'J walks column-major (2 saved, then Applied)');
+    await page.keyboard.press('k'); f = await focusId(page); assert(f === order[2], 'K goes back');
+    await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); f = await focusId(page); assert(f === order[0], 'ArrowUp crosses columns too');
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); f = await focusId(page); assert(f === order[2], 'ArrowDown crosses into Applied');
+    const cur = f;
+    await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    assert(await page.evaluate(() => ui.state.drawer?.kind === 'app'), 'Enter opens the drawer');
+    await page.keyboard.press('3'); await page.waitForTimeout(250); // move to Screen from inside the drawer (card remounts)
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    f = await focusId(page); assert(f === cur, `focus returns to the moved card after Esc (${f})`);
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(250);
+    f = await focusId(page); assert(f === cur, 'ArrowRight move keeps focus on the card');
+    // menu: open via the card's more button, pick Select, focus returns to card
+    await page.locator(`[data-card="${cur}"] .pl-more`).click(); await page.waitForTimeout(200);
+    await page.locator('.pl-menu button:has-text("Select")').click(); await page.waitForTimeout(200);
+    f = await focusId(page); assert(f === cur, 'focus back on the card after a menu pick');
+    await page.locator('.pl-bulk button[aria-label="Mark as ghosted"]').click(); await page.waitForTimeout(300);
+    f = await focusId(page); assert(f !== 'body', `focus not on body after a bulk action (${f})`);
+    // palette-opened drawer returns to the card
+    await page.keyboard.press('Escape');
+    const fig = await appId(page, 'Figma');
+    await page.evaluate((i) => openApp(i), fig); await page.waitForTimeout(300);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    f = await focusId(page); log('fig', fig, 'focused', f); assert(f === fig, 'closing a drawer opened elsewhere focuses that app’s card');
+  },
+  async seedTableKeys(page) {
+    await page.click('.pl-page h1'); await page.evaluate(() => document.activeElement.blur());
+    await page.keyboard.press('j'); await page.keyboard.press('j');
+    const rows = await page.evaluate(() => [...document.querySelectorAll('.pl-table tr[data-row]')].map((e) => e.dataset.row));
+    let f = await focusId(page); assert(f === rows[1], 'J moves across table rows');
+    await page.keyboard.press('ArrowDown'); f = await focusId(page); assert(f === rows[2], 'ArrowDown moves rows');
+    await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    f = await focusId(page); assert(f === rows[2], 'Esc returns focus to the row');
+  },
+  async seedBoard(page) { await page.waitForTimeout(100); },
+  async seedTable(page) { await page.waitForTimeout(100); },
+};
 // Every action starts from a clean board (no overlays left from a previous action).
-module.exports = Object.fromEntries(Object.entries(actions).map(([k, fn]) => [k, async (page) => { await reset(page, k.startsWith('table') ? 'table' : 'board'); return fn(page); }]));
+module.exports = {
+  ...Object.fromEntries(Object.entries(actions).map(([k, fn]) => [k, async (page) => { await reset(page, k.startsWith('table') ? 'table' : 'board'); return fn(page); }])),
+  ...Object.fromEntries(Object.entries(seeded).map(([k, fn]) => [k, async (page) => { await seedReset(page, /Table/.test(k) ? 'table' : 'board'); return fn(page); }])),
+};

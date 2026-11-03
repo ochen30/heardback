@@ -132,7 +132,8 @@ function find_restore(a) { store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: 
 function find_appFields(job) { return { company: job.co, title: job.t, location: (job.l || [])[0] || "", url: job.url, jobId: job.id, source: "find" }; }
 function find_toggleSave(job, app) {
   if (app && app.stage === "saved") { find_untrack(app.id); toast(`Removed ${job.co} from saved`, { undo: () => find_restore(app) }); return; }
-  if (app) return;
+  /* B11: S on a role you already track says so, with a way to open it */
+  if (app) { toast(`Already in your pipeline (${STAGE[app.stage]?.label || "tracked"})`, { action: { label: "Open", run: () => openApp(app.id) } }); return; }
   const a = Apps.create({ ...find_appFields(job), stage: "saved" });
   toast(`Saved ${job.co} to your pipeline`, { undo: () => find_untrack(a.id) });
 }
@@ -630,6 +631,17 @@ DRAWERS.job = ({ id }) => {
   const [allLocs, setAllLocs] = useState(false);
   const [clicked, setClicked] = useState(false);
   const job = jobs.byId.get(id);
+  /* B11: S in the open job drawer saves / unsaves this job */
+  const sref = useRef(null); sref.current = job ? { job, app: byJob.get(job.id) } : null;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key.toLowerCase() !== "s" || e.metaKey || e.ctrlKey || e.altKey || e.repeat || find_typing(e.target)) return;
+      if (ui.state.modal || ui.state.palette || ui.state.drawer?.kind !== "job" || !sref.current) return;
+      e.preventDefault(); find_toggleSave(sref.current.job, sref.current.app);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   if (!job) {
     const loading = jobs.status !== "ready" && jobs.status !== "error";
@@ -659,7 +671,7 @@ DRAWERS.job = ({ id }) => {
   const saved = app && app.stage === "saved";
   const foot = html`
     <a class="btn primary find-apply" href=${job.url} target="_blank" rel="noopener" aria-label=${`Apply on ${job.co}’s site (opens in a new tab)`} onClick=${() => setClicked(true)}><span>Apply<span class="hide-sm"> on company site</span></span><${Icon} name="ext" /></a>
-    ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} cls=${cx(saved && "find-save on")} aria-pressed=${saved ? "true" : "false"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
+    ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} cls=${cx(saved && "find-save on")} aria-pressed=${saved ? "true" : "false"} title=${saved ? "Saved. Press S to remove" : "Save to pipeline (S)"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
     ${(!app || saved) && html`<${Btn} kind="ghost" icon="check" onClick=${() => find_markApplied(job, app)}>Mark as applied</${Btn}>`}
     ${app && !saved && html`<${Btn} iconRight="arrowR" onClick=${() => openApp(app.id)}>Open in pipeline</${Btn}>`}`;
 

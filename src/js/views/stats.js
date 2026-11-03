@@ -2,7 +2,8 @@
 
 const STATS_REPLY_STAGES = ["screen", "interview", "offer", "rejected"];
 function stats_isReplied(a) { return !!a.lastReplyAt || STATS_REPLY_STAGES.includes(a.stage); }
-function stats_reachedInterview(a) { return ["interview", "offer"].includes(a.stage) || (a.rounds || []).length > 0 || (a.events || []).some((e) => e.to === "interview"); }
+/* Same rule as the Interviewed count: the Interviews stage, or a round that already happened (online assessments excluded). */
+function stats_reachedInterview(a) { return ["interview", "offer"].includes(a.stage) || (a.rounds || []).some((r) => r.at && r.at <= now() && r.type !== "assessment") || (a.events || []).some((e) => e.to === "interview"); }
 function stats_days(d) { return d == null ? "—" : d < 10 && d % 1 ? d.toFixed(1) : String(Math.round(d)); }
 function stats_niceScale(max) {
   if (max <= 4) return { step: 1, top: Math.max(2, max) };
@@ -20,90 +21,105 @@ function stats_pcts(counts) {
   return out;
 }
 
-/* Deterministic, plain-language observations. Each one only appears when there is enough data behind it. */
+/* Deterministic, plain-language observations. Each one only appears when there is enough data behind it,
+   names its sample, and compares like with like: any comparison uses only applications sent 14+ days ago,
+   so recent ones that haven't had time to get a reply can't drag a group down. At most one action each. */
+const STATS_MATURE_DAYS = 14;
+const STATS_MIN_GROUP = 8;
 function stats_observations(s, apps, st, jobsById) {
   const t = now();
   const applied = apps.filter((a) => a.stage !== "saved" && a.appliedAt);
   const ghostDays = s.settings.ghostDays || 21;
   const out = [];
+  const seePipeline = { label: "See them", run: () => go("pipeline") };
 
   // 1. Silence after the ghost window
   const old = applied.filter((a) => t - a.appliedAt >= ghostDays * DAY);
   const silent = old.filter((a) => !stats_isReplied(a));
+  const stillOpen = silent.filter((a) => ACTIVE_STAGES.includes(a.stage));
   if (old.length >= 3 && silent.length) {
     const most = silent.length / old.length > 0.5;
     out.push({ key: "silent", icon: "ghost", tone: "ghost",
-      text: most ? `Most applications go silent: ${silent.length} of ${old.length} sent ${ghostDays}+ days ago never got a reply.` : `${silent.length} of ${old.length} applications sent ${ghostDays}+ days ago never got a reply.` });
+      text: `${most ? "Most applications go silent: " : ""}${silent.length} of ${old.length} applications sent ${ghostDays}+ days ago never got a reply.${stillOpen.length ? ` ${stillOpen.length === 1 ? "1 is" : `${stillOpen.length} are`} still marked active.` : ""}`,
+      action: stillOpen.length ? seePipeline : null });
   }
 
-  // 2. Biggest drop-off between funnel steps (each step needs at least 3 at the start)
+  // 2. Biggest drop-off between funnel steps (each step needs at least 5 at the start)
   const repliedApps = applied.filter(stats_isReplied);
   const positive = applied.filter((a) => ["screen", "interview", "offer"].includes(a.stage) || (a.events || []).some((e) => ["screen", "interview", "offer"].includes(e.to)));
   const interviewed = applied.filter(stats_reachedInterview);
   const decidedInterviews = interviewed.filter((a) => ["offer", "rejected", "ghosted"].includes(a.stage));
   const steps = [
-    { label: "getting a first reply", n: applied.length, k: repliedApps.length },
+    // Recent applications haven't had time to hear back, so the reply step only counts ones sent 14+ days ago.
+    { label: "getting a first reply", n: applied.filter((a) => t - a.appliedAt >= STATS_MATURE_DAYS * DAY).length, k: repliedApps.filter((a) => t - a.appliedAt >= STATS_MATURE_DAYS * DAY).length, note: ` sent ${STATS_MATURE_DAYS}+ days ago` },
     { label: "turning a reply into an interview", n: positive.length, k: positive.filter(stats_reachedInterview).length },
     { label: "turning interviews into an offer", n: decidedInterviews.length, k: decidedInterviews.filter((a) => a.stage === "offer").length },
-  ].filter((x) => x.n >= 3);
+  ].filter((x) => x.n >= 5);
   if (steps.length) {
     const worst = steps.reduce((a, b) => (b.k / b.n < a.k / a.n ? b : a));
-    out.push({ key: "drop", icon: "filter", tone: "wait", text: `Biggest drop-off: ${worst.label} (${worst.k} of ${worst.n}).` });
+    out.push({ key: "drop", icon: "filter", tone: "wait", text: `Biggest drop-off: ${worst.label} (${worst.k} of ${worst.n}${worst.note || ""}).` });
   }
 
   // 3. Where rejections happen
   const rej = applied.filter((a) => a.stage === "rejected");
-  if (rej.length >= 2) {
+  if (rej.length >= 3) {
     const pre = rej.filter((a) => !stats_reachedInterview(a)).length;
     out.push({ key: "rej", icon: "x", tone: "bad",
       text: pre / rej.length >= 0.5
-        ? `${pre} of ${rej.length} rejections came before any interview. Tailoring your resume to each listing matters most here.`
-        : `${rej.length - pre} of ${rej.length} rejections came after an interview. Your round notes are the place to look for patterns.` });
+        ? `${pre} of ${rej.length} rejections came before any interview. That points at the resume screen, so tailoring your resume to each listing is the best lever.`
+        : `${rej.length - pre} of ${rej.length} rejections came after an interview. Your round notes are the place to look for patterns.`,
+      action: pre / rej.length >= 0.5 ? null : { label: "Open prep", run: () => go("prep") } });
   }
 
-  // 4. Round outcomes by type
+  // 4. Interview rounds by type (online assessments and recruiter calls aren't interviews)
   const byType = {};
   for (const a of apps) for (const r of a.rounds || []) {
     if (r.outcome !== "passed" && r.outcome !== "failed") continue;
+    if (r.type === "assessment" || r.type === "recruiter") continue;
     const b = (byType[r.type] = byType[r.type] || { p: 0, f: 0 });
     b[r.outcome === "passed" ? "p" : "f"]++;
   }
   const typed = Object.entries(byType).map(([type, b]) => ({ type, ...b, d: b.p + b.f }));
   const decided = typed.reduce((x, y) => x + y.d, 0);
-  const weak = typed.filter((x) => x.d >= 2 && x.f > 0).sort((x, y) => x.p / x.d - y.p / y.d)[0];
-  if (weak) out.push({ key: "rounds", icon: "prep", tone: "accent", text: `${ROUND[weak.type]?.label || "These"} rounds are your toughest so far: you passed ${weak.p} of ${weak.d}.` });
+  const weak = typed.filter((x) => x.d >= 3 && x.f > 0).sort((x, y) => x.p / x.d - y.p / y.d)[0];
+  if (weak) out.push({ key: "rounds", icon: "prep", tone: "accent", text: `${ROUND[weak.type]?.label || "These"} rounds are your toughest so far: you passed ${weak.p} of ${weak.d}.`, action: { label: "Prep for the next one", run: () => go("prep") } });
   else if (decided >= 3) {
     const passed = typed.reduce((x, y) => x + y.p, 0);
-    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You’ve passed ${passed} of ${decided} interview rounds with a logged outcome.` });
+    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You’ve passed ${passed} of ${decided} interview rounds with a logged outcome (not counting recruiter calls or online assessments).` });
   }
 
   // 5. Reply timing vs. who is still waiting
-  if (st.medianReplyDays != null && st.replied >= 3) {
-    const waiting = applied.filter((a) => a.stage === "applied" && !stats_isReplied(a) && (t - a.appliedAt) / DAY > st.medianReplyDays);
+  if (st.medianReplyDays != null && (st.replyN ?? st.replied) >= 3) {
+    const waiting = applied.filter((a) => a.stage === "applied" && !stats_isReplied(a) && (t - a.appliedAt) / DAY > st.medianReplyDays && (t - a.appliedAt) / DAY < ghostDays);
     out.push({ key: "timing", icon: "clock", tone: "",
-      text: `Replies took a median of ${stats_days(st.medianReplyDays)} days.${waiting.length ? ` ${waiting.length === 1 ? "1 application is" : `${waiting.length} applications are`} past that with no reply, so a short follow-up is reasonable.` : ""}` });
+      text: `Replies took a median of ${stats_days(st.medianReplyDays)} days (from ${pluralize(st.replyN ?? st.replied, "reply", "replies")}).${waiting.length ? ` ${waiting.length === 1 ? "1 application is" : `${waiting.length} applications are`} past that with no reply, so a short follow-up is reasonable.` : ""}`,
+      action: waiting.length ? { label: "Follow up from Today", run: () => go("today") } : null });
   }
 
-  // 6. Category response rates (needs applications linked to listings)
+  // Comparisons: linked applications sent 14+ days ago only, at least 8 in each group.
+  const mature = applied.filter((a) => t - a.appliedAt >= STATS_MATURE_DAYS * DAY);
+  const linked = mature.map((a) => ({ a, j: a.jobId && jobsById.get(a.jobId) })).filter((x) => x.j);
+  const rate = (xs) => xs.filter((x) => stats_isReplied(x.a)).length;
+
+  // 6. Category response rates
   const cats = {};
-  for (const a of applied) {
-    const j = a.jobId && jobsById.get(a.jobId);
-    if (!j) continue;
-    const c = (cats[j.cat] = cats[j.cat] || { n: 0, r: 0 });
-    c.n++; if (stats_isReplied(a)) c.r++;
-  }
-  const cl = Object.entries(cats).filter(([, c]) => c.n >= 3).sort((x, y) => y[1].r / y[1].n - x[1].r / x[1].n);
+  for (const x of linked) (cats[x.j.cat] = cats[x.j.cat] || []).push(x);
+  const cl = Object.entries(cats).filter(([, xs]) => xs.length >= STATS_MIN_GROUP).sort((x, y) => rate(y[1]) / y[1].length - rate(x[1]) / x[1].length);
   if (cl.length >= 2) {
     const [hi, lo] = [cl[0], cl[cl.length - 1]];
-    if (hi[1].r / hi[1].n > lo[1].r / lo[1].n) out.push({ key: "cat", icon: "layers", tone: "info", text: `${hi[0]} roles reply more often: ${hi[1].r} of ${hi[1].n}, vs ${lo[1].r} of ${lo[1].n} for ${lo[0]}.` });
+    const n = cl.reduce((m, [, xs]) => m + xs.length, 0);
+    if (rate(hi[1]) / hi[1].length - rate(lo[1]) / lo[1].length >= 0.15) out.push({ key: "cat", icon: "layers", tone: "info",
+      text: `${hi[0]} roles replied more often: ${rate(hi[1])} of ${hi[1].length}, vs ${rate(lo[1])} of ${lo[1].length} for ${lo[0]}. From ${n} applications linked to a listing and sent ${STATS_MATURE_DAYS}+ days ago.` });
   }
 
-  // 7. Applying early (needs linked listings with a posted date)
-  const timed = applied.map((a) => ({ a, j: a.jobId && jobsById.get(a.jobId) })).filter((x) => x.j && x.j.p);
+  // 7. Applying early
+  const timed = linked.filter((x) => x.j.p && x.a.appliedAt >= x.j.p - DAY);
   const early = timed.filter((x) => x.a.appliedAt - x.j.p <= 3 * DAY), late = timed.filter((x) => x.a.appliedAt - x.j.p > 3 * DAY);
-  if (early.length >= 3 && late.length >= 3) {
-    const re = early.filter((x) => stats_isReplied(x.a)).length / early.length, rl = late.filter((x) => stats_isReplied(x.a)).length / late.length;
-    if (Math.abs(re - rl) >= 0.1) out.push({ key: "early", icon: "bolt", tone: "accent", text: `Applying within 3 days of posting got replies ${fmt.pct(re)} of the time, vs ${fmt.pct(rl)} when you applied later.` });
+  if (early.length >= STATS_MIN_GROUP && late.length >= STATS_MIN_GROUP) {
+    const re = rate(early) / early.length, rl = rate(late) / late.length;
+    if (Math.abs(re - rl) >= 0.15) out.push({ key: "early", icon: "bolt", tone: "accent",
+      text: `Applied within 3 days of posting: ${rate(early)} of ${early.length} got a reply. Applied later: ${rate(late)} of ${late.length}. From ${timed.length} linked applications sent ${STATS_MATURE_DAYS}+ days ago.`,
+      action: re > rl ? { label: "See new roles", run: () => go("find") } : null });
   }
   return out;
 }
@@ -243,7 +259,7 @@ function stats_Stall({ obs, applied }) {
       : obs.length
         ? html`<div class="st-insights">${obs.map((o) => html`<div class="st-insight" key=${o.key}>
             <span class="task-ico"><${Icon} name=${o.icon} /></span>
-            <p>${o.text}</p>
+            <p>${o.text}${o.action ? html` <a href="#" class="st-insight-act" onClick=${(e) => { e.preventDefault(); o.action.run(); }}>${o.action.label}<${Icon} name="arrowR" size=${14} /></a>` : null}</p>
           </div>`)}</div>`
         : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there’s enough behind them.</span></div>`}
   </section>`;
@@ -274,11 +290,12 @@ function stats_Method({ ghostDays, ex }) {
   return html`<details class="st-method">
     <summary><${Icon} name="chevR" size=${14} />How we calculate this</summary>
     <ul>
-      <li><b>Replied</b> counts any response, including rejections. <b>Interviewed</b> counts any logged round, including recruiter calls.</li>
+      <li><b>Replied</b> counts any response, including rejections. <b>Interviewed</b> counts applications that reached Interviews or had a round that already happened, including recruiter calls but not online assessments.</li>
       <li>Rates are shares of applications sent. Under 10 applications, they’re flagged as a small sample because one reply moves them a lot.</li>
       <li>Time to first reply is the median across applications that got a reply.</li>
       <li>Replies are counted in the week the first reply arrived, over the last 8 weeks.</li>
       <li>Patterns need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
+      <li>Comparisons between groups only use applications sent 14+ days ago, so recent ones that haven’t had time to get a reply don’t skew them. Each group needs at least 8 applications, and each line says how many it’s based on.</li>
       <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It’s a signal from listing data, not proof.</li>
       ${ex ? html`<li>Example applications are included. Turn off “Include examples” to see only your own.</li>` : null}
     </ul>

@@ -88,6 +88,39 @@ module.exports = {
     });
     console.log('find_run avg ms', t.toFixed(2));
   },
+  // B11: S on a tracked job explains itself; S in the open job drawer saves / unsaves
+  async saveKeys(p) {
+    await ready(p); await wait(p, 300);
+    const ok = (c, m) => { console.log(`  [find] ${c ? 'ok' : 'ASSERT FAILED'} - ${m}`); if (!c) throw new Error(m); };
+    const first = await p.evaluate(() => { const el = document.querySelector('.find-results [data-find-i="0"]'); return el && el.querySelector('.find-row-title') ? true : false; });
+    ok(first, 'results rendered');
+    // track the first result as Applied (read its id by opening it)
+    await p.keyboard.press('j'); await wait(p, 150);
+    await p.keyboard.press('Enter'); await wait(p, 300);
+    const jid = await p.evaluate(() => ui.state.drawer?.id);
+    await p.keyboard.press('Escape'); await wait(p, 200);
+    await p.evaluate((id) => { const j = jobsStore.byId.get(id); Apps.create({ company: j.co, title: j.t, jobId: j.id, url: j.url, stage: 'applied', appliedAt: Date.now() }); ui.set({ toasts: [] }); }, jid);
+    await wait(p, 200);
+    await p.keyboard.press('s'); await wait(p, 200);
+    const t = await p.locator('.toasts').innerText();
+    ok(/Already in your pipeline \(Applied\)/.test(t) && /Open/.test(t), `toast: "${t.replace(/\n/g, ' ')}"`);
+    await p.click('.toasts button:has-text("Open")'); await wait(p, 300);
+    ok(await p.evaluate(() => ui.state.drawer?.kind === 'app'), 'Open in the toast opens the application');
+    await p.keyboard.press('Escape'); await wait(p, 200);
+    // S inside the job drawer (second result, untracked)
+    await p.evaluate(() => ui.set({ toasts: [] }));
+    await p.keyboard.press('j'); await p.keyboard.press('Enter'); await wait(p, 400);
+    const id = await p.evaluate(() => ui.state.drawer?.kind === 'job' && ui.state.drawer.id);
+    ok(!!id, 'Enter opens the job drawer');
+    await p.keyboard.press('s'); await wait(p, 250);
+    let st = await p.evaluate((jid) => Apps.byJob ? (Apps.byJob(jid)?.stage || Object.values(store.get().apps).find((a) => a.jobId === jid)?.stage) : null, id);
+    ok(st === 'saved', `S in the drawer saves (${st})`);
+    ok(/Saved/.test(await p.locator('.drawer-foot').innerText()), 'drawer footer shows Saved');
+    await p.keyboard.press('s'); await wait(p, 250);
+    st = await p.evaluate((jid) => Object.values(store.get().apps).find((a) => a.jobId === jid)?.stage || null, id);
+    ok(st === null, 'S again unsaves');
+    await p.keyboard.press('s'); await wait(p, 250);
+  },
 };
 // close any drawer/modal left open by a previous action in the same session
 for (const [k, fn] of Object.entries(module.exports)) {

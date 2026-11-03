@@ -442,3 +442,15 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .pl-banner .btn { flex: none; }
 @media (max-width: 520px) { .pl-banner-more { display: none; } }
 @media (hover: none) { .pl-board:not(.selecting) .pl-chk { pointer-events: none; } }
+
+/* B4: taken-down posting callout (quiet: neutral surface, amber icon only) */
+.pl-removed { align-items: flex-start; }
+.pl-removed > .ico { color: var(--wait); }
+.pl-removed-body { flex: 1; min-width: 0; gap: 8px; }
+.pl-removed-body b { color: var(--fg); font-weight: 600; }
+.pl-removed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: -2px; }
+.pl-removed-btn[disabled] { opacity: 1; color: var(--fg-3); background: transparent; }
+.pl-removed-tag { flex: none; }
+/* B9: "Log outcome · Onsite / Final, 2d ago" may wrap to a second line instead of truncating */
+.pl-status-2l { white-space: normal; align-items: flex-start; line-height: 1.35; }
+.pl-status-2l .ico { margin-top: 2px; }

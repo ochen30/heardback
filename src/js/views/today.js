@@ -120,55 +120,201 @@ function today_taskCopy(tk) {
 /* Core builds task text with straight apostrophes; display them typographically. */
 function today_typo(t) { return typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t; }
 
-function today_TaskRow({ tk, first }) {
+function today_snooze(tk, d) {
+  const prev = store.get().dismissed[tk.key];
+  dismissTask(tk.key, d);
+  toast(`Snoozed until ${fmt.date(now() + d * DAY, { weekday: "short", month: "short", day: "numeric" })}`, { undo: () => today_undismiss(tk.key, prev) });
+}
+function today_dismiss(tk) {
+  const prev = store.get().dismissed[tk.key];
+  dismissTask(tk.key);
+  toast("Dismissed", { undo: () => today_undismiss(tk.key, prev) });
+}
+/* Inline outcome for a past round. "Didn't pass" also closes the application as Rejected; one toast undoes all of it. */
+function today_logOutcome(tk, outcome) {
+  const a = tk.app, r = tk.round, before = Apps.get(a.id);
+  const restore = () => store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: before } }));
+  if (outcome === "waiting") {
+    const prev = store.get().dismissed[tk.key];
+    dismissTask(tk.key, 2);
+    toast(`We’ll ask again ${fmt.date(now() + 2 * DAY, { weekday: "short" })}`, { undo: () => today_undismiss(tk.key, prev) });
+    return;
+  }
+  Apps.updateRound(a.id, r.id, { outcome });
+  if (outcome === "passed") toast("Logged as passed", { undo: restore, action: { label: "Add next round", run: () => openApp(a.id, "rounds") } });
+  else {
+    if (!["rejected", "ghosted", "offer"].includes(a.stage)) Apps.move(a.id, "rejected", { silent: true });
+    toast(`${a.company} moved to Rejected`, { undo: restore });
+  }
+}
+function today_typing(el) { return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable); }
+
+function today_TaskRow({ tk, primary, idx }) {
   const [menu, setMenu] = useState(null);
   const close = useCallback(() => setMenu(null), []);
-  const snooze = (d) => {
-    const prev = store.get().dismissed[tk.key];
-    dismissTask(tk.key, d);
-    toast(`Snoozed until ${fmt.date(now() + d * DAY, { weekday: "short", month: "short", day: "numeric" })}`, { undo: () => today_undismiss(tk.key, prev) });
-  };
-  const dismiss = () => {
-    const prev = store.get().dismissed[tk.key];
-    dismissTask(tk.key);
-    toast("Dismissed", { undo: () => today_undismiss(tk.key, prev) });
-  };
   const a = tk.app;
   const copy = today_taskCopy(tk);
-  const cls = cx("btn sm td-act", first && "primary");
-  let primary;
-  if (tk.kind === "apply" && a.url) primary = html`<a class=${cls} href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
-  else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") primary = html`<button type="button" class=${cls} onClick=${() => openJob(a.jobId)}>Apply</button>`;
-  else primary = html`<button type="button" class=${cls} onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
+  const cls = cx("btn sm td-act", primary && "primary");
+  let act;
+  if (tk.kind === "outcome" && tk.round) act = html`<div class="td-outcome" role="group" aria-label=${"Outcome of the " + a.company + " round"}>
+      <button type="button" class="btn sm" data-primary onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
+      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
+      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "waiting")}>Still waiting</button>
+    </div>`;
+  else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
+  else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
+  else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
   const safeKey = tk.key.replace(/[^a-z0-9]/gi, "-");
-  return html`<div class="task td-task" data-key=${tk.key}>
+  return html`<div class="task td-task" data-key=${tk.key} data-fidx=${idx} tabindex="-1" aria-label=${today_typo(tk.title)}>
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
       ${typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`}
     </div>
-    <div class="task-actions td-task-actions">
-      ${primary}
+    <div class=${cx("task-actions td-task-actions", tk.kind === "outcome" && "is-outcome")}>
+      ${act}
       <button type="button" class="btn sm ghost icon td-more" id=${"more-" + safeKey} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
         aria-label=${"More options: " + tk.title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
     </div>
     ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Task options"
       items=${[
-        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => snooze(o.d) })),
+        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: o.d === 1 ? "S" : fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => today_snooze(tk, o.d) })),
         { key: "sep", sep: true },
-        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", run: dismiss },
+        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", hint: "D", run: () => today_dismiss(tk) },
       ]} />`}
   </div>`;
 }
 
+const TODAY_GROUPS = [{ id: "today", label: "Today" }, { id: "quick", label: "Quick wins" }, { id: "later", label: "When you have time" }];
+const TODAY_GROUP_MAX = 8;
+// Within Quick wins: things only you can answer first, then nudges, then cleanup.
+const TODAY_QUICK_ORDER = { confirm: 0, thanks: 0, outcome: 1, removed: 2, nextround: 3, follow: 4, ghost: 5 };
+function today_groups(tasks, open) {
+  return TODAY_GROUPS.map((g) => {
+    let all = tasks.filter((tk) => (tk.group || "later") === g.id);
+    if (g.id === "quick") all = all.map((tk, i) => [tk, i]).sort(([x, i], [y, j]) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || i - j).map((p) => p[0]);
+    return { ...g, all, shown: open[g.id] ? all : all.slice(0, TODAY_GROUP_MAX) };
+  }).filter((g) => g.all.length);
+}
+
+function today_ghostAll(list) {
+  const ids = list.map((tk) => tk.app.id);
+  const names = list.map((tk) => tk.app.company);
+  const named = names.length <= 4 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+  askConfirm({
+    title: `Mark ${ids.length} applications as ghosted?`,
+    body: `${named} haven’t replied in ${store.get().settings.ghostDays || 21}+ days. They move to Ghosted and stop showing up here. You can undo this right after.`,
+    confirmLabel: `Mark ${ids.length} as ghosted`,
+    onConfirm: () => Apps.moveMany(ids, "ghosted"),
+  });
+}
+
 function today_NeedsYou({ tasks, fresh, next }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? tasks : tasks.slice(0, 5);
+  const [open, setOpen] = useState({});
+  const [kbd, setKbd] = useState(false);
+  const listRef = useRef(null);
+  const last = useRef({ key: null, idx: 0 });
+  const groups = today_groups(tasks, open);
+  const flat = groups.flatMap((g) => g.shown);
+  const kref = useRef({}); kref.current = { flat, groups };
+  const primaryKey = flat.find((tk) => tk.kind !== "outcome")?.key;
+
+  // Focus now when the row exists (so fast J J K stays in order), else after the render that adds it.
+  const focusRow = (key) => {
+    const go = () => {
+      const el = listRef.current && [...listRef.current.querySelectorAll(".td-task")].find((r) => r.dataset.key === key);
+      if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "nearest" }); return true; }
+    };
+    if (!go()) setTimeout(go, 0);
+  };
+  // After an action removes the focused row (or a modal/drawer it opened closes onto nothing), focus the row that took its place.
+  const refocus = () => {
+    if (ui.state.modal || ui.state.drawer || ui.state.palette) return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae.isConnected) return;
+    const { flat } = kref.current, L = last.current;
+    if (!L.key || !flat.length) return;
+    const at = flat.findIndex((t) => t.key === L.key);
+    focusRow((at >= 0 ? flat[at] : flat[Math.min(L.idx, flat.length - 1)]).key);
+  };
+  const flatSig = flat.map((t) => t.key).join("|");
+  useEffect(() => { refocus(); const t = setTimeout(refocus, 120); return () => clearTimeout(t); }, [flatSig]);
+  useEffect(() => {
+    const off = ui.sub(() => setTimeout(refocus, 60));
+    // A click anywhere outside the list means focus left on purpose: stop restoring it.
+    const down = (e) => { if (!listRef.current?.contains(e.target) && !e.target.closest?.(".modal, .drawer, .toasts, .td-menu")) last.current = { key: null, idx: 0 }; };
+    document.addEventListener("mousedown", down, true);
+    return () => { off(); document.removeEventListener("mousedown", down, true); };
+  }, []);
+
+  useEffect(() => {
+    let lastG = 0;
+    const onKey = (e) => {
+      if (today_typing(e.target) || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      if (ui.state.modal || ui.state.palette || ui.state.drawer || document.querySelector(".td-menu")) return;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (k === "g") { lastG = now(); return; }
+      if (lastG && now() - lastG < 1200) { lastG = 0; return; } // "G then S" etc. belong to the shell
+      const { flat, groups } = kref.current;
+      if (!flat.length) return;
+      const row = e.target?.closest?.(".td-task");
+      const curKey = row ? row.dataset.key : null;
+      const idx = flat.findIndex((t) => t.key === curKey);
+      if (k === "j" || k === "k") {
+        e.preventDefault();
+        if (idx < 0) {
+          const at = last.current.key ? flat.findIndex((t) => t.key === last.current.key) : -1;
+          return focusRow(flat[at >= 0 ? at : k === "j" ? 0 : flat.length - 1].key);
+        }
+        if (k === "k") return focusRow(flat[Math.max(0, idx - 1)].key);
+        // J past the last shown row of a group with more: show the rest of that group.
+        const g = groups.find((x) => x.shown.some((t) => t.key === curKey));
+        if (g && g.shown[g.shown.length - 1].key === curKey && g.all.length > g.shown.length) {
+          setOpen((o) => ({ ...o, [g.id]: true }));
+          return focusRow(g.all[g.shown.length].key);
+        }
+        return focusRow(flat[Math.min(flat.length - 1, idx + 1)].key);
+      }
+      if (idx < 0) return;
+      const tk = flat[idx];
+      if (e.key === "Enter") {
+        if (e.target !== row) return; // a focused button inside the row activates natively
+        e.preventDefault();
+        if (tk.kind === "outcome") return today_runTask(tk);
+        row.querySelector("[data-primary]")?.click();
+      } else if (k === "d") { e.preventDefault(); today_dismiss(tk); }
+      else if (k === "s") { e.preventDefault(); today_snooze(tk, 1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const onFocusIn = (e) => {
+    const el = e.target.closest?.("[data-fidx]");
+    if (el) last.current = { key: el.dataset.key || null, idx: +el.dataset.fidx || 0 };
+    setKbd(!!e.target.closest?.(".td-task"));
+  };
+  const onFocusOut = (e) => { if (!listRef.current?.contains(e.relatedTarget)) setKbd(false); };
+
+  let n = 0;
   return html`<section class="card" aria-labelledby="td-needs-h">
-    <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}</div>
+    <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}
+      ${tasks.length ? html`<span class="spacer"></span><span class=${cx("td-keys hide-sm", kbd && "on")} aria-hidden="true"><${Kbd}>J</${Kbd}><${Kbd}>K</${Kbd}> move<${Kbd}>Enter</${Kbd}> do it<${Kbd}>S</${Kbd}> snooze<${Kbd}>D</${Kbd}> dismiss</span>` : null}</div>
     ${tasks.length
-      ? html`<div class="list">${shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} first=${i === 0} />`)}</div>
-        ${tasks.length > 5 && html`<div class="td-card-foot"><${Btn} size="sm" kind="ghost" iconRight=${all ? undefined : "chevD"} onClick=${() => setAll(!all)}>${all ? "Show fewer" : `Show ${tasks.length - 5} more`}</${Btn}></div>`}`
+      ? html`<div class="td-groups" ref=${listRef} onfocusin=${onFocusIn} onfocusout=${onFocusOut}>${groups.map((g) => {
+          const ghosts = g.all.filter((tk) => tk.kind === "ghost");
+          const startIdx = n; n += g.shown.length;
+          const more = g.all.length - TODAY_GROUP_MAX;
+          return html`<div class="td-group" key=${g.id} role="group" aria-labelledby=${"td-g-" + g.id}>
+            <div class="td-group-h" data-key=${"group:" + g.id} data-fidx=${startIdx}>
+              <h3 id=${"td-g-" + g.id}>${g.label}</h3><span class="td-count num">${g.all.length}</span>
+              <span class="spacer"></span>
+              ${ghosts.length >= 2 ? html`<${Btn} size="sm" kind="ghost" icon="ghost" cls="td-batch" onClick=${() => today_ghostAll(ghosts)}>Mark all ${ghosts.length} as ghosted</${Btn}>` : null}
+            </div>
+            <div class="list">${g.shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} idx=${startIdx + i} primary=${tk.key === primaryKey} />`)}</div>
+            ${more > 0 ? html`<div class="td-group-more" data-key=${"more:" + g.id} data-fidx=${startIdx + g.shown.length - 1}><${Btn} size="sm" kind="ghost" iconRight=${open[g.id] ? undefined : "chevD"} onClick=${() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>${open[g.id] ? "Show fewer" : `Show ${more} more`}</${Btn}></div>` : null}
+          </div>`;
+        })}</div>`
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
@@ -363,8 +509,16 @@ function today_View() {
   const parts = [];
   if (!apps.length) parts.push("Start with a few roles worth applying to.");
   else {
-    parts.push(tasks.length ? `${tasks.length} ${tasks.length === 1 ? "thing needs" : "things need"} you today` : "Nothing needs you right now");
-    if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
+    const nT = tasks.filter((tk) => tk.group === "today").length, nQ = tasks.filter((tk) => tk.group === "quick").length, nL = tasks.length - nT - nQ;
+    if (!tasks.length) parts.push("Nothing needs you right now");
+    else {
+      if (nT) parts.push(`${nT} for today`);
+      if (nQ) parts.push(pluralize(nQ, "quick win"));
+      if (!nT && !nQ) parts.push(`${nL} when you have time`);
+    }
+    const nx = up.items[0];
+    if (nx && fmt.startOfDay(nx.r.at) === fmt.startOfDay(now())) parts.push(`Next: ${nx.a.company} ${(ROUND[nx.r.type]?.label || "interview").toLowerCase()} at ${fmt.time(nx.r.at)}`);
+    else if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
     else if (up.items.length) parts.push(`Next interview ${fmt.date(up.items[0].r.at, { weekday: "short", month: "short", day: "numeric" })}`);
     else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
   }

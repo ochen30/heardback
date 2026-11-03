@@ -130,11 +130,16 @@ const WRAP = () => {
     await page.evaluate((id) => openApp(id), nwId); await page.waitForTimeout(300);
     await page.keyboard.press('Control+k'); await page.waitForTimeout(200);
     const items = await page.locator('.palette-item').allInnerTexts();
-    const palExp = await page.evaluate((id) => { const a = Apps.get(id); return { head: `${a.company} · ${a.title || 'Application'}`, moves: STAGES.filter((st) => st.id !== a.stage).map((st) => `Move to ${st.label}`).slice(0, 4) }; }, nwId);
+    const palExp = await page.evaluate((id) => { const a = Apps.get(id); return { head: `${a.company} · ${a.title || 'Application'}`, moves: STAGES.filter((st) => st.id !== a.stage).map((st) => `Move to ${st.label}`), ghosted: a.stage === 'ghosted', pastPending: (a.rounds || []).some((r) => r.at && r.at <= Date.now() && r.outcome === 'pending') }; }, nwId);
     const palHead = await page.locator('.palette-group').first().innerText().catch(() => '');
     T.check('palette over app drawer: context group header is "{Company} · {Title}"', palHead.trim() === palExp.head, `${palHead} vs ${palExp.head}`);
-    const palCtx = items.slice(0, 6).map((t) => t.trim().split('\n')[0].trim());
-    T.check('palette over app drawer: context group first (Add round, Draft follow-up, then Move to …)', JSON.stringify(palCtx) === JSON.stringify(['Add an interview round', 'Draft a follow-up', ...palExp.moves]), palCtx.join(' | '));
+    // the context group is the first 6 items under that header; ordering contract: Add round first,
+    // Draft a follow-up before any "Move to …", and Move-to items follow STAGES order skipping the current stage
+    const palAll = await page.evaluate(() => { const out = []; let g = null; for (const el of document.querySelectorAll('.palette-list > *')) { if (el.classList.contains('palette-group')) g = el.textContent.trim(); else if (el.classList.contains('palette-item')) out.push({ g, t: (el.innerText || '').trim().split('\n')[0].trim() }); } return out; });
+    const palCtx = palAll.filter((x) => x.g === palExp.head).map((x) => x.t);
+    const iDraft = palCtx.indexOf('Draft a follow-up'), mv = palCtx.filter((t) => /^Move to /.test(t)), iMv = palCtx.findIndex((t) => /^Move to /.test(t));
+    T.check('palette over app drawer: context group first (Add round, Draft follow-up, then Move to …)', palAll[0] && palAll[0].g === palExp.head && palCtx[0] === 'Add an interview round' && iDraft > 0 && iMv > iDraft && palCtx.slice(iMv).every((t) => /^Move to /.test(t)) && JSON.stringify(mv) === JSON.stringify(palExp.moves.slice(0, mv.length)) && mv.length >= 1 && palCtx.length === 6, palCtx.join(' | '));
+    T.check('palette over app drawer: "Mark as ghosted" offered unless already ghosted; outcome items only with a past pending round', palCtx.includes('Mark as ghosted') === !palExp.ghosted && palCtx.includes('Log a round outcome') === palExp.pastPending, `${palCtx.join(' | ')} ghosted=${palExp.ghosted} pastPending=${palExp.pastPending}`);
     T.check('palette over app drawer: offers Add round + Draft follow-up', items.some((t) => /Add an interview round|Add a round/.test(t)) && items.some((t) => /Draft a follow-up/.test(t)), items.join(' | ').slice(0, 300));
     T.check('palette over app drawer: no "Move to" current stage', !items.some((t) => new RegExp(`Move to ${'Interviews'}`).test(t)) || true);
     await page.keyboard.type('move to offer'); await page.waitForTimeout(150);
