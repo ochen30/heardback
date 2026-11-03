@@ -613,6 +613,7 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .sep-item { white-space: nowrap; }
 @media (max-width: 860px) { .topbar .btn.primary { width: 36px; height: 36px; padding: 0; } }
 p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+.modal-body:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -2447,7 +2448,7 @@ function Modal({ title, onClose, children, foot, size, label }) {
     <div class="scrim modal-scrim" onClick=${onClose}></div>
     <div class=${cx("modal", size)} role="dialog" aria-modal="true" aria-label=${label || title} ref=${ref} tabindex="-1">
       ${title && html`<div class="modal-head"><h2>${title}</h2><span class="spacer"></span><${Btn} kind="ghost" icon="x" aria-label="Close" onClick=${onClose} /></div>`}
-      <div class="modal-body">${children}</div>
+      <div class="modal-body" tabindex="0">${children}</div>
       ${foot && html`<div class="modal-foot">${foot}</div>`}
     </div>
   </${Fragment}>`;

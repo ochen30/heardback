@@ -149,7 +149,7 @@ function Modal({ title, onClose, children, foot, size, label }) {
     <div class="scrim modal-scrim" onClick=${onClose}></div>
     <div class=${cx("modal", size)} role="dialog" aria-modal="true" aria-label=${label || title} ref=${ref} tabindex="-1">
       ${title && html`<div class="modal-head"><h2>${title}</h2><span class="spacer"></span><${Btn} kind="ghost" icon="x" aria-label="Close" onClick=${onClose} /></div>`}
-      <div class="modal-body">${children}</div>
+      <div class="modal-body" tabindex="0">${children}</div>
       ${foot && html`<div class="modal-foot">${foot}</div>`}
     </div>
   </${Fragment}>`;
