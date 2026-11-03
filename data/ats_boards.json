@@ -4890,14 +4890,6 @@
   "lastSeen": "2026-09-07"
  },
  {
-  "company": "Medra",
-  "ats": "ashby",
-  "board": "medraai",
-  "openInDataset": 1,
-  "seenInDataset": 1,
-  "lastSeen": "2026-10-24"
- },
- {
   "company": "Mendix",
   "ats": "lever",
   "board": "mendix",
@@ -5451,14 +5443,6 @@
   "openInDataset": 1,
   "seenInDataset": 1,
   "lastSeen": "2026-08-21"
- },
- {
-  "company": "Phoenix Contact",
-  "ats": "greenhouse",
-  "board": "phoenixcontact",
-  "openInDataset": 1,
-  "seenInDataset": 3,
-  "lastSeen": "2026-08-27"
  },
  {
   "company": "Phonely",
@@ -11532,6 +11516,14 @@
   "lastSeen": "2026-06-13"
  },
  {
+  "company": "Medra",
+  "ats": "ashby",
+  "board": "medraai",
+  "openInDataset": 0,
+  "seenInDataset": 1,
+  "lastSeen": "2026-10-24"
+ },
+ {
   "company": "Meds",
   "ats": "lever",
   "board": "meds",
@@ -12699,6 +12691,14 @@
   "openInDataset": 0,
   "seenInDataset": 1,
   "lastSeen": "2026-07-21"
+ },
+ {
+  "company": "Phoenix Contact",
+  "ats": "greenhouse",
+  "board": "phoenixcontact",
+  "openInDataset": 0,
+  "seenInDataset": 3,
+  "lastSeen": "2026-08-27"
  },
  {
   "company": "Piaggio Fast Forward",

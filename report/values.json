@@ -1,5 +1,5 @@
 {
-  "versions": 15,
+  "versions": 16,
   "score": "9.2",
   "checks": "2,428",
   "timeline": [
@@ -87,6 +87,11 @@
       "6:55 AM",
       "v15: review 10 + chaos test",
       "Generic round type renamed Interview, browse-only visitors see no goal they never set, thin company stats hidden, Interviews get their own color. 1,900 random clicks and keys: zero errors."
+    ],
+    [
+      "7:28 AM",
+      "v16: interview day",
+      "A fourth usability test walked through interview day. A Next up row pins the next round with Open notes and Join; rounds get a Where field filled from invite emails; Prep shows your notes on the company; mock answers and practice outlines save to notes; honest calendar states."
     ]
   ],
   "qa": "Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. The end-to-end suite drives the real UI (onboarding, search, saving, drag and drop, keyboard, bulk actions, email logging with 11 realistic emails, rounds, nudges, Insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior) at phone and desktop widths, with and without Claude: __CHECKS__ checks, all passing in the final run. An axe-core scan finds zero WCAG 2 A/AA violations on every screen and overlay in both themes. Three usability tests (an intern hunter on desktop, a new grad on a phone, a power user with 42 applications) drove the last rounds of fixes.",
