@@ -609,3 +609,10 @@ p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offs
 .modal-body:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
 /* One keyboard-focus style for list rows and cards (J/K navigation) */
 .kb-active, .kb-row:focus-visible { outline: none; box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
+@media (max-width: 640px) {
+  .meth-table thead { display: none; }
+  .meth-table tr { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .meth-table td { display: block; padding: 0; height: auto; border: 0; }
+  .meth-pts { min-width: 0; white-space: normal; color: var(--fg-2); }
+  .meth-table tbody tr:last-child { border-bottom: 0; }
+}

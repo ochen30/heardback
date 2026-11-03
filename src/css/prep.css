@@ -6,8 +6,17 @@
 .onb-brand { display: flex; align-items: center; gap: 12px; }
 .onb-brand .spacer { flex: 1; }
 .onb-word { font-size: var(--fs-lg); font-weight: 650; letter-spacing: -0.02em; }
-.onb-value { margin-top: -12px; color: var(--fg-2); font-size: var(--fs-md); }
+.onb-pitch { display: flex; flex-direction: column; gap: 8px; margin-top: -8px; }
+.onb-value { color: var(--fg); font-size: var(--fs-md); line-height: 1.5; max-width: 52ch; }
+.onb-trust { display: flex; align-items: center; gap: 6px; color: var(--fg-2); font-size: var(--fs-sm); }
+.onb-trust .ico { color: var(--ok); flex: none; }
 .onb-link { border: 0; background: none; padding: 6px 4px; color: var(--fg-2); font-size: var(--fs-sm); font-weight: 500; border-radius: var(--r-sm); min-height: 32px; }
+.onb-browse { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; margin-right: -12px; color: var(--accent-text); }
+.onb-browse:hover { color: var(--accent-text); }
+.onb-sample { min-height: 44px; padding: 0 4px; margin-left: -4px; text-align: left; }
+.onb-note { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-sm); color: var(--fg-2); }
+.onb-note .ico { color: var(--fg-3); flex: none; margin-top: 3px; }
+.onb-matches > .onb-note { padding: 0 4px; }
 .onb-link:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; }
 .onb-progress { display: flex; flex-direction: column; gap: 8px; padding-top: 24px; border-top: 1px solid var(--line); }
 .onb-step-label { font-size: var(--fs-xs); color: var(--fg-3); font-weight: 500; letter-spacing: .02em; }
@@ -64,8 +73,10 @@
 .onb-big { font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.025em; line-height: 1.1; }
 .onb-big-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); }
 .onb-count + .callout { margin: 16px 20px; }
-.onb-job { cursor: default; padding: 12px 20px; }
-.onb-job:hover { background: var(--surface); }
+.onb-job { width: 100%; padding: 12px 20px; border: 0; text-align: left; min-height: 56px; }
+.onb-job:hover { background: var(--surface-2); }
+.onb-reason { font-size: var(--fs-xs); color: var(--fg-2); }
+.onb-flag-h { display: flex; flex-direction: column; gap: 2px; padding: 14px 20px 6px; border-top: 1px solid var(--line); }
 .onb-source { padding: 12px 20px; border-top: 1px solid var(--line); }
 .onb-ex { align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
 .onb-ex input { margin-top: 2px; }
@@ -225,6 +236,7 @@
   .onb-card-pad { padding: 16px; }
   .onb-count { padding: 16px; }
   .onb-job { padding: 12px 16px; }
+  .onb-flag-h { padding: 12px 16px 4px; }
   .onb-source { padding: 12px 16px; }
   .onb-name { max-width: none; }
   .onb-add { max-width: none; }

@@ -135,6 +135,15 @@ function fitScore(job, profile) {
     if (hit) { score += 20; parts.push({ k: "Location", ok: true, text: hit === "remote" ? "Remote option" : `In ${LOC_OPTIONS.find((o) => o.id === hit)?.label || hit}` }); }
     else parts.push({ k: "Location", ok: false, text: `${(job.l || [])[0] || "Location"} isn't on your list` });
   }
+  // degree: a hard gate when the listing's lowest accepted degree is above yours
+  const DEG_RANK = { AS: 0, BS: 1, MS: 2, PhD: 3 };
+  const mine = DEG_RANK[profile.degree || "BS"] ?? 1;
+  const listed = (job.deg || []).filter((d) => d in DEG_RANK);
+  const phdTitle = /\bph\.?\s?d\b|doctoral/i.test(job.t);
+  const minReq = listed.length ? Math.min(...listed.map((d) => DEG_RANK[d])) : phdTitle ? 3 : null;
+  let degreeGap = false;
+  if (minReq != null && minReq > mine) { degreeGap = true; parts.push({ k: "Degree", ok: false, text: `Asks for ${minReq === 3 ? "a PhD" : minReq === 2 ? "a master's" : "a bachelor's"}` }); }
+  else if (minReq != null) parts.push({ k: "Degree", ok: true, text: "Open to your degree" });
   // sponsorship (10)
   max += 10;
   if (profile.needsSponsor) {
@@ -155,7 +164,8 @@ function fitScore(job, profile) {
     score += Math.round(20 * Math.min(1, r));
     parts.push({ k: "Skills", ok: matched.length ? true : false, text: matched.length ? `You list ${matched.slice(0, 3).join(", ")}` : `Usually asks for ${exp.slice(0, 3).join(", ")}` });
   }
-  return { score: Math.round((score / max) * 100), parts, matched, missing, expected: exp };
+  const raw = Math.round((score / max) * 100);
+  return { score: degreeGap ? Math.min(raw, 35) : raw, parts, matched, missing, expected: exp, degreeGap };
 }
 
 /* ===== Email parsing (rule-based; Claude upgrade lives in the paste modal) ===== */

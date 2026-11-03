@@ -99,7 +99,7 @@ const LEVELS = [{ id: "intern", label: "Internship" }, { id: "newgrad", label: "
 const STORE_KEY = "heardback:v1";
 const defaultState = () => ({
   v: 1,
-  profile: { roles: [], levels: ["intern", "newgrad"], locations: [], remote: true, needsSponsor: false, resume: "", skills: [], onboarded: false, name: "", weeklyGoal: 10 },
+  profile: { roles: [], levels: ["intern", "newgrad"], locations: [], remote: true, needsSponsor: false, resume: "", skills: [], onboarded: false, name: "", weeklyGoal: 10, degree: "BS" },
   apps: {},
   settings: { theme: "system", followUpDays: 7, ghostDays: 21, shareAnon: false, showExamples: true, hideGhostAbove: 0 },
   dismissed: {},
@@ -119,6 +119,7 @@ function cleanProfile(p) {
     roles: strArr(p.roles), levels: strArr(p.levels).filter((l) => l === "intern" || l === "newgrad"), locations: strArr(p.locations), skills: strArr(p.skills),
     remote: p.remote == null ? d.remote : !!p.remote, needsSponsor: !!p.needsSponsor, onboarded: !!p.onboarded,
     resume: strOr(p.resume).slice(0, 60000), name: strOr(p.name).slice(0, 80), weeklyGoal: clamp(Math.round(numOr(p.weeklyGoal, d.weeklyGoal)), 1, 100),
+    degree: ["AS", "BS", "MS", "PhD"].includes(p.degree) ? p.degree : "BS",
   };
 }
 function cleanSettings(x) {

@@ -213,6 +213,9 @@ function PfProfile() {
     <${PfRow} label="Remote">
       <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
     </${PfRow}>
+    <${PfRow} label="Degree" hint="Roles that ask for a higher degree get a low fit.">
+      <${Seg} label="Highest degree by graduation" value=${p.degree || "BS"} options=${[{ id: "AS", label: "Associate" }, { id: "BS", label: "Bachelor’s" }, { id: "MS", label: "Master’s" }, { id: "PhD", label: "PhD" }]} onChange=${(v) => pfSetProfile({ degree: v })} />
+    </${PfRow}>
     <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don’t sponsor.">
       <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I’ll need sponsorship" />
     </${PfRow}>

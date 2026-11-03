@@ -131,8 +131,26 @@ function onbMatches(jobs, p) {
 function onbTop(list, p, n = 5) {
   return list
     .map((j) => ({ j, f: fitScore(j, p) }))
-    .sort((a, b) => (b.f?.score || 0) - (a.f?.score || 0) || (a.j.g || 0) - (b.j.g || 0) || b.j.p - a.j.p)
+    .sort((a, b) => (b.f?.score || 0) - (a.f?.score || 0) || (ghostLevel(a.j.g || 0) === "low" ? 0 : 1) - (ghostLevel(b.j.g || 0) === "low" ? 0 : 1) || b.j.p - a.j.p)
     .slice(0, n);
+}
+/* One listing with ghost signals, so the idea is visible before the first search: the newest flagged match
+   with a stated reason, preferring "some" signals (a typical case) over "strong". */
+function onbFlagged(list, skip) {
+  let best = null;
+  for (const j of list) {
+    if (skip.has(j.id) || (j.g || 0) < 25 || !(j.gr || []).length) continue;
+    if (ghostLevel(j.g) === "mid") return j;
+    if (!best) best = j;
+  }
+  return best;
+}
+/* Location text for a matched row: the city that matched the picked locations first (else Find's default). */
+function onbLocText(j, p) {
+  const locs = (p.locations || []).filter((l) => l !== "remote");
+  if (j.r && !(j.l || []).length) return "Remote";
+  const city = locs.length ? (j.l || []).find((l) => locs.some((id) => jobInLoc({ ...j, l: [l] }, id))) : null;
+  return city ? `${city}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}` : find_locText(j);
 }
 function onbSummary(p) {
   const lv = p.levels.length === 1 ? (p.levels[0] === "intern" ? "Internships" : "New grad roles") : "Internships and new grad roles";
@@ -190,6 +208,7 @@ function OnbLocChecklist({ idp, value, onChange, label, roles = [], levels = [] 
 }
 
 /* ---------- Steps ---------- */
+const ONB_OTHER_NOTE = "Most listings here are technical roles. You can still track any application.";
 function OnbGroup({ title, hint, children, id }) {
   return html`<section class="onb-group" aria-labelledby=${id}>
     <div class="onb-group-head"><h3 id=${id}>${title}</h3>${hint && html`<span class="hint">${hint}</span>`}</div>
@@ -202,8 +221,9 @@ function OnbStepTargets({ d, set }) {
     <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
     </${OnbGroup}>
-    <${OnbGroup} id="onb-g-role" title="Roles" hint="Leave empty to see every role.">
-      <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}</div>
+    <${OnbGroup} id="onb-g-role" title="Roles" hint="Tech-focused for now: software, data and AI, product, quant and hardware.">
+      <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}<${Chip} key="other" on=${!!d.other} onClick=${() => set({ other: !d.other })}>Something else</${Chip}></div>
+      ${d.other && html`<p class="onb-note" role="status"><${Icon} name="info" size=${14} /><span>${ONB_OTHER_NOTE}</span></p>`}
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-loc" title="Locations" hint="Leave empty to see every location.">
       <${OnbLocChecklist} idp="onb" value=${locs} roles=${d.roles} levels=${d.levels} onChange=${(v) => set({ locations: v })} />
@@ -218,11 +238,25 @@ function OnbStepTargets({ d, set }) {
   </div>`;
 }
 
-function OnbStepMatches({ d, examples, setExamples }) {
+function OnbJobRow({ j, f, p, onOpen, reason }) {
+  return html`<button type="button" class="job-row onb-job" onClick=${() => onOpen(j.id)}>
+    <${Logo} name=${j.co} />
+    <div class="stack-sm" style="gap:2px;min-width:0">
+      <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
+      <${find_Meta} cls="job-meta find-row-meta" parts=${[j.co, onbLocText(j, p)]} />
+      ${reason && html`<span class="onb-reason">${reason}</span>`}
+    </div>
+    <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", find_fitHi(f.score, j) && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+  </button>`;
+}
+
+function OnbStepMatches({ d, examples, setExamples, onOpen }) {
   const J = useJobs();
   const list = useMemo(() => (J.status === "ready" ? onbMatches(J.jobs, d) : []), [J.status, J.jobs, d]);
   const top = useMemo(() => onbTop(list, d), [list, d]);
+  const flagged = useMemo(() => onbFlagged(list, new Set(top.map((x) => x.j.id))), [list, top]);
   const low = list.filter((j) => (j.g || 0) < 25).length;
+  const hasFit = top.some((x) => x.f);
   return html`<div class="stack onb-matches">
     <div class="card">
       ${J.status === "error"
@@ -232,22 +266,19 @@ function OnbStepMatches({ d, examples, setExamples }) {
           : html`<div class="onb-count">
               <div class="row wrap" style="align-items:baseline;gap:10px"><span class="onb-big num">${fmt.num(list.length)}</span><span class="onb-big-label">${list.length === 1 ? "open role matches" : "open roles match"}</span></div>
               <${find_Meta} cls="hint onb-summary" parts=${onbSummary(d)} />
-              ${list.length > 0 && html`<span class="hint num">${fmt.num(low)} of them show no ghost-job signals.</span>`}
+              ${list.length > 0 && list.length > low && html`<span class="hint num">${fmt.num(list.length - low)} of these ${fmt.num(list.length)} show ghost-job signals, like being reposted again and again or open for months. We flag them so you don’t waste an application.</span>`}
+              ${list.length > 0 && list.length === low && html`<span class="hint num">None of these show ghost-job signals right now.</span>`}
             </div>
             ${list.length === 0
               ? html`<div class="callout"><${Icon} name="info" /><span>Nothing open matches all of these right now. Go back and add a role or location, or finish and widen your search in Find jobs.</span></div>`
               : html`<div class="list onb-top" aria-label="Top matches">
-                ${top.map(({ j, f }) => html`<div class="job-row onb-job" key=${j.id}>
-                  <${Logo} name=${j.co} />
-                  <div class="stack-sm" style="gap:2px">
-                    <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-                    <${find_Meta} cls="job-meta find-row-meta" parts=${[j.co, j.r && !(j.l || []).length ? "Remote" : find_locText(j)]} />
-                  </div>
-                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", find_fitHi(f.score, j) && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
-                </div>`)}
-              </div>`}
-            <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
+                ${top.map(({ j, f }) => html`<${OnbJobRow} key=${j.id} j=${j} f=${f} p=${d} onOpen=${onOpen} />`)}
+              </div>
+              ${flagged && html`<div class="onb-flag-h"><span class="label">One we flagged</span><span class="hint">Still open, but worth a check before you apply.</span></div>
+                <div class="list onb-top" aria-label="Flagged listing"><${OnbJobRow} j=${flagged} f=${fitScore(flagged, d)} p=${d} onOpen=${onOpen} reason=${flagged.gr[0]} /></div>`}`}
+            <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} ${hasFit ? "Fit is out of 100." : "Tap a role to see its listing check."}</span></div>`}
     </div>
+    ${d.other && html`<p class="onb-note" role="note"><${Icon} name="info" size=${14} /><span>${ONB_OTHER_NOTE}</span></p>`}
     <label class="check onb-ex" for="onb-examples">
       <input id="onb-examples" type="checkbox" checked=${examples} onChange=${(e) => setExamples(e.currentTarget.checked)} />
       <span class="stack-sm" style="gap:0"><span>Add example applications to explore</span><span class="hint">10 fictional applications. Clear them any time in Settings.</span></span>
@@ -258,7 +289,7 @@ function OnbStepMatches({ d, examples, setExamples }) {
 const ONB_STEPS = [
   { title: "What are you looking for?", lede: "Pick what fits. You can change any of this later in Settings." },
   { title: "Add your resume (optional)", lede: "We use it to score fit and suggest interview talking points. Skip it if you’d rather not." },
-  { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first." },
+  { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first.", ledeNoFit: "Real listings that match your targets, newest and most likely real first." },
 ];
 
 /* Draft of the choices so far, kept in store.ui.onboardDraft so a reload resumes at the same step. */
@@ -294,25 +325,33 @@ VIEWS.__onboarding = function Onboarding() {
   const commit = (done) => {
     store.set((s) => {
       const { onboardDraft, ...ui } = s.ui || {};
-      return { ...s, ui: done ? ui : s.ui, profile: { ...s.profile, ...d, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } };
+      const { other, ...dd } = d;
+      return { ...s, ui: done ? ui : s.ui, profile: { ...s.profile, ...dd, name: d.name.trim(), resume: res.text.trim(), skills: onbEditorSkills(res), onboarded: done ? true : s.profile.onboarded } };
     });
   };
-  const finish = () => {
+  const finish = (route = "today") => {
     commit(true);
     if (examples && !hasExamples()) loadExamples();
-    go("today");
+    go(route);
   };
-  const skip = () => { commit(true); go("today"); };
+  // "Just browse jobs": finish with whatever is picked (empty = everything) and land on the full list.
+  const browse = () => { commit(true); go("find"); };
+  const sample = () => { commit(true); if (!hasExamples()) loadExamples(); go("pipeline"); };
+  // Tapping a preview finishes setup and opens that listing over Find (after the route change, which closes drawers).
+  const openPreview = (id) => { finish("find"); setTimeout(() => openJob(id), 80); };
   const S = ONB_STEPS[step];
   return html`<div class="onboard-wrap" ref=${top} role="dialog" aria-modal="true" aria-label="Set up Heardback">
     <div class="onboard">
       <header class="onb-brand">
         <div class="row" style="gap:10px"><${BrandMark} size=${30} /><span class="onb-word">Heardback</span></div>
         <span class="spacer"></span>
-        <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
+        <button type="button" class="onb-link onb-browse" onClick=${browse}>Just browse jobs<${Icon} name="arrowR" size=${14} /></button>
       </header>
       ${saved && html`<p class="onb-resumed" role="status"><${Icon} name="check" size=${14} />Picking up where you left off.</p>`}
-      ${step === 0 && !saved && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
+      ${step === 0 && html`<div class="onb-pitch">
+        <p class="onb-value">Internship and new-grad listings, checked for ghost jobs. Track every application and interview in one calm place.</p>
+        <p class="onb-trust"><${Icon} name="shield" size=${14} /><span>Free. Your data stays in this browser.</span></p>
+      </div>`}
       ${step === 0 && typeof storage !== "undefined" && storage.corrupt && html`<div class="callout wait onb-corrupt" role="alert"><${Icon} name="alert" />
         <span class="onb-corrupt-text">Your saved data couldn’t be read, so setup started over. A copy was kept in this browser. If you exported a backup, restore it now.</span>
         <label class="btn sm onb-restore"><${Icon} name="upload" />Restore from backup<input id="onb-restore" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; if (typeof pfImportFile === "function") pfImportFile(f); }} /></label>
@@ -323,18 +362,18 @@ VIEWS.__onboarding = function Onboarding() {
       </div>
       <div>
         <h1 id="onb-title" tabindex="-1">${S.title}</h1>
-        <p class="lede">${S.lede}</p>
+        <p class="lede">${step === 2 && !draft.skills.length ? S.ledeNoFit : S.lede}</p>
       </div>
       ${step === 0 && html`<${OnbStepTargets} d=${d} set=${set} />`}
       ${step === 1 && html`<div class="card onb-card onb-card-pad"><${OnbResumeEditor} value=${res} onChange=${setRes} idp="onb-res" /></div>`}
-      ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} />`}
+      ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} onOpen=${openPreview} />`}
       <footer class="onb-foot">
-        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<span></span>`}
+        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<button type="button" class="onb-link onb-sample" onClick=${sample}>See a sample tracker first</button>`}
         <span class="spacer"></span>
         ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
         ${step < 2
           ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
-          : html`<${Btn} kind="primary" iconRight="arrowR" onClick=${finish} id="onb-finish">Start using Heardback</${Btn}>`}
+          : html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => finish()} id="onb-finish">Start using Heardback</${Btn}>`}
       </footer>
     </div>
   </div>`;
