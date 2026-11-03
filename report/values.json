@@ -1,7 +1,7 @@
 {
   "versions": 10,
   "score": "9.0",
-  "checks": "2,288",
+  "checks": "2,428",
   "timeline": [
     [
       "12:30 AM",
@@ -64,7 +64,7 @@
       "Design review 6 scored 9.0. Zero axe-core WCAG 2 A/AA violations on every route and overlay in both themes. Silence respects scheduled rounds; share card opens on a meaningful period."
     ]
   ],
-  "qa": "Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. Two full QA passes drove the real UI end to end (onboarding, search, saving, drag and drop, keyboard moves, email logging with 11 realistic emails, rounds, nudges, insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior): __CHECKS__ automated checks in the final suite. All crash and broken-feature bugs found were fixed. Remaining failures in the suite are tests written for earlier UI text, plus decorative separators that fall below contrast ratio by design.",
+  "qa": "Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. The end-to-end suite drives the real UI (onboarding, search, saving, drag and drop, keyboard, bulk actions, email logging with 11 realistic emails, rounds, nudges, Insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior) at phone and desktop widths, with and without Claude: __CHECKS__ checks, all passing in the final run. An axe-core scan finds zero WCAG 2 A/AA violations on every screen and overlay in both themes. Three usability tests (an intern hunter on desktop, a new grad on a phone, a power user with 42 applications) drove the last rounds of fixes.",
   "known": [
     "Add to calendar matches your Google Calendar connector's schema but wasn't fired tonight, because it would create a real event."
   ],

@@ -614,6 +614,8 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 @media (max-width: 860px) { .topbar .btn.primary { width: 36px; height: 36px; padding: 0; } }
 p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
 .modal-body:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
+/* One keyboard-focus style for list rows and cards (J/K navigation) */
+.kb-active, .kb-row:focus-visible { outline: none; box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -1342,6 +1344,18 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 @media (max-width: 520px) { .pl-banner-more { display: none; } }
 @media (hover: none) { .pl-board:not(.selecting) .pl-chk { pointer-events: none; } }
 
+/* B4: taken-down posting callout (quiet: neutral surface, amber icon only) */
+.pl-removed { align-items: flex-start; }
+.pl-removed > .ico { color: var(--wait); }
+.pl-removed-body { flex: 1; min-width: 0; gap: 8px; }
+.pl-removed-body b { color: var(--fg); font-weight: 600; }
+.pl-removed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: -2px; }
+.pl-removed-btn[disabled] { opacity: 1; color: var(--fg-3); background: transparent; }
+.pl-removed-tag { flex: none; }
+/* B9: "Log outcome · Onsite / Final, 2d ago" may wrap to a second line instead of truncating */
+.pl-status-2l { white-space: normal; align-items: flex-start; line-height: 1.35; }
+.pl-status-2l .ico { margin-top: 2px; }
+
 /* ===== Onboarding, Settings, Interview prep (prep.css) ===== */
 
 /* ---------- Onboarding ---------- */
@@ -1959,6 +1973,37 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .td-up-in { font-weight: 400; }
 .stat-value.td-early { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); letter-spacing: 0; line-height: 1.3; padding: 6px 0 4px; }
 
+/* Needs you: three quiet groups, keyboard focus ring */
+.td-group + .td-group { border-top: 1px solid var(--line); }
+.td-group-h { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 10px 16px 2px; }
+.td-group-h h3 { font-size: var(--fs-xs); font-weight: 600; color: var(--fg-3); letter-spacing: .02em; white-space: nowrap; }
+.td-group-h .td-count { font-size: var(--fs-xs); margin-left: 0; }
+.td-group-h .spacer { flex: 1; }
+.td-group-h .td-batch { margin: -4px -8px -4px 0; color: var(--fg-2); }
+.td-group-more { padding: 4px 8px 8px; }
+.td-group .list > .td-task:first-child { border-top: 0; }
+.td-task { outline: none; position: relative; }
+.td-task:focus-visible { box-shadow: inset 2px 0 0 var(--accent), inset 0 0 0 1px var(--line-strong); background: var(--surface-2); border-radius: 0; }
+.td-task:focus-visible .td-more { opacity: 1; }
+.td-outcome { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.td-keys { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--fg-3); white-space: nowrap; transition: opacity var(--t-fast); }
+.td-keys .kbd + .kbd { margin-left: -1px; }
+.td-keys .kbd:not(:first-child) { margin-left: 8px; }
+.td-keys .kbd + .kbd:nth-child(2) { margin-left: 2px; }
+.td-keys.on { opacity: 1; color: var(--fg-2); }
+@media (hover: none), (max-width: 1100px) { .td-keys { display: none; } }
+.td-up-time { white-space: nowrap; }
+@media (max-width: 640px) {
+  .td-up-row { grid-template-columns: 64px 24px minmax(0, 1fr) auto; gap: 10px; }
+  .td-outcome { justify-content: flex-start; }
+  .td-group-h .td-batch { min-height: 36px; }
+}
+@media (max-width: 640px) { .td-outcome { display: contents; } }
+.st-insight-act { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-weight: 500; white-space: nowrap; }
+.st-insight-act .ico { width: 14px; height: 14px; }
+@media (max-width: 640px) { .st-insight-act { display: flex; width: fit-content; margin: 2px 0 0; min-height: 36px; } }
+@media (max-width: 640px) and (min-width: 360px) { .td-task-actions.is-outcome { gap: 4px; flex-wrap: nowrap; } }
+
 </style>
 <div id="app"><div style="display:grid;place-items:center;height:100vh;color:#6b7482;font:14px system-ui">Loading Heardback…</div></div>
 <script src="https://cdn.jsdelivr.net/npm/preact@10.19.3/dist/preact.umd.js"></script>
@@ -2052,6 +2097,7 @@ const STAGE = Object.fromEntries(STAGES.map((s, i) => [s.id, { ...s, i }]));
 const ACTIVE_STAGES = ["applied", "screen", "interview"];
 const ROUND_TYPES = [
   { id: "recruiter", label: "Recruiter call" },
+  { id: "assessment", label: "Online assessment" },
   { id: "technical", label: "Technical" },
   { id: "behavioral", label: "Behavioral" },
   { id: "case", label: "Case" },
@@ -2200,6 +2246,22 @@ const Apps = {
     if (stage === "offer" && !opts.silent) celebrate(a);
     if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}${stage === "applied" && !a.appliedAt ? " (applied today)" : ""}`, { undo: () => Apps.update(id, a), ...(stage === "applied" && !a.appliedAt ? { action: { label: "Change date", run: () => openApp(id, "overview") } } : {}) });
   },
+  moveMany(ids, stage) {
+    const t = now(); const before = {};
+    store.set((s) => {
+      const apps = { ...s.apps };
+      for (const id of ids) {
+        const a = apps[id]; if (!a || a.stage === stage) continue;
+        before[id] = a;
+        const ev = { id: uid("e_"), at: t, kind: "stage", from: a.stage, to: stage, text: `Moved to ${STAGE[stage].label}` };
+        apps[id] = { ...a, stage, lastActivityAt: t, events: [...a.events, ev], ...(stage !== "saved" && !a.appliedAt ? { appliedAt: t } : {}) };
+      }
+      return { ...s, apps };
+    });
+    const n = Object.keys(before).length;
+    if (n) toast(`Moved ${pluralize(n, "application")} to ${STAGE[stage].label}`, { undo: () => store.set((s) => ({ ...s, apps: { ...s.apps, ...before } })) });
+    return n;
+  },
   remove(id) {
     const a = Apps.get(id);
     store.set((s) => { const apps = { ...s.apps }; delete apps[id]; return { ...s, apps }; });
@@ -2250,7 +2312,7 @@ const closeModal = () => ui.set({ modal: null });
 
 function toast(text, opts = {}) {
   const id = uid("t");
-  ui.set((s) => ({ toasts: [...s.toasts.slice(-2), { id, text, ...opts }] }));
+  ui.set((s) => ({ toasts: [...s.toasts.slice(-1), { id, text, ...opts }] }));
   setTimeout(() => ui.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), opts.ms || 4200);
 }
 function celebrate(app) {
@@ -2771,7 +2833,7 @@ function parseEmail(raw) {
   }
   let roundType = null;
   if (kind === "screen") roundType = "recruiter";
-  else if (kind === "interview") roundType = /technical|coding|hackerrank|codesignal|leetcode|system design/i.test(text) ? "technical" : /behavioral/i.test(text) ? "behavioral" : /case/i.test(text) ? "case" : /onsite|final|superday/i.test(text) ? "onsite" : "other";
+  else if (kind === "interview") roundType = /hackerrank|codesignal|codility|online assessment|\bOA\b|take-home|assessment link/i.test(text) ? "assessment" : /technical|coding|leetcode|system design/i.test(text) ? "technical" : /behavioral/i.test(text) ? "behavioral" : /case/i.test(text) ? "case" : /onsite|final|superday/i.test(text) ? "onsite" : "other";
 
   const next = { confirmation: "Wait for a reply. Follow up in a week if you hear nothing.", screen: "Reply with your availability and prep a 60-second intro.", interview: "Confirm the time and start prep for this round.", rejection: "Log it and move on. Ask for feedback if you had interviews.", offer: "Ask for the offer in writing and the decision deadline.", other: "Review and decide whether anything changed." }[kind];
   return { kind, company, title, at, interviewAt, roundType, next, confidence: (company ? 1 : 0) + (title ? 1 : 0) + (kind !== "other" ? 1 : 0) };
@@ -2859,7 +2921,11 @@ function computeTasks(s = store.get()) {
       }    }
   }
   out.sort((x, y) => x.pri - y.pri);
-  return out;
+  // One row per application (the most urgent), grouped for Today.
+  const seen = new Set(); const one = [];
+  for (const tk of out) { if (seen.has(tk.app.id)) continue; seen.add(tk.app.id); one.push(tk); }
+  for (const tk of one) tk.group = tk.pri <= 1 ? "today" : ["outcome", "follow", "ghost", "nextround", "removed", "confirm", "thanks"].includes(tk.kind) ? "quick" : "later";
+  return one;
 }
 function dismissTask(key, days = 365) { store.set((s) => ({ ...s, dismissed: { ...s.dismissed, [key]: now() + days * DAY } })); }
 
@@ -2867,7 +2933,7 @@ function dismissTask(key, days = 365) { store.set((s) => ({ ...s, dismissed: { .
 function computeStats(s = store.get(), apps = Apps.list(s)) {
   const applied = apps.filter((a) => a.stage !== "saved" && a.appliedAt);
   const replied = applied.filter((a) => a.lastReplyAt || ["screen", "interview", "offer", "rejected"].includes(a.stage));
-  const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).length || a.events.some((e) => e.to === "interview"));
+  const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).some((r) => r.at && r.at <= now() && r.type !== "assessment") || a.events.some((e) => e.to === "interview"));
   const offers = applied.filter((a) => a.stage === "offer" || a.events.some((e) => e.to === "offer"));
   const replyDays = replied.filter((a) => !(a.source === "import" && firstReplyAt(a) && a.appliedAt && Math.abs(firstReplyAt(a) - a.appliedAt) < DAY)).map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
   const median = (arr) => { if (!arr.length) return null; const v = [...arr].sort((a, b) => a - b); const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
@@ -2937,7 +3003,7 @@ function followUpTemplate(a, profile) {
 }
 function thankYouTemplate(a, r, profile) {
   const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me today about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 
 /* --- js/30-shell.js --- */
@@ -3042,6 +3108,7 @@ function Palette() {
       { g: "Actions", icon: "doc", label: "Update your resume", run: () => openModal("resume") },
       { g: "Actions", icon: "send", label: "Share your progress", run: () => (MODALS.share ? openModal("share") : go("stats")) },
       { g: "Actions", icon: "info", label: "How we score listings", run: () => openModal("method") },
+      { g: "Actions", icon: "download", label: "Export your data", run: () => go("prefs") },
       { g: "Actions", icon: "moon", label: "Toggle dark mode", run: () => store.set((st) => ({ ...st, settings: { ...st.settings, theme: document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches) ? "light" : "dark" } })) },
       { g: "Actions", icon: "keyboard", label: "Keyboard shortcuts", sub: "?", run: () => openModal("shortcuts") },
       ...NAV.concat([{ id: "prefs", label: "Settings", icon: "prefs" }]).map((x, i) => ({ g: "Go to", icon: x.icon, label: x.label, sub: `G then ${"TFPCIS"[i] || ","}`, run: () => go(x.id) })),
@@ -3051,7 +3118,11 @@ function Palette() {
     if (d?.kind === "app" && Apps.get(d.id)) {
       const a = Apps.get(d.id);
       const ctx = [
-        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => { Apps.addRound(a.id, { type: "recruiter", at: null }); openApp(a.id, "rounds"); toast("Round added. Set the date and type."); } },
+        ...((a.rounds || []).some((r) => r.at && r.at <= now() && r.outcome === "pending") ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "flag", label: "Log a round outcome", run: () => openApp(a.id, "rounds") },
+          { g: `${a.company} · ${a.title || "Application"}`, icon: "send", label: "Draft a thank-you note", run: () => { const r = [...a.rounds].filter((x) => x.at && x.at <= now()).sort((x, y) => y.at - x.at)[0]; openModal("draft", { appId: a.id, roundId: r?.id, kind: "thanks" }); } }] : []),
+        { g: `${a.company} · ${a.title || "Application"}`, icon: "edit", label: "Add a note", run: () => openApp(a.id, "timeline") },
+        ...(a.stage !== "ghosted" ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "ghost", label: "Mark as ghosted", run: () => Apps.move(a.id, "ghosted") }] : []),
         { g: `${a.company} · ${a.title || "Application"}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
         ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
       ];
@@ -3109,7 +3180,7 @@ function Palette() {
 }
 
 MODALS.shortcuts = () => {
-  const rows = [["⌘K / Ctrl K", "Search and commands"], ["/", "Search jobs"], ["N", "Add application"], ["E", "Paste an email"], ["G then T", "Today"], ["G then F", "Find jobs"], ["G then P", "Pipeline"], ["G then C", "Companies"], ["G then I", "Interview prep"], ["G then S", "Insights"], ["J / K", "Next / previous item in lists"], ["1 – 7", "Move the open application to a stage"], ["X", "Select in Pipeline (Shift X for a range)"], ["S", "Save the selected job in Find"], ["Esc", "Close panel"], ["?", "This list"]];
+  const rows = [["⌘K / Ctrl K", "Search and commands"], ["/", "Search jobs"], ["N", "Add application"], ["E", "Paste an email"], ["G then T", "Today"], ["G then F", "Find jobs"], ["G then P", "Pipeline"], ["G then C", "Companies"], ["G then I", "Interview prep"], ["G then S", "Insights"], ["J / K", "Next / previous item (Today, Find, Pipeline)"], ["Enter", "Open or run the focused item"], ["D", "Dismiss the focused Today task"], ["1 – 7", "Move the open application to a stage"], ["X", "Select in Pipeline (Shift X for a range)"], ["S", "Save a job in Find · snooze a Today task"], ["Esc", "Close panel"], ["?", "This list"]];
   return html`<${Modal} title="Keyboard shortcuts" onClose=${closeModal}>
     <div class="list">${rows.map(([k, v]) => html`<div class="row" style="padding:9px 0"><span style="flex:1">${v}</span>${k.split(" ").map((x) => x === "then" || x === "/" && k.length > 1 ? html`<span class="faint" style="font-size:var(--fs-xs)">${x}</span>` : html`<${Kbd}>${x}</${Kbd}>`)}</div>`)}</div>
   </${Modal}>`;
@@ -3328,7 +3399,8 @@ function find_restore(a) { store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: 
 function find_appFields(job) { return { company: job.co, title: job.t, location: (job.l || [])[0] || "", url: job.url, jobId: job.id, source: "find" }; }
 function find_toggleSave(job, app) {
   if (app && app.stage === "saved") { find_untrack(app.id); toast(`Removed ${job.co} from saved`, { undo: () => find_restore(app) }); return; }
-  if (app) return;
+  /* B11: S on a role you already track says so, with a way to open it */
+  if (app) { toast(`Already in your pipeline (${STAGE[app.stage]?.label || "tracked"})`, { action: { label: "Open", run: () => openApp(app.id) } }); return; }
   const a = Apps.create({ ...find_appFields(job), stage: "saved" });
   toast(`Saved ${job.co} to your pipeline`, { undo: () => find_untrack(a.id) });
 }
@@ -3826,6 +3898,17 @@ DRAWERS.job = ({ id }) => {
   const [allLocs, setAllLocs] = useState(false);
   const [clicked, setClicked] = useState(false);
   const job = jobs.byId.get(id);
+  /* B11: S in the open job drawer saves / unsaves this job */
+  const sref = useRef(null); sref.current = job ? { job, app: byJob.get(job.id) } : null;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key.toLowerCase() !== "s" || e.metaKey || e.ctrlKey || e.altKey || e.repeat || find_typing(e.target)) return;
+      if (ui.state.modal || ui.state.palette || ui.state.drawer?.kind !== "job" || !sref.current) return;
+      e.preventDefault(); find_toggleSave(sref.current.job, sref.current.app);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   if (!job) {
     const loading = jobs.status !== "ready" && jobs.status !== "error";
@@ -3855,7 +3938,7 @@ DRAWERS.job = ({ id }) => {
   const saved = app && app.stage === "saved";
   const foot = html`
     <a class="btn primary find-apply" href=${job.url} target="_blank" rel="noopener" aria-label=${`Apply on ${job.co}’s site (opens in a new tab)`} onClick=${() => setClicked(true)}><span>Apply<span class="hide-sm"> on company site</span></span><${Icon} name="ext" /></a>
-    ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} cls=${cx(saved && "find-save on")} aria-pressed=${saved ? "true" : "false"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
+    ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} cls=${cx(saved && "find-save on")} aria-pressed=${saved ? "true" : "false"} title=${saved ? "Saved. Press S to remove" : "Save to pipeline (S)"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
     ${(!app || saved) && html`<${Btn} kind="ghost" icon="check" onClick=${() => find_markApplied(job, app)}>Mark as applied</${Btn}>`}
     ${app && !saved && html`<${Btn} iconRight="arrowR" onClick=${() => openApp(app.id)}>Open in pipeline</${Btn}>`}`;
 
@@ -4548,13 +4631,23 @@ function plSortInCol(list) {
   });
 }
 
+function plRoundLabel(r) { return ROUND[r?.type]?.label || "Round"; }
+/* "Today, 11 PM" -> "today, 11 PM" (weekday and month names keep their capital) */
+function plLower(w) { return w.replace(/^(Today|Tomorrow)\b/, (m) => m.toLowerCase()); }
+function plPastPending(a, t = now()) { return (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0] || null; }
 function plFirstName(s) { return (s || "").replace(/\([^)]*\)/g, "").split(/[,&;]| and /)[0].trim(); }
 
 /* Card / table status line */
 function plStatus(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
-  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", main: plWhen(up.at), text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: `${ROUND[up.type]?.label || "Round"} · ${fmt.dateTime(up.at)}` };
+  if (up && !PL_CLOSED.includes(a.stage)) {
+    const oa = up.type === "assessment", when = plWhen(up.at);
+    return { icon: oa ? "clock" : "cal", tone: "accent", main: oa ? `Due ${plLower(when)}` : when, text: `${plRoundLabel(up)} · ${oa ? "due " + plLower(when) : when}`, title: `${plRoundLabel(up)} · ${oa ? "due " : ""}${fmt.dateTime(up.at)}` };
+  }
+  /* A past round still waiting on its outcome says so, instead of "Replied 21d ago" */
+  const past = ["screen", "interview"].includes(a.stage) ? plPastPending(a, t) : null;
+  if (past) return { icon: "flag", tone: "wait", lead: "Log outcome", rest: `${plRoundLabel(past)}, ${fmt.ago(past.at)}`, text: `Log outcome · ${plRoundLabel(past)}, ${fmt.ago(past.at)}`, title: `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
@@ -4576,8 +4669,10 @@ function plNextStep(a, st) {
     ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it’s fair to ask for brief feedback. Otherwise, let it go." }
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };
   if (a.stage === "offer") return { kind: "offer", icon: "trophy", tone: "ok", short: "Get the offer in writing", title: "You have an offer", sub: "Ask for the offer in writing and the decision deadline before you reply." };
+  if (up && up.type === "assessment") return { kind: "upcoming", icon: "clock", tone: "info", round: up, short: `Assessment due ${fmt.until(up.at)}`, title: `Online assessment due ${fmt.until(up.at)}`, sub: `Due ${fmt.dateTime(up.at)}${up.interviewers ? " · on " + up.interviewers : ""}` };
   if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${up.interviewers ? " · with " + up.interviewers : ""}` };
-  const past = (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0];
+  const past = plPastPending(a, t);
+  if (past && past.type === "assessment") return { kind: "outcome", icon: "flag", round: past, short: "Log the result", title: "Did you pass the online assessment?", sub: `It was due ${fmt.ago(past.at)}. Log the result when you hear back.` };
   if (past && !past.thanked && t - past.at < 2 * DAY) return { kind: "thanks", icon: "send", tone: "info", round: past, short: "Send a thank-you", title: "Send a thank-you note", sub: `Your ${label(past).toLowerCase()} was ${fmt.ago(past.at)}. A short note within 24 hours helps.` };
   if (past) return { kind: "outcome", icon: "flag", round: past, short: "Log the outcome", title: `How did the ${label(past).toLowerCase()} go?`, sub: `It was ${fmt.ago(past.at)}. Log the outcome and a few notes while you remember.` };
   if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It’s no longer in the live listings. Check the company’s careers page, or remove it from your board." };
@@ -4709,6 +4804,9 @@ VIEWS.pipeline = function PipelineView() {
   /* Only items on screen can be selected: filtered out (or in the collapsed Closed rail) drops them */
   const visible = view === "board" && !closedOpen ? apps.filter((a) => !PL_CLOSED.includes(a.stage)) : apps;
   const sel = plUseSelection(visible.map((a) => a.id).join(","), view);
+  const keepFocus = plUseKeys();
+  /* Any re-render (a move, an undo, a delete) can drop the focused card: put focus back on it */
+  useEffect(() => { keepFocus(); });
 
   if (!all.length) return html`<div class="page pl-page">
     <div class="page-head"><div><h1>Pipeline</h1><p>Track applications and what to do next.</p></div></div>
@@ -4738,6 +4836,61 @@ VIEWS.pipeline = function PipelineView() {
     ${sel.size > 0 && html`<${PlBulkBar} sel=${sel} view=${view} />`}
   </div>`;
 };
+
+/* ---------- Keyboard: J/K across cards (board: column by column) and rows (table); focus never drops to <body> ---------- */
+function plItems() { return [...document.querySelectorAll(".pl-page [data-card], .pl-page tr[data-row]")]; }
+function plItemId(el) { const c = el && el.closest ? el.closest("[data-card], tr[data-row]") : null; return c && c.closest(".pl-page") ? c.dataset.card || c.dataset.row : null; }
+function plFocusItem(el) { if (!el) return; el.focus({ preventScroll: true }); el.scrollIntoView({ block: "nearest", inline: "nearest" }); }
+function plUseKeys() {
+  const last = useRef({ id: null, i: 0 });
+  /* Restore focus to the last card/row when it was lost (removed from the DOM, or a drawer/menu closed onto <body>) */
+  const restore = useCallback((force) => {
+    const st = ui.state;
+    if (st.drawer || st.modal || st.palette || document.querySelector(".pl-menu")) return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae.isConnected && !(force && plItemId(ae) && plItemId(ae) !== force)) return;
+    const { i } = last.current, id = force || last.current.id; if (!id) return;
+    const els = plItems(); if (!els.length) return;
+    plFocusItem(els.find((el) => (el.dataset.card || el.dataset.row) === id) || els[Math.min(i, els.length - 1)]);
+  }, []);
+  useEffect(() => {
+    let lastG = 0;
+    const onIn = (e) => { const id = plItemId(e.target); if (id) last.current = { id, i: Math.max(0, plItems().findIndex((el) => (el.dataset.card || el.dataset.row) === id)) }; };
+    /* A click on empty space is a deliberate blur: don't pull focus back after it */
+    const onPtr = (e) => { if (!e.target.closest?.("[data-card], tr[data-row], .pl-menu, .pl-bulk, .drawer, .modal, .toasts, .scrim")) last.current = { id: null, i: 0 }; };
+    const onOut = () => setTimeout(restore, 0);
+    const onKey = (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || plEditable(e.target)) return;
+      if (ui.state.drawer || ui.state.modal || ui.state.palette || document.querySelector(".pl-menu")) return;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (k === "g") { lastG = now(); return; }
+      if (now() - lastG < 1200) return; /* "G then …" belongs to the shell */
+      const onItem = !!plItemId(e.target) && e.target.matches("[data-card], tr[data-row]");
+      const d = k === "j" || (onItem && k === "ArrowDown") ? 1 : k === "k" || (onItem && k === "ArrowUp") ? -1 : 0;
+      if (!d) return;
+      const els = plItems(); if (!els.length) return;
+      e.preventDefault();
+      const cur = plItemId(document.activeElement) || last.current.id;
+      const i = cur ? els.findIndex((el) => (el.dataset.card || el.dataset.row) === cur) : -1;
+      plFocusItem(els[i < 0 ? (d > 0 ? 0 : els.length - 1) : clamp(i + d, 0, els.length - 1)]);
+    };
+    /* A drawer opened on an application (from a card, a row or the palette) hands focus back to that card */
+    let prev = ui.state;
+    const offUi = ui.sub((st) => {
+      const closed = (prev.drawer && !st.drawer) || (prev.modal && !st.modal) || (prev.palette && !st.palette);
+      const app = prev.drawer && !st.drawer && prev.drawer.kind === "app" && plItems().some((el) => (el.dataset.card || el.dataset.row) === prev.drawer.id) ? prev.drawer.id : null;
+      if (app) last.current = { ...last.current, id: app };
+      prev = st;
+      if (closed) setTimeout(() => restore(app), 40);
+    });
+    document.addEventListener("focusin", onIn);
+    document.addEventListener("focusout", onOut);
+    document.addEventListener("pointerdown", onPtr, true);
+    window.addEventListener("keydown", onKey);
+    return () => { offUi(); document.removeEventListener("focusin", onIn); document.removeEventListener("focusout", onOut); document.removeEventListener("pointerdown", onPtr, true); window.removeEventListener("keydown", onKey); };
+  }, []);
+  return () => setTimeout(restore, 0);
+}
 
 /* ---------- Selection + bulk actions ---------- */
 /* Selection lives in the view. Range order is the on-screen order (board: column by column; table: row order). */
@@ -4919,10 +5072,6 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering, sel }) {
       const j = PL_MAIN.indexOf(a.stage);
       const to = j < 0 ? null : PL_MAIN[j + (k === "ArrowRight" || k === "]" ? 1 : -1)];
       if (to) move(a, to);
-    } else if (k === "ArrowDown" || k === "ArrowUp") {
-      e.preventDefault();
-      const cards = [...e.currentTarget.closest(".col-body").querySelectorAll(".app-card")];
-      cards[cards.indexOf(e.currentTarget) + (k === "ArrowDown" ? 1 : -1)]?.focus();
     }
   };
   const card = (a) => html`<${PlCard} key=${a.id} a=${a} settings=${settings} dragging=${drag === a.id}
@@ -4963,7 +5112,7 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering, sel }) {
           <span class="pl-rail-count num">${closedList.length}</span><span class="pl-rail-label">Closed</span><${Icon} name="chevL" size=${14} />
         </button>`}
     </div>
-    <p class="sr" id="pl-kbd-hint">Press the left and right arrow keys to move a card to another stage, up and down to switch cards, Enter to open, X to select.</p>
+    <p class="sr" id="pl-kbd-hint">Press the left and right arrow keys to move a card to another stage, J and K or up and down to go to the next or previous card, Enter to open, X to select.</p>
     ${hint && html`<div class="pl-tip hide-sm" role="note">
       <${Icon} name="keyboard" size=${14} />
       <span>Tip: drag cards between columns, or focus a card and press <${Kbd}>←</${Kbd}> <${Kbd}>→</${Kbd}> to move it.</span>
@@ -4993,7 +5142,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
+      <span class=${cx("pl-status", stt.tone, stt.lead && "pl-status-2l")} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : stt.lead ? html`<span>${stt.lead}<span class="pl-status-extra"> · ${stt.rest}</span></span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -5031,7 +5180,7 @@ function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
       <span class=${cx("dot", st.id)}></span><span style="flex:1">${st.label}</span>${current === st.id && html`<${Icon} name="check" size=${14} />`}
     </button>`)}
     ${extra && extra.length > 0 && html`<div class="pl-menu-sep"></div>`}
-    ${(extra || []).map((x) => html`<button type="button" role="menuitem" key=${x.label} onClick=${() => { onClose(); x.run(); }}><${Icon} name=${x.icon} size=${14} />${x.label}</button>`)}
+    ${(extra || []).map((x) => html`<button type="button" role="menuitem" key=${x.label} onClick=${() => { onClose(); x.run(); setTimeout(() => { if (!ui.state.drawer && !ui.state.modal) anchor.closest?.("[data-card]")?.focus(); }, 0); }}><${Icon} name=${x.icon} size=${14} />${x.label}</button>`)}
   </div>`;
 }
 
@@ -5111,7 +5260,7 @@ const PL_TABS = [{ id: "overview", label: "Overview" }, { id: "rounds", label: "
 function plNextAction(a, ns, setTab) {
   const draft = (mode, extra) => () => openModal("draft", { appId: a.id, mode, ...extra });
   return {
-    upcoming: { label: "Prep for this round", icon: "prep", run: () => plPrep(a, ns.round) },
+    upcoming: { label: ns.round?.type === "assessment" ? "Prep for the assessment" : "Prep for this round", icon: "prep", run: () => plPrep(a, ns.round) },
     thanks: { label: "Draft thank-you", icon: "send", run: draft("thanks", { roundId: ns.round?.id }) },
     outcome: { label: "Log outcome", icon: "flag", run: () => setTab("rounds") },
     saved: { label: "Mark as applied", icon: "check", run: () => Apps.move(a.id, "applied") },
@@ -5135,6 +5284,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const del = () => askConfirm({ title: `Delete ${a.company}?`, body: `This removes ${a.title || "this application"} with its rounds, notes and timeline from this device. You can undo right after.`, confirmLabel: "Delete application", danger: true, onConfirm: () => { closeDrawer(); Apps.remove(a.id); } });
   const ns = plNextStep(a, settings);
   const act = plNextAction(a, ns, setT);
+  const removed = listingRemoved(a);
   const head = html`<div class="pl-dhead">
     <${Logo} name=${a.company} size="lg" />
     <div class="pl-dhead-text">
@@ -5148,7 +5298,9 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const foot = html`
     ${act && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
     ${ns.kind === "wait" && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
-    ${a.url && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}
+    ${a.url && (removed
+      ? html`<button type="button" class="btn pl-removed-btn hide-sm" disabled title="This listing is no longer live"><${Icon} name="flag" />Posting removed</button>`
+      : html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`)}
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del} aria-label="Delete application" title="Delete application"><span class="hide-sm">Delete</span></${Btn}>`;
   const counts = { rounds: (a.rounds || []).length, timeline: (a.events || []).length };
@@ -5165,7 +5317,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
       ${PL_TABS.map((x) => html`<button type="button" role="tab" key=${x.id} id=${`pl-tab-${x.id}`} aria-selected=${t === x.id ? "true" : "false"} aria-controls="pl-tabpanel" tabindex=${t === x.id ? "0" : "-1"} onClick=${() => setT(x.id)}>${x.label}${counts[x.id] ? html`<span class="count">${counts[x.id]}</span>` : null}</button>`)}
     </div>
     <div id="pl-tabpanel" role="tabpanel" aria-labelledby=${`pl-tab-${t}`} class="pl-tabpanel">
-      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} />`}
+      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} removed=${removed} hasCo=${hasCo} />`}
       ${t === "rounds" && html`<${PlRounds} a=${a} />`}
       ${t === "timeline" && html`<${PlTimeline} a=${a} />`}
       ${t === "notes" && html`<${PlNotes} a=${a} />`}
@@ -5235,7 +5387,24 @@ function PlEscape({ onEscape }) {
 
 function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : "")).replace(/\/$/, ""); } catch { return u; } }
 
-function PlOverview({ a, ns, settings, jobs, setTab }) {
+/* B4: an Applied / Screen application whose linked posting is no longer live */
+function PlRemoved({ a, jobs, hasCo }) {
+  const open = hasCo ? (jobs.byCompany.get(a.company) || []).length : 0;
+  const screen = a.stage === "screen";
+  return html`<div class="callout pl-removed" role="note">
+    <${Icon} name="flag" />
+    <div class="stack-sm pl-removed-body">
+      <span><b>This posting was taken down.</b> ${screen ? `It may be filled, but your process with ${a.company} can still go on.` : "It may be filled."}</span>
+      <div class="pl-removed-actions">
+        ${html`<${Btn} size="sm" icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</${Btn}>`}
+        ${html`<${Btn} size="sm" kind="ghost" icon="ghost" onClick=${() => Apps.move(a.id, "ghosted")}>Mark as ghosted</${Btn}>`}
+        ${hasCo && html`<${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openCompany(a.company)}>${open ? `See ${a.company}’s ${pluralize(open, "open role")}` : `See ${a.company}’s open roles`}</${Btn}>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
   const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
@@ -5246,6 +5415,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
     ghost: html`<button type="button" class="pl-linkbtn" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</button>`,
   }[ns.kind];
   return html`<div class="pl-ov">
+    ${removed && ["applied", "screen"].includes(a.stage) && html`<${PlRemoved} a=${a} jobs=${jobs} hasCo=${hasCo} />`}
     <div class=${cx("pl-next-card", ns.tone)}>
       <span class="pl-next-ico"><${Icon} name=${ns.icon} /></span>
       <div class="stack-sm" style="flex:1;min-width:0">
@@ -5265,7 +5435,8 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
         <span class="pl-kv-k">Posting</span>
         <div class="pl-url-row">
           <${PlInline} id="pl-url" label="Posting link" type="url" value=${a.url || ""} display=${a.url ? plHost(a.url) : ""} placeholder="Add link" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { url: v })} />
-          ${a.url && html`<a class="btn icon sm ghost" href=${plHref(a.url)} target="_blank" rel="noopener" aria-label="Open posting in a new tab" title="Open posting"><${Icon} name="ext" /></a>`}
+          ${a.url && (removed ? html`<span class="badge wait pl-removed-tag" title="This listing is no longer live">Removed</span>`
+            : html`<a class="btn icon sm ghost" href=${plHref(a.url)} target="_blank" rel="noopener" aria-label="Open posting in a new tab" title="Open posting"><${Icon} name="ext" /></a>`)}
         </div>
         <span class="pl-kv-k">Location</span>
         <${PlInline} id="pl-loc" label="Location" value=${a.location || ""} display=${a.location} placeholder="Add location" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { location: v })} />
@@ -5365,7 +5536,8 @@ function PlRounds({ a }) {
 function plOutcomeBadge(r, t = now()) {
   if (r.outcome === "pending") {
     if (!r.at) return { kind: "", text: "No date" };
-    return r.at > t ? { kind: "info", text: fmt.until(r.at) } : { kind: "wait", text: "Outcome pending" };
+    const u = fmt.until(r.at);
+    return r.at > t ? { kind: "info", text: r.type === "assessment" ? `Due ${u}` : u } : { kind: "wait", text: r.type === "assessment" ? "Result pending" : "Outcome pending" };
   }
   return { kind: PL_OUT_BADGE[r.outcome] ?? "", text: PL_OUTCOMES.find((o) => o.id === r.outcome)?.label || "Pending" };
 }
@@ -5390,6 +5562,7 @@ function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
   const t = now();
+  const oa = r.type === "assessment";
   const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can’t be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
   return html`<div class="round pl-round pl-round-open" data-round=${r.id}>
     <div class="pl-round-head">
@@ -5398,19 +5571,19 @@ function PlRound({ a, r, onDone }) {
       <${Btn} kind="ghost" size="sm" icon="check" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
     </div>
     <div class="pl-round-grid">
-      <${Field} label="Date and time" id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
+      <${Field} label=${oa ? "Due" : "Date and time"} id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
       <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => upd({ outcome: e.currentTarget.value })}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
-      <div class="pl-span2"><${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}></div>
+      <div class="pl-span2"><${Field} label=${oa ? "Platform" : "Interviewers"} id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder=${oa ? "e.g. HackerRank, CodeSignal" : "e.g. Priya S. (Eng manager)"} onSave=${(v) => upd({ interviewers: v })} /></${Field}></div>
       <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics, stories, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
       <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
     </div>
     <div class="pl-round-foot">
-      <label class="check" for=${pid + "-thx"}><input id=${pid + "-thx"} type="checkbox" checked=${!!r.thanked} onChange=${(e) => upd({ thanked: e.currentTarget.checked })} />Thank-you sent</label>
+      ${!oa && html`<label class="check" for=${pid + "-thx"}><input id=${pid + "-thx"} type="checkbox" checked=${!!r.thanked} onChange=${(e) => upd({ thanked: e.currentTarget.checked })} />Thank-you sent</label>`}
       <span class="spacer" style="flex:1"></span>
       <${Btn} kind="ghost" size="sm" icon="trash" aria-label="Delete round" title="Delete round" onClick=${del} />
       <${CalendarButton} appId=${a.id} round=${r} />
       ${r.at && r.at > t ? html`<${Btn} size="sm" icon="prep" onClick=${() => plPrep(a, r)}>Prep</${Btn}>`
-        : html`<${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>`}
+        : oa ? null : html`<${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>`}
     </div>
   </div>`;
 }
@@ -6882,7 +7055,8 @@ VIEWS.prep = function PrepView() {
 
 const STATS_REPLY_STAGES = ["screen", "interview", "offer", "rejected"];
 function stats_isReplied(a) { return !!a.lastReplyAt || STATS_REPLY_STAGES.includes(a.stage); }
-function stats_reachedInterview(a) { return ["interview", "offer"].includes(a.stage) || (a.rounds || []).length > 0 || (a.events || []).some((e) => e.to === "interview"); }
+/* Same rule as the Interviewed count: the Interviews stage, or a round that already happened (online assessments excluded). */
+function stats_reachedInterview(a) { return ["interview", "offer"].includes(a.stage) || (a.rounds || []).some((r) => r.at && r.at <= now() && r.type !== "assessment") || (a.events || []).some((e) => e.to === "interview"); }
 function stats_days(d) { return d == null ? "—" : d < 10 && d % 1 ? d.toFixed(1) : String(Math.round(d)); }
 function stats_niceScale(max) {
   if (max <= 4) return { step: 1, top: Math.max(2, max) };
@@ -6900,90 +7074,105 @@ function stats_pcts(counts) {
   return out;
 }
 
-/* Deterministic, plain-language observations. Each one only appears when there is enough data behind it. */
+/* Deterministic, plain-language observations. Each one only appears when there is enough data behind it,
+   names its sample, and compares like with like: any comparison uses only applications sent 14+ days ago,
+   so recent ones that haven't had time to get a reply can't drag a group down. At most one action each. */
+const STATS_MATURE_DAYS = 14;
+const STATS_MIN_GROUP = 8;
 function stats_observations(s, apps, st, jobsById) {
   const t = now();
   const applied = apps.filter((a) => a.stage !== "saved" && a.appliedAt);
   const ghostDays = s.settings.ghostDays || 21;
   const out = [];
+  const seePipeline = { label: "See them", run: () => go("pipeline") };
 
   // 1. Silence after the ghost window
   const old = applied.filter((a) => t - a.appliedAt >= ghostDays * DAY);
   const silent = old.filter((a) => !stats_isReplied(a));
+  const stillOpen = silent.filter((a) => ACTIVE_STAGES.includes(a.stage));
   if (old.length >= 3 && silent.length) {
     const most = silent.length / old.length > 0.5;
     out.push({ key: "silent", icon: "ghost", tone: "ghost",
-      text: most ? `Most applications go silent: ${silent.length} of ${old.length} sent ${ghostDays}+ days ago never got a reply.` : `${silent.length} of ${old.length} applications sent ${ghostDays}+ days ago never got a reply.` });
+      text: `${most ? "Most applications go silent: " : ""}${silent.length} of ${old.length} applications sent ${ghostDays}+ days ago never got a reply.${stillOpen.length ? ` ${stillOpen.length === 1 ? "1 is" : `${stillOpen.length} are`} still marked active.` : ""}`,
+      action: stillOpen.length ? seePipeline : null });
   }
 
-  // 2. Biggest drop-off between funnel steps (each step needs at least 3 at the start)
+  // 2. Biggest drop-off between funnel steps (each step needs at least 5 at the start)
   const repliedApps = applied.filter(stats_isReplied);
   const positive = applied.filter((a) => ["screen", "interview", "offer"].includes(a.stage) || (a.events || []).some((e) => ["screen", "interview", "offer"].includes(e.to)));
   const interviewed = applied.filter(stats_reachedInterview);
   const decidedInterviews = interviewed.filter((a) => ["offer", "rejected", "ghosted"].includes(a.stage));
   const steps = [
-    { label: "getting a first reply", n: applied.length, k: repliedApps.length },
+    // Recent applications haven't had time to hear back, so the reply step only counts ones sent 14+ days ago.
+    { label: "getting a first reply", n: applied.filter((a) => t - a.appliedAt >= STATS_MATURE_DAYS * DAY).length, k: repliedApps.filter((a) => t - a.appliedAt >= STATS_MATURE_DAYS * DAY).length, note: ` sent ${STATS_MATURE_DAYS}+ days ago` },
     { label: "turning a reply into an interview", n: positive.length, k: positive.filter(stats_reachedInterview).length },
     { label: "turning interviews into an offer", n: decidedInterviews.length, k: decidedInterviews.filter((a) => a.stage === "offer").length },
-  ].filter((x) => x.n >= 3);
+  ].filter((x) => x.n >= 5);
   if (steps.length) {
     const worst = steps.reduce((a, b) => (b.k / b.n < a.k / a.n ? b : a));
-    out.push({ key: "drop", icon: "filter", tone: "wait", text: `Biggest drop-off: ${worst.label} (${worst.k} of ${worst.n}).` });
+    out.push({ key: "drop", icon: "filter", tone: "wait", text: `Biggest drop-off: ${worst.label} (${worst.k} of ${worst.n}${worst.note || ""}).` });
   }
 
   // 3. Where rejections happen
   const rej = applied.filter((a) => a.stage === "rejected");
-  if (rej.length >= 2) {
+  if (rej.length >= 3) {
     const pre = rej.filter((a) => !stats_reachedInterview(a)).length;
     out.push({ key: "rej", icon: "x", tone: "bad",
       text: pre / rej.length >= 0.5
-        ? `${pre} of ${rej.length} rejections came before any interview. Tailoring your resume to each listing matters most here.`
-        : `${rej.length - pre} of ${rej.length} rejections came after an interview. Your round notes are the place to look for patterns.` });
+        ? `${pre} of ${rej.length} rejections came before any interview. That points at the resume screen, so tailoring your resume to each listing is the best lever.`
+        : `${rej.length - pre} of ${rej.length} rejections came after an interview. Your round notes are the place to look for patterns.`,
+      action: pre / rej.length >= 0.5 ? null : { label: "Open prep", run: () => go("prep") } });
   }
 
-  // 4. Round outcomes by type
+  // 4. Interview rounds by type (online assessments and recruiter calls aren't interviews)
   const byType = {};
   for (const a of apps) for (const r of a.rounds || []) {
     if (r.outcome !== "passed" && r.outcome !== "failed") continue;
+    if (r.type === "assessment" || r.type === "recruiter") continue;
     const b = (byType[r.type] = byType[r.type] || { p: 0, f: 0 });
     b[r.outcome === "passed" ? "p" : "f"]++;
   }
   const typed = Object.entries(byType).map(([type, b]) => ({ type, ...b, d: b.p + b.f }));
   const decided = typed.reduce((x, y) => x + y.d, 0);
-  const weak = typed.filter((x) => x.d >= 2 && x.f > 0).sort((x, y) => x.p / x.d - y.p / y.d)[0];
-  if (weak) out.push({ key: "rounds", icon: "prep", tone: "accent", text: `${ROUND[weak.type]?.label || "These"} rounds are your toughest so far: you passed ${weak.p} of ${weak.d}.` });
+  const weak = typed.filter((x) => x.d >= 3 && x.f > 0).sort((x, y) => x.p / x.d - y.p / y.d)[0];
+  if (weak) out.push({ key: "rounds", icon: "prep", tone: "accent", text: `${ROUND[weak.type]?.label || "These"} rounds are your toughest so far: you passed ${weak.p} of ${weak.d}.`, action: { label: "Prep for the next one", run: () => go("prep") } });
   else if (decided >= 3) {
     const passed = typed.reduce((x, y) => x + y.p, 0);
-    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You’ve passed ${passed} of ${decided} interview rounds with a logged outcome.` });
+    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You’ve passed ${passed} of ${decided} interview rounds with a logged outcome (not counting recruiter calls or online assessments).` });
   }
 
   // 5. Reply timing vs. who is still waiting
-  if (st.medianReplyDays != null && st.replied >= 3) {
-    const waiting = applied.filter((a) => a.stage === "applied" && !stats_isReplied(a) && (t - a.appliedAt) / DAY > st.medianReplyDays);
+  if (st.medianReplyDays != null && (st.replyN ?? st.replied) >= 3) {
+    const waiting = applied.filter((a) => a.stage === "applied" && !stats_isReplied(a) && (t - a.appliedAt) / DAY > st.medianReplyDays && (t - a.appliedAt) / DAY < ghostDays);
     out.push({ key: "timing", icon: "clock", tone: "",
-      text: `Replies took a median of ${stats_days(st.medianReplyDays)} days.${waiting.length ? ` ${waiting.length === 1 ? "1 application is" : `${waiting.length} applications are`} past that with no reply, so a short follow-up is reasonable.` : ""}` });
+      text: `Replies took a median of ${stats_days(st.medianReplyDays)} days (from ${pluralize(st.replyN ?? st.replied, "reply", "replies")}).${waiting.length ? ` ${waiting.length === 1 ? "1 application is" : `${waiting.length} applications are`} past that with no reply, so a short follow-up is reasonable.` : ""}`,
+      action: waiting.length ? { label: "Follow up from Today", run: () => go("today") } : null });
   }
 
-  // 6. Category response rates (needs applications linked to listings)
+  // Comparisons: linked applications sent 14+ days ago only, at least 8 in each group.
+  const mature = applied.filter((a) => t - a.appliedAt >= STATS_MATURE_DAYS * DAY);
+  const linked = mature.map((a) => ({ a, j: a.jobId && jobsById.get(a.jobId) })).filter((x) => x.j);
+  const rate = (xs) => xs.filter((x) => stats_isReplied(x.a)).length;
+
+  // 6. Category response rates
   const cats = {};
-  for (const a of applied) {
-    const j = a.jobId && jobsById.get(a.jobId);
-    if (!j) continue;
-    const c = (cats[j.cat] = cats[j.cat] || { n: 0, r: 0 });
-    c.n++; if (stats_isReplied(a)) c.r++;
-  }
-  const cl = Object.entries(cats).filter(([, c]) => c.n >= 3).sort((x, y) => y[1].r / y[1].n - x[1].r / x[1].n);
+  for (const x of linked) (cats[x.j.cat] = cats[x.j.cat] || []).push(x);
+  const cl = Object.entries(cats).filter(([, xs]) => xs.length >= STATS_MIN_GROUP).sort((x, y) => rate(y[1]) / y[1].length - rate(x[1]) / x[1].length);
   if (cl.length >= 2) {
     const [hi, lo] = [cl[0], cl[cl.length - 1]];
-    if (hi[1].r / hi[1].n > lo[1].r / lo[1].n) out.push({ key: "cat", icon: "layers", tone: "info", text: `${hi[0]} roles reply more often: ${hi[1].r} of ${hi[1].n}, vs ${lo[1].r} of ${lo[1].n} for ${lo[0]}.` });
+    const n = cl.reduce((m, [, xs]) => m + xs.length, 0);
+    if (rate(hi[1]) / hi[1].length - rate(lo[1]) / lo[1].length >= 0.15) out.push({ key: "cat", icon: "layers", tone: "info",
+      text: `${hi[0]} roles replied more often: ${rate(hi[1])} of ${hi[1].length}, vs ${rate(lo[1])} of ${lo[1].length} for ${lo[0]}. From ${n} applications linked to a listing and sent ${STATS_MATURE_DAYS}+ days ago.` });
   }
 
-  // 7. Applying early (needs linked listings with a posted date)
-  const timed = applied.map((a) => ({ a, j: a.jobId && jobsById.get(a.jobId) })).filter((x) => x.j && x.j.p);
+  // 7. Applying early
+  const timed = linked.filter((x) => x.j.p && x.a.appliedAt >= x.j.p - DAY);
   const early = timed.filter((x) => x.a.appliedAt - x.j.p <= 3 * DAY), late = timed.filter((x) => x.a.appliedAt - x.j.p > 3 * DAY);
-  if (early.length >= 3 && late.length >= 3) {
-    const re = early.filter((x) => stats_isReplied(x.a)).length / early.length, rl = late.filter((x) => stats_isReplied(x.a)).length / late.length;
-    if (Math.abs(re - rl) >= 0.1) out.push({ key: "early", icon: "bolt", tone: "accent", text: `Applying within 3 days of posting got replies ${fmt.pct(re)} of the time, vs ${fmt.pct(rl)} when you applied later.` });
+  if (early.length >= STATS_MIN_GROUP && late.length >= STATS_MIN_GROUP) {
+    const re = rate(early) / early.length, rl = rate(late) / late.length;
+    if (Math.abs(re - rl) >= 0.15) out.push({ key: "early", icon: "bolt", tone: "accent",
+      text: `Applied within 3 days of posting: ${rate(early)} of ${early.length} got a reply. Applied later: ${rate(late)} of ${late.length}. From ${timed.length} linked applications sent ${STATS_MATURE_DAYS}+ days ago.`,
+      action: re > rl ? { label: "See new roles", run: () => go("find") } : null });
   }
   return out;
 }
@@ -7123,7 +7312,7 @@ function stats_Stall({ obs, applied }) {
       : obs.length
         ? html`<div class="st-insights">${obs.map((o) => html`<div class="st-insight" key=${o.key}>
             <span class="task-ico"><${Icon} name=${o.icon} /></span>
-            <p>${o.text}</p>
+            <p>${o.text}${o.action ? html` <a href="#" class="st-insight-act" onClick=${(e) => { e.preventDefault(); o.action.run(); }}>${o.action.label}<${Icon} name="arrowR" size=${14} /></a>` : null}</p>
           </div>`)}</div>`
         : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there’s enough behind them.</span></div>`}
   </section>`;
@@ -7154,11 +7343,12 @@ function stats_Method({ ghostDays, ex }) {
   return html`<details class="st-method">
     <summary><${Icon} name="chevR" size=${14} />How we calculate this</summary>
     <ul>
-      <li><b>Replied</b> counts any response, including rejections. <b>Interviewed</b> counts any logged round, including recruiter calls.</li>
+      <li><b>Replied</b> counts any response, including rejections. <b>Interviewed</b> counts applications that reached Interviews or had a round that already happened, including recruiter calls but not online assessments.</li>
       <li>Rates are shares of applications sent. Under 10 applications, they’re flagged as a small sample because one reply moves them a lot.</li>
       <li>Time to first reply is the median across applications that got a reply.</li>
       <li>Replies are counted in the week the first reply arrived, over the last 8 weeks.</li>
       <li>Patterns need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
+      <li>Comparisons between groups only use applications sent 14+ days ago, so recent ones that haven’t had time to get a reply don’t skew them. Each group needs at least 8 applications, and each line says how many it’s based on.</li>
       <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It’s a signal from listing data, not proof.</li>
       ${ex ? html`<li>Example applications are included. Turn off “Include examples” to see only your own.</li>` : null}
     </ul>
@@ -7329,55 +7519,201 @@ function today_taskCopy(tk) {
 /* Core builds task text with straight apostrophes; display them typographically. */
 function today_typo(t) { return typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t; }
 
-function today_TaskRow({ tk, first }) {
+function today_snooze(tk, d) {
+  const prev = store.get().dismissed[tk.key];
+  dismissTask(tk.key, d);
+  toast(`Snoozed until ${fmt.date(now() + d * DAY, { weekday: "short", month: "short", day: "numeric" })}`, { undo: () => today_undismiss(tk.key, prev) });
+}
+function today_dismiss(tk) {
+  const prev = store.get().dismissed[tk.key];
+  dismissTask(tk.key);
+  toast("Dismissed", { undo: () => today_undismiss(tk.key, prev) });
+}
+/* Inline outcome for a past round. "Didn't pass" also closes the application as Rejected; one toast undoes all of it. */
+function today_logOutcome(tk, outcome) {
+  const a = tk.app, r = tk.round, before = Apps.get(a.id);
+  const restore = () => store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: before } }));
+  if (outcome === "waiting") {
+    const prev = store.get().dismissed[tk.key];
+    dismissTask(tk.key, 2);
+    toast(`We’ll ask again ${fmt.date(now() + 2 * DAY, { weekday: "short" })}`, { undo: () => today_undismiss(tk.key, prev) });
+    return;
+  }
+  Apps.updateRound(a.id, r.id, { outcome });
+  if (outcome === "passed") toast("Logged as passed", { undo: restore, action: { label: "Add next round", run: () => openApp(a.id, "rounds") } });
+  else {
+    if (!["rejected", "ghosted", "offer"].includes(a.stage)) Apps.move(a.id, "rejected", { silent: true });
+    toast(`${a.company} moved to Rejected`, { undo: restore });
+  }
+}
+function today_typing(el) { return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable); }
+
+function today_TaskRow({ tk, primary, idx }) {
   const [menu, setMenu] = useState(null);
   const close = useCallback(() => setMenu(null), []);
-  const snooze = (d) => {
-    const prev = store.get().dismissed[tk.key];
-    dismissTask(tk.key, d);
-    toast(`Snoozed until ${fmt.date(now() + d * DAY, { weekday: "short", month: "short", day: "numeric" })}`, { undo: () => today_undismiss(tk.key, prev) });
-  };
-  const dismiss = () => {
-    const prev = store.get().dismissed[tk.key];
-    dismissTask(tk.key);
-    toast("Dismissed", { undo: () => today_undismiss(tk.key, prev) });
-  };
   const a = tk.app;
   const copy = today_taskCopy(tk);
-  const cls = cx("btn sm td-act", first && "primary");
-  let primary;
-  if (tk.kind === "apply" && a.url) primary = html`<a class=${cls} href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
-  else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") primary = html`<button type="button" class=${cls} onClick=${() => openJob(a.jobId)}>Apply</button>`;
-  else primary = html`<button type="button" class=${cls} onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
+  const cls = cx("btn sm td-act", primary && "primary");
+  let act;
+  if (tk.kind === "outcome" && tk.round) act = html`<div class="td-outcome" role="group" aria-label=${"Outcome of the " + a.company + " round"}>
+      <button type="button" class="btn sm" data-primary onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
+      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
+      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "waiting")}>Still waiting</button>
+    </div>`;
+  else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
+  else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
+  else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
   const safeKey = tk.key.replace(/[^a-z0-9]/gi, "-");
-  return html`<div class="task td-task" data-key=${tk.key}>
+  return html`<div class="task td-task" data-key=${tk.key} data-fidx=${idx} tabindex="-1" aria-label=${today_typo(tk.title)}>
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
       ${typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`}
     </div>
-    <div class="task-actions td-task-actions">
-      ${primary}
+    <div class=${cx("task-actions td-task-actions", tk.kind === "outcome" && "is-outcome")}>
+      ${act}
       <button type="button" class="btn sm ghost icon td-more" id=${"more-" + safeKey} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
         aria-label=${"More options: " + tk.title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
     </div>
     ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Task options"
       items=${[
-        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => snooze(o.d) })),
+        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: o.d === 1 ? "S" : fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => today_snooze(tk, o.d) })),
         { key: "sep", sep: true },
-        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", run: dismiss },
+        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", hint: "D", run: () => today_dismiss(tk) },
       ]} />`}
   </div>`;
 }
 
+const TODAY_GROUPS = [{ id: "today", label: "Today" }, { id: "quick", label: "Quick wins" }, { id: "later", label: "When you have time" }];
+const TODAY_GROUP_MAX = 8;
+// Within Quick wins: things only you can answer first, then nudges, then cleanup.
+const TODAY_QUICK_ORDER = { confirm: 0, thanks: 0, outcome: 1, removed: 2, nextround: 3, follow: 4, ghost: 5 };
+function today_groups(tasks, open) {
+  return TODAY_GROUPS.map((g) => {
+    let all = tasks.filter((tk) => (tk.group || "later") === g.id);
+    if (g.id === "quick") all = all.map((tk, i) => [tk, i]).sort(([x, i], [y, j]) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || i - j).map((p) => p[0]);
+    return { ...g, all, shown: open[g.id] ? all : all.slice(0, TODAY_GROUP_MAX) };
+  }).filter((g) => g.all.length);
+}
+
+function today_ghostAll(list) {
+  const ids = list.map((tk) => tk.app.id);
+  const names = list.map((tk) => tk.app.company);
+  const named = names.length <= 4 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+  askConfirm({
+    title: `Mark ${ids.length} applications as ghosted?`,
+    body: `${named} haven’t replied in ${store.get().settings.ghostDays || 21}+ days. They move to Ghosted and stop showing up here. You can undo this right after.`,
+    confirmLabel: `Mark ${ids.length} as ghosted`,
+    onConfirm: () => Apps.moveMany(ids, "ghosted"),
+  });
+}
+
 function today_NeedsYou({ tasks, fresh, next }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? tasks : tasks.slice(0, 5);
+  const [open, setOpen] = useState({});
+  const [kbd, setKbd] = useState(false);
+  const listRef = useRef(null);
+  const last = useRef({ key: null, idx: 0 });
+  const groups = today_groups(tasks, open);
+  const flat = groups.flatMap((g) => g.shown);
+  const kref = useRef({}); kref.current = { flat, groups };
+  const primaryKey = flat.find((tk) => tk.kind !== "outcome")?.key;
+
+  // Focus now when the row exists (so fast J J K stays in order), else after the render that adds it.
+  const focusRow = (key) => {
+    const go = () => {
+      const el = listRef.current && [...listRef.current.querySelectorAll(".td-task")].find((r) => r.dataset.key === key);
+      if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "nearest" }); return true; }
+    };
+    if (!go()) setTimeout(go, 0);
+  };
+  // After an action removes the focused row (or a modal/drawer it opened closes onto nothing), focus the row that took its place.
+  const refocus = () => {
+    if (ui.state.modal || ui.state.drawer || ui.state.palette) return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae.isConnected) return;
+    const { flat } = kref.current, L = last.current;
+    if (!L.key || !flat.length) return;
+    const at = flat.findIndex((t) => t.key === L.key);
+    focusRow((at >= 0 ? flat[at] : flat[Math.min(L.idx, flat.length - 1)]).key);
+  };
+  const flatSig = flat.map((t) => t.key).join("|");
+  useEffect(() => { refocus(); const t = setTimeout(refocus, 120); return () => clearTimeout(t); }, [flatSig]);
+  useEffect(() => {
+    const off = ui.sub(() => setTimeout(refocus, 60));
+    // A click anywhere outside the list means focus left on purpose: stop restoring it.
+    const down = (e) => { if (!listRef.current?.contains(e.target) && !e.target.closest?.(".modal, .drawer, .toasts, .td-menu")) last.current = { key: null, idx: 0 }; };
+    document.addEventListener("mousedown", down, true);
+    return () => { off(); document.removeEventListener("mousedown", down, true); };
+  }, []);
+
+  useEffect(() => {
+    let lastG = 0;
+    const onKey = (e) => {
+      if (today_typing(e.target) || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      if (ui.state.modal || ui.state.palette || ui.state.drawer || document.querySelector(".td-menu")) return;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (k === "g") { lastG = now(); return; }
+      if (lastG && now() - lastG < 1200) { lastG = 0; return; } // "G then S" etc. belong to the shell
+      const { flat, groups } = kref.current;
+      if (!flat.length) return;
+      const row = e.target?.closest?.(".td-task");
+      const curKey = row ? row.dataset.key : null;
+      const idx = flat.findIndex((t) => t.key === curKey);
+      if (k === "j" || k === "k") {
+        e.preventDefault();
+        if (idx < 0) {
+          const at = last.current.key ? flat.findIndex((t) => t.key === last.current.key) : -1;
+          return focusRow(flat[at >= 0 ? at : k === "j" ? 0 : flat.length - 1].key);
+        }
+        if (k === "k") return focusRow(flat[Math.max(0, idx - 1)].key);
+        // J past the last shown row of a group with more: show the rest of that group.
+        const g = groups.find((x) => x.shown.some((t) => t.key === curKey));
+        if (g && g.shown[g.shown.length - 1].key === curKey && g.all.length > g.shown.length) {
+          setOpen((o) => ({ ...o, [g.id]: true }));
+          return focusRow(g.all[g.shown.length].key);
+        }
+        return focusRow(flat[Math.min(flat.length - 1, idx + 1)].key);
+      }
+      if (idx < 0) return;
+      const tk = flat[idx];
+      if (e.key === "Enter") {
+        if (e.target !== row) return; // a focused button inside the row activates natively
+        e.preventDefault();
+        if (tk.kind === "outcome") return today_runTask(tk);
+        row.querySelector("[data-primary]")?.click();
+      } else if (k === "d") { e.preventDefault(); today_dismiss(tk); }
+      else if (k === "s") { e.preventDefault(); today_snooze(tk, 1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const onFocusIn = (e) => {
+    const el = e.target.closest?.("[data-fidx]");
+    if (el) last.current = { key: el.dataset.key || null, idx: +el.dataset.fidx || 0 };
+    setKbd(!!e.target.closest?.(".td-task"));
+  };
+  const onFocusOut = (e) => { if (!listRef.current?.contains(e.relatedTarget)) setKbd(false); };
+
+  let n = 0;
   return html`<section class="card" aria-labelledby="td-needs-h">
-    <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}</div>
+    <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}
+      ${tasks.length ? html`<span class="spacer"></span><span class=${cx("td-keys hide-sm", kbd && "on")} aria-hidden="true"><${Kbd}>J</${Kbd}><${Kbd}>K</${Kbd}> move<${Kbd}>Enter</${Kbd}> do it<${Kbd}>S</${Kbd}> snooze<${Kbd}>D</${Kbd}> dismiss</span>` : null}</div>
     ${tasks.length
-      ? html`<div class="list">${shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} first=${i === 0} />`)}</div>
-        ${tasks.length > 5 && html`<div class="td-card-foot"><${Btn} size="sm" kind="ghost" iconRight=${all ? undefined : "chevD"} onClick=${() => setAll(!all)}>${all ? "Show fewer" : `Show ${tasks.length - 5} more`}</${Btn}></div>`}`
+      ? html`<div class="td-groups" ref=${listRef} onfocusin=${onFocusIn} onfocusout=${onFocusOut}>${groups.map((g) => {
+          const ghosts = g.all.filter((tk) => tk.kind === "ghost");
+          const startIdx = n; n += g.shown.length;
+          const more = g.all.length - TODAY_GROUP_MAX;
+          return html`<div class="td-group" key=${g.id} role="group" aria-labelledby=${"td-g-" + g.id}>
+            <div class="td-group-h" data-key=${"group:" + g.id} data-fidx=${startIdx}>
+              <h3 id=${"td-g-" + g.id}>${g.label}</h3><span class="td-count num">${g.all.length}</span>
+              <span class="spacer"></span>
+              ${ghosts.length >= 2 ? html`<${Btn} size="sm" kind="ghost" icon="ghost" cls="td-batch" onClick=${() => today_ghostAll(ghosts)}>Mark all ${ghosts.length} as ghosted</${Btn}>` : null}
+            </div>
+            <div class="list">${g.shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} idx=${startIdx + i} primary=${tk.key === primaryKey} />`)}</div>
+            ${more > 0 ? html`<div class="td-group-more" data-key=${"more:" + g.id} data-fidx=${startIdx + g.shown.length - 1}><${Btn} size="sm" kind="ghost" iconRight=${open[g.id] ? undefined : "chevD"} onClick=${() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>${open[g.id] ? "Show fewer" : `Show ${more} more`}</${Btn}></div>` : null}
+          </div>`;
+        })}</div>`
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
@@ -7572,8 +7908,16 @@ function today_View() {
   const parts = [];
   if (!apps.length) parts.push("Start with a few roles worth applying to.");
   else {
-    parts.push(tasks.length ? `${tasks.length} ${tasks.length === 1 ? "thing needs" : "things need"} you today` : "Nothing needs you right now");
-    if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
+    const nT = tasks.filter((tk) => tk.group === "today").length, nQ = tasks.filter((tk) => tk.group === "quick").length, nL = tasks.length - nT - nQ;
+    if (!tasks.length) parts.push("Nothing needs you right now");
+    else {
+      if (nT) parts.push(`${nT} for today`);
+      if (nQ) parts.push(pluralize(nQ, "quick win"));
+      if (!nT && !nQ) parts.push(`${nL} when you have time`);
+    }
+    const nx = up.items[0];
+    if (nx && fmt.startOfDay(nx.r.at) === fmt.startOfDay(now())) parts.push(`Next: ${nx.a.company} ${(ROUND[nx.r.type]?.label || "interview").toLowerCase()} at ${fmt.time(nx.r.at)}`);
+    else if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
     else if (up.items.length) parts.push(`Next interview ${fmt.date(up.items[0].r.at, { weekday: "short", month: "short", day: "numeric" })}`);
     else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
   }
@@ -7611,7 +7955,17 @@ const CAL_SERVER = "Google Calendar";
 const CAL_MIN = 45;
 function cal_localISO(ts) { const d = new Date(ts); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`; }
 function cal_tz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } }
-function cal_fold(line) { const out = []; let s = line; while (s.length > 74) { out.push(s.slice(0, 74)); s = " " + s.slice(74); } out.push(s); return out.join("\r\n"); }
+/* RFC 5545: lines are at most 75 octets (UTF-8); continuation lines start with one space. */
+function cal_fold(line) {
+  const enc = new TextEncoder(); const out = []; let cur = ""; let bytes = 0;
+  for (const ch of line) {
+    const b = enc.encode(ch).length;
+    if (bytes + b > 75) { out.push(cur); cur = " "; bytes = 1; }
+    cur += ch; bytes += b;
+  }
+  out.push(cur);
+  return out.join("\r\n");
+}
 function cal_utcStamp(ts) { return new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
 function cal_text(app, round) {
   const type = ROUND[round.type]?.label || "Interview";

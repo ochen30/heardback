@@ -174,7 +174,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--fg-2); display: flex; fle
 
   <section>
     <h2>QA</h2>
-    <p>Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. Two full QA passes drove the real UI end to end (onboarding, search, saving, drag and drop, keyboard moves, email logging with 11 realistic emails, rounds, nudges, insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior): 2,288 automated checks in the final suite. All crash and broken-feature bugs found were fixed. Remaining failures in the suite are tests written for earlier UI text, plus decorative separators that fall below contrast ratio by design.</p>
+    <p>Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. The end-to-end suite drives the real UI (onboarding, search, saving, drag and drop, keyboard, bulk actions, email logging with 11 realistic emails, rounds, nudges, Insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior) at phone and desktop widths, with and without Claude: 2,428 checks, all passing in the final run. An axe-core scan finds zero WCAG 2 A/AA violations on every screen and overlay in both themes. Three usability tests (an intern hunter on desktop, a new grad on a phone, a power user with 42 applications) drove the last rounds of fixes.</p>
   </section>
 
   <section>
@@ -273,7 +273,7 @@ If you&#x27;re recruiting this season, try it and log your last 10 applications.
     <p>The GitHub repo didn't exist tonight, so the source ships here: <a href="source/heardback-app.txt">the built app (single file)</a>, <a href="source/refresh_jobs.py.txt">data refresh script</a>, <a href="source/fetch_ats.py.txt">direct ATS fetcher</a>, <a href="source/CHANGELOG.md.txt">changelog</a> and <a href="source/NOTES.md.txt">engineering notes</a>. The full git history is in the session workspace, ready to push.</p>
   </section>
 
-  <p class="foot">Built overnight by Claude with a team of agents: four builders, four design reviews, a QA engineer running 2,288 automated checks, and three polish rounds. Nothing was posted publicly.</p>
+  <p class="foot">Built overnight by Claude with a team of agents: builders working in parallel, seven design reviews, three usability tests, an accessibility audit and a QA suite of 2,428 automated checks. Nothing was posted publicly.</p>
 </div>
 
 <script>
