@@ -32,6 +32,8 @@
   --ghost: #6d6787;
   --ghost-soft: #eeedf4;
   --info: #2a6f9e;
+  --int: #7a4fc4;
+  --int-soft: #f0eafb;
   --info-soft: #e5f0f8;
   --shadow-float: 0 1px 2px rgba(18, 22, 29, .06), 0 8px 24px rgba(18, 22, 29, .10);
   --shadow-pop: 0 2px 4px rgba(18, 22, 29, .06), 0 16px 48px rgba(18, 22, 29, .16);
@@ -62,7 +64,7 @@
     --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1;
     --accent: #6f8bff; --accent-hover: #8aa0ff; --accent-soft: #1c2440; --accent-fg: #0b1020; --accent-text: #93a8ff;
     --ok: #4cc38a; --ok-soft: #12291e; --wait: #e2a740; --wait-soft: #2b2112; --bad: #f0776c; --bad-soft: #2e1715;
-    --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
+    --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433; --int: #b79cf0; --int-soft: #241c38;
     --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
     --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
     --scrim: rgba(0, 0, 0, .56);
@@ -75,7 +77,7 @@
   --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1;
   --accent: #6f8bff; --accent-hover: #8aa0ff; --accent-soft: #1c2440; --accent-fg: #0b1020; --accent-text: #93a8ff;
   --ok: #4cc38a; --ok-soft: #12291e; --wait: #e2a740; --wait-soft: #2b2112; --bad: #f0776c; --bad-soft: #2e1715;
-  --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
+  --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433; --int: #b79cf0; --int-soft: #241c38;
   --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
   --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
   --scrim: rgba(0, 0, 0, .56);
@@ -255,7 +257,7 @@ p { margin: 0; }
 .dot.saved { background: var(--fg-3); }
 .dot.applied { background: var(--accent); }
 .dot.screen { background: var(--info); }
-.dot.interview { background: var(--wait); }
+.dot.interview { background: var(--int); }
 .dot.offer { background: var(--ok); }
 .dot.rejected { background: var(--bad); }
 .dot.ghosted { background: var(--ghost); }
@@ -623,6 +625,7 @@ p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offs
   .meth-pts { min-width: 0; white-space: normal; color: var(--fg-2); }
   .meth-table tbody tr:last-child { border-bottom: 0; }
 }
+.badge.int { background: var(--int-soft); color: var(--int); }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -1765,6 +1768,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .onb-deg .seg { display: flex; width: 100%; }
   .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
 }
+@media (max-width: 400px) { .onb-foot { flex-wrap: wrap; row-gap: 8px; } .onb-foot .btn { padding: 0 14px; } .onb-foot > :not(.btn):not(.spacer) { min-width: 0; font-size: var(--fs-sm); } }
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -2175,9 +2179,14 @@ const ROUND_TYPES = [
   { id: "behavioral", label: "Behavioral" },
   { id: "case", label: "Case" },
   { id: "onsite", label: "Onsite / Final" },
-  { id: "other", label: "Other" },
+  { id: "other", label: "Interview" },
 ];
 const ROUND = Object.fromEntries(ROUND_TYPES.map((r) => [r.id, r]));
+/* How a round reads inside a sentence: "your technical interview", "the recruiter call", "the online assessment" */
+const ROUND_NOUN = { recruiter: "recruiter call", assessment: "online assessment", technical: "technical interview", behavioral: "behavioral interview", case: "case interview", onsite: "final round", other: "interview" };
+function roundNoun(r) { return ROUND_NOUN[r?.type] || "interview"; }
+function roundPeople(r) { if (!r?.interviewers || r.type === "assessment") return ""; return r.interviewers.replace(/\s*\([^)]*\)/g, "").trim(); }
+function roundTitle(r) { const n = roundNoun(r); return n[0].toUpperCase() + n.slice(1); }
 const CATS = ["Software", "Data & AI", "Product", "Quant", "Hardware"];
 const LEVELS = [{ id: "intern", label: "Internship" }, { id: "newgrad", label: "New grad" }];
 
@@ -2548,7 +2557,7 @@ function Btn({ kind, size, icon, iconRight, children, cls, ...rest }) {
 function Kbd({ children }) { return html`<span class="kbd">${children}</span>`; }
 function Badge({ kind, children, title, icon }) { return html`<span class=${cx("badge", kind)} title=${title}>${icon && html`<${Icon} name=${icon} size=${12} />`}${children}</span>`; }
 function StageBadge({ stage }) {
-  const kinds = { saved: "", applied: "accent", screen: "info", interview: "wait", offer: "ok", rejected: "bad", ghosted: "ghost" };
+  const kinds = { saved: "", applied: "accent", screen: "info", interview: "int", offer: "ok", rejected: "bad", ghosted: "ghost" };
   return html`<span class=${cx("badge", kinds[stage])}><span class=${cx("dot", stage)}></span>${STAGE[stage]?.label}</span>`;
 }
 function Logo({ name, size }) {
@@ -2689,7 +2698,11 @@ async function loadJobs() {
     const byCompany = new Map();
     for (const x of jobs) { if (!byCompany.has(x.co)) byCompany.set(x.co, []); byCompany.get(x.co).push(x); }
     const cstats = {};
-    for (const [k, v] of Object.entries(c.companies || {})) cstats[v.n || companies[+k]] = v;
+    for (const [k, v] of Object.entries(c.companies || {})) {
+      // Too few measurable closed listings make "typical time open" noise; hide it below 10.
+      const thin = (v.closedTimed || 0) < 10;
+      cstats[v.n || companies[+k]] = thin ? { ...v, medOpenDays: null, fastClose: null } : v;
+    }
     Object.assign(jobsStore, { status: "ready", jobs, companies, cstats, meta: { generatedAt: j.generatedAt, source: j.source, stats: j.stats }, byId, byCompany });
   } catch (e) {
     jobsStore.status = "error"; jobsStore.error = String(e?.message || e);
@@ -2954,19 +2967,19 @@ function computeTasks(s = store.get()) {
       const fromEmail = (a.events || []).some((e) => e.kind === "email" && t - e.at < 3 * DAY);
       if (until > 0 && fromEmail && !r.confirmed) {
         const key = `confirm:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${(ROUND[r.type]?.label || "interview").toLowerCase()} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
+        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${roundNoun(r)} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}. Reply so they know you'll be there.`, action: "Review" });
       }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${ROUND[r.type]?.label || "Interview"} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
+        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}`, action: "Prep" });
       }
       if (until <= 0 && -until < 2 * DAY && !r.thanked && r.outcome === "pending") {
         const key = `thanks:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${(ROUND[r.type]?.label || "interview").toLowerCase()}${r.interviewers ? " with " + r.interviewers : ""}`, action: "Draft note" });
+        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${roundNoun(r)}${roundPeople(r) ? " with " + roundPeople(r) : ""}`, action: "Draft note" });
       }
       if (until <= -DAY && r.outcome === "pending") {
         const key = `outcome:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "outcome", pri: 2, app: a, round: r, icon: "flag", tone: "", title: `How did the ${a.company} ${(ROUND[r.type]?.label || "interview").toLowerCase()} go?`, sub: `It was ${fmt.ago(r.at)}. Log the outcome and a few notes while you remember.`, action: "Log outcome" });
+        if (!skip(key)) out.push({ key, kind: "outcome", pri: 2, app: a, round: r, icon: "flag", tone: "", title: `How did the ${a.company} ${roundNoun(r)} go?`, sub: `It was ${fmt.ago(r.at)}. Log the outcome and a few notes while you remember.`, action: "Log outcome" });
       }
     }
     if (["applied", "screen", "interview"].includes(a.stage)) {
@@ -3084,11 +3097,16 @@ function hasExamples(s = store.get()) { return Object.values(s.apps).some((a) =>
 
 /* ===== Templates (used when Claude isn't available) ===== */
 function followUpTemplate(a, profile) {
-  return `Subject: Following up on my ${a.title || "application"}\n\nHi ${a.contacts?.[0]?.name || "there"},\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
+  const name = a.contacts?.[0]?.name?.split(/\s+/)[0];
+  const hi = name ? `Hi ${name},` : `Hi ${a.company} team,`;
+  if (a.followedUpAt) {
+    return `Subject: Checking in on my ${a.title || "application"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
+  }
+  return `Subject: Following up on my ${a.title || "application"} application\n\n${hi}\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 function thankYouTemplate(a, r, profile) {
   const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  return `Subject: Thank you for the ${roundNoun(r)} · ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 
 /* --- js/30-shell.js --- */
@@ -3122,7 +3140,7 @@ function Rail({ route }) {
       ${NAV.map((n) => html`<a class="nav-item" href=${"#" + n.id} aria-current=${route === n.id ? "page" : undefined}><${Icon} name=${n.icon} />${n.label}${counts[n.id] ? html`<span class="nav-count">${counts[n.id]}</span>` : null}</a>`)}
     </div>
     <div class="rail-foot">
-      ${route !== "today" && html`<div class="goal-card">
+      ${route !== "today" && apps.some((a) => !a.example && a.stage !== "saved") && html`<div class="goal-card">
         <div class="goal-top"><span style="font-weight:500">This week</span><span class="num muted">${st.thisWeek} / ${goal} applied</span></div>
         <${Meter} value=${st.thisWeek} max=${goal} ok=${st.thisWeek >= goal} label="Applications this week toward your goal" />
         <span class="hint">${st.thisWeek >= goal ? "Weekly goal reached. Nice work." : `${goal - st.thisWeek} more to hit your goal`}</span>
@@ -4813,7 +4831,7 @@ function plNextStep(a, st) {
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };
   if (a.stage === "offer") return { kind: "offer", icon: "trophy", tone: "ok", short: "Get the offer in writing", title: "You have an offer", sub: "Ask for the offer in writing and the decision deadline before you reply." };
   if (up && up.type === "assessment") return { kind: "upcoming", icon: "clock", tone: "info", round: up, short: `Assessment due ${fmt.until(up.at)}`, title: `Online assessment due ${fmt.until(up.at)}`, sub: `Due ${fmt.dateTime(up.at)}${up.interviewers ? " · on " + up.interviewers : ""}` };
-  if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${up.interviewers ? " · with " + up.interviewers : ""}` };
+  if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${roundPeople(up) ? " · with " + roundPeople(up) : ""}` };
   const past = plPastPending(a, t);
   if (past && past.type === "assessment") return { kind: "outcome", icon: "flag", round: past, short: "Log the result", title: "Did you pass the online assessment?", sub: `It was due ${fmt.ago(past.at)}. Log the result when you hear back.` };
   if (past && !past.thanked && t - past.at < 2 * DAY) return { kind: "thanks", icon: "send", tone: "info", round: past, short: "Send a thank-you", title: "Send a thank-you note", sub: `Your ${label(past).toLowerCase()} was ${fmt.ago(past.at)}. A short note within 24 hours helps.` };
@@ -5563,7 +5581,8 @@ function PlRemoved({ a, jobs, hasCo }) {
 function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
+  const lastContact = Math.max(a.lastReplyAt || 0, ...(a.rounds || []).filter((r) => r.at && r.at <= now()).map((r) => r.at), ...(a.events || []).filter((e) => e.kind === "stage" && ["screen", "interview", "offer"].includes(e.to)).map((e) => e.at)) || null;
+  const replyTxt = lastContact ? `${plDaysSince(lastContact) < 1 ? "Today" : plDaysSince(lastContact) === 1 ? "Yesterday" : `${pluralize(plDaysSince(lastContact), "day")} ago`} · ${fmt.date(lastContact)}` : a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
     : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
@@ -5835,7 +5854,7 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
       `Role: ${a.title || "unknown"} at ${a.company}. Current stage: ${STAGE[a.stage].label}.`,
       a.appliedAt && `Applied on ${fmt.dateY(a.appliedAt)}.`,
       a.contacts?.[0]?.name && `Contact: ${a.contacts[0].name}${a.contacts[0].role ? " (" + a.contacts[0].role + ")" : ""}.`,
-      r && `Interview round: ${ROUND[r.type]?.label || "interview"}${r.at ? " on " + fmt.dateY(r.at) : ""}${r.interviewers ? " with " + r.interviewers : ""}.`,
+      r && `Interview round: ${ROUND[r.type]?.label || "interview"}${r.at ? " on " + fmt.dateY(r.at) : ""}${roundPeople(r) ? " with " + roundPeople(r) : ""}.`,
       r?.reflection && `The candidate's notes on how it went: ${r.reflection}`,
     ].filter(Boolean).join("\n");
     const prompt = `Rewrite this ${confirm ? "short reply confirming a scheduled job interview time" : thanks ? "thank-you email to send after a job interview" : "follow-up email about a job application that hasn't had a reply"}.
@@ -7732,6 +7751,7 @@ function today_TaskRow({ tk, primary, idx, child }) {
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
     </div>`;
+  else if (tk.kind === "apply" && a.jobId && jobsStore.byId.get(a.jobId)?.g >= 50 && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Review</button>`;
   else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
   else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
   else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
@@ -7970,7 +7990,7 @@ function today_Upcoming({ up }) {
             <${Logo} name=${a.company} size="sm" />
             <span class="td-up-main">
               <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
-              <span class="td-up-sub truncate">${r.interviewers ? `With ${r.interviewers}` : a.title}</span>
+              <span class="td-up-sub truncate">${roundPeople(r) ? `With ${roundPeople(r)}` : a.title}</span>
             </span>
             ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}
             <${Icon} name="chevR" cls="faint" />
