@@ -134,4 +134,51 @@ module.exports = {
     await page.evaluate(() => { clearExamples(); const d = (n) => Date.now() - n * 86400000; [['Acme', 4], ['Globex', 9], ['Initech', 2]].forEach(([c, n]) => Apps.create({ company: c, title: 'Software Engineer Intern', stage: 'applied', appliedAt: d(n), createdAt: d(n) })); });
     await page.waitForTimeout(300);
   },
+  // REVIEW5 #1: no visible "·" may start (or end) a visual line, and Outcomes must sum to 100%.
+  async dotCheck(page) {
+    const bad = await page.evaluate(() => {
+      const out = [];
+      const vis = (el) => { for (let e = el; e; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return false; } return true; };
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n; (n = w.nextNode());) {
+        const t = n.nodeValue; if (!t.includes('·') || !vis(n.parentElement)) continue;
+        if (n.parentElement.closest('option, select, title, .sr, [aria-hidden="true"]:not(.td-meta *)') && n.parentElement.closest('option, select, title, .sr')) continue;
+        for (let i = 0; i < t.length; i++) {
+          if (t[i] !== '·') continue;
+          const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1);
+          const d = r.getBoundingClientRect(); if (!d.width) continue;
+          // the nearest visible glyph before and after the dot (within the same block)
+          const block = n.parentElement.closest('p, li, div, td, span.stat-sub, summary') || n.parentElement;
+          const rects = [...block.getClientRects()]; if (!rects.length) continue;
+          const all = document.createRange(); all.selectNodeContents(block);
+          const lines = [...all.getClientRects()].filter((x) => x.width > 0);
+          const minLeft = Math.min(...lines.map((x) => x.left));
+          if (d.left - minLeft < 3) out.push('starts line: ' + (block.textContent || '').trim().slice(0, 70));
+        }
+      }
+      // clipped meta dots: an item that starts a line must sit at its list's left edge (its dot in the clipped gutter)
+      for (const ml of document.querySelectorAll('.td-meta')) {
+        if (!vis(ml)) continue;
+        const L = ml.getBoundingClientRect().left;
+        const items = [...ml.children]; let prevTop = null;
+        items.forEach((it, i) => {
+          const r = it.getBoundingClientRect();
+          const lineStart = i === 0 || (prevTop != null && r.top > prevTop + 2);
+          if (lineStart && Math.abs(r.left - L) > 1) out.push('meta item not at line start edge: ' + it.textContent.slice(0, 50));
+          prevTop = r.top;
+        });
+        if (ml.scrollWidth > ml.clientWidth + 1 && getComputedStyle(ml).flexWrap === 'wrap') out.push('meta overflows: ' + ml.textContent.slice(0, 60));
+      }
+      return out;
+    });
+    assert(bad.length === 0, `no line starts with "·" (${bad.length ? bad.join(' | ') : 'clean'})`);
+    if (await page.$('.st-out-row')) {
+      const sum = await page.$$eval('.st-out-row .faint', (els) => els.reduce((a, e) => a + (parseInt(e.textContent, 10) || 0), 0));
+      assert(sum === 100, `Outcomes sum to 100% (got ${sum})`);
+    }
+  },
+  async scrollOutcomes(page) {
+    await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; const el = document.querySelector('.st-out-rows'); w.scrollTop = el.getBoundingClientRect().top + w.scrollTop - 200; });
+    await page.waitForTimeout(200);
+  },
 };

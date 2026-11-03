@@ -50,7 +50,7 @@ function Topbar({ route }) {
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
       </button>
       <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Log an email (E)">Log an email</${Btn}>
-      <${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
+      <${Btn} kind="primary" icon="plus" onClick=${() => openModal(matchMedia("(max-width: 860px)").matches ? "quickadd" : "add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
     </div>
   </header>`;
 }
@@ -67,6 +67,12 @@ MODALS.more = () => {
     <div class="list">${items.map((it) => html`<button type="button" class="nav-item" style="min-height:48px" onClick=${() => { closeModal(); setTimeout(it.run, 0); }}><${Icon} name=${it.icon} />${it.label}<span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>`)}</div>
   </${Modal}>`;
 };
+MODALS.quickadd = () => html`<${Modal} title="Add" onClose=${closeModal}>
+  <div class="list">
+    <button type="button" class="nav-item" style="min-height:52px" onClick=${() => { closeModal(); setTimeout(() => openModal("add"), 0); }}><${Icon} name="plus" />Add an application<span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>
+    <button type="button" class="nav-item" style="min-height:52px" onClick=${() => { closeModal(); setTimeout(() => openModal("paste"), 0); }}><${Icon} name="mail" />Log an email<span class="hint" style="margin-left:8px">Paste a recruiter email</span><span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>
+  </div>
+</${Modal}>`;
 function BottomNav({ route }) {
   const items = [NAV[0], NAV[1], NAV[2], NAV[4], { id: "prefs", label: "More", icon: "menu" }];
   return html`<nav class="bottom-nav" aria-label="Main">

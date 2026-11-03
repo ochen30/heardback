@@ -5,9 +5,19 @@ function stats_isReplied(a) { return !!a.lastReplyAt || STATS_REPLY_STAGES.inclu
 function stats_reachedInterview(a) { return ["interview", "offer"].includes(a.stage) || (a.rounds || []).length > 0 || (a.events || []).some((e) => e.to === "interview"); }
 function stats_days(d) { return d == null ? "—" : d < 10 && d % 1 ? d.toFixed(1) : String(Math.round(d)); }
 function stats_niceScale(max) {
-  if (max <= 4) return { step: 1, top: 4 };
+  if (max <= 4) return { step: 1, top: Math.max(2, max) };
   for (const step of [1, 2, 5, 10, 20, 25, 50, 100, 200, 500]) if (max / step <= 5) return { step, top: Math.ceil(max / step) * step };
   return { step: max, top: max };
+}
+/* Whole-number percentages that always sum to 100 (largest remainder). */
+function stats_pcts(counts) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (!total) return counts.map(() => null);
+  const raw = counts.map((n) => (n / total) * 100);
+  const out = raw.map(Math.floor);
+  let left = 100 - out.reduce((a, b) => a + b, 0);
+  raw.map((v, i) => [v - out[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { out[i]++; left--; } });
+  return out;
 }
 
 /* Deterministic, plain-language observations. Each one only appears when there is enough data behind it. */
@@ -100,20 +110,24 @@ function stats_observations(s, apps, st, jobsById) {
 
 function stats_WeeklyChart({ weeks }) {
   const ref = useRef(null);
-  const [w, setW] = useState(640);
+  const [box, setBox] = useState({ w: 640, h: 0 });
   const [hi, setHi] = useState(null);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
-    setW(Math.max(260, Math.round(el.clientWidth)));
+    const read = (r) => setBox((b) => { const w = Math.max(260, Math.round(r.width)), h = Math.round(r.height); return b.w === w && b.h === h ? b : { w, h }; });
+    read(el.getBoundingClientRect());
     if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver((es) => setW(Math.max(260, Math.round(es[0].contentRect.width))));
+    const ro = new ResizeObserver((es) => read(es[0].contentRect));
     ro.observe(el); return () => ro.disconnect();
   }, []);
-  const H = w < 420 ? 224 : 284;
+  const w = box.w;
   const m = { l: w < 420 ? 52 : 60, r: 8, t: 22, b: 58 };
   const n = weeks.length;
   const max = Math.max(1, ...weeks.map((x) => x.applied));
   const { step, top } = stats_niceScale(max);
+  /* Small counts get a shorter plot; beside the funnel the card stretches to the funnel's height and the plot fills it. */
+  const minH = max <= 4 ? (w < 420 ? 196 : 220) : (w < 420 ? 224 : 284);
+  const H = Math.max(minH, box.h);
   const iw = w - m.l - m.r, ih = H - m.t - m.b;
   const band = iw / n, bw = Math.min(24, band * 0.5);
   const xc = (i) => m.l + band * (i + 0.5);
@@ -129,7 +143,7 @@ function stats_WeeklyChart({ weeks }) {
   const lbl = (x, i) => i === last ? (band < 60 ? "Now" : "This week") : fmt.date(x.start);
   const tip = hi != null ? weeks[hi] : null;
   const yx = y(0) + 18, yr = H - 10;
-  return html`<div class="st-chart-inner" ref=${ref} style="position:relative">
+  return html`<div class="st-chart-inner" ref=${ref} style=${`min-height:${minH}px`}>
     <svg class="chart st-chart" width=${w} height=${H} viewBox=${`0 0 ${w} ${H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Applications and replies per week, last 8 weeks">
       ${ticks.map((v) => html`<g key=${"t" + v}>
         <line class=${v === 0 ? "base-line" : "grid-line"} x1=${m.l} x2=${w - m.r} y1=${y(v)} y2=${y(v)} />
@@ -150,7 +164,7 @@ function stats_WeeklyChart({ weeks }) {
     </svg>
     ${tip && html`<div class="st-tip" style=${`left:${clamp(xc(hi), 70, w - 70)}px;top:${y(tip.applied) - 12}px`}>
       <span>${hi === last ? "This week" : "Week of " + fmt.date(tip.start)}</span>
-      <span class="st-tip-row"><b>${tip.applied}</b> applied <span aria-hidden="true">·</span> <b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span>
+      <span class="st-tip-row td-meta"><span><b>${tip.applied}</b> applied</span><span><b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span></span>
     </div>`}
     <table class="sr"><caption>Applications and replies per week</caption><thead><tr><th>Week of</th><th>Applied</th><th>Replies</th></tr></thead>
       <tbody>${weeks.map((x) => html`<tr key=${x.start}><td>${fmt.date(x.start)}</td><td>${x.applied}</td><td>${x.replies}</td></tr>`)}</tbody></table>
@@ -162,8 +176,8 @@ function stats_Kpis({ st, saved }) {
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent <span class="sep-item"><span aria-hidden="true">·</span> ${saved} saved</span> <span class="sep-item"><span aria-hidden="true">·</span> ${st.thisWeek} this week</span></span></div>
-    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep" aria-hidden="true"> · </span>${smallTag}` : null}</span></div>
+    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span>${today_meta([`${st.applied} sent`, `${saved} saved`, `${st.thisWeek} this week`], "stat-sub num")}</div>
+    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span>${today_meta([`${st.replied} of ${st.applied} replied`, smallTag], "stat-sub num")}</div>
     <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
   </section>`;
@@ -197,6 +211,7 @@ const STATS_OUTCOMES = [
 function stats_Outcomes({ applied }) {
   const rows = STATS_OUTCOMES.map((o) => ({ ...o, n: applied.filter(o.test).length }));
   const total = applied.length;
+  const pcts = stats_pcts(rows.map((r) => r.n));
   return html`<section class="card" aria-labelledby="st-out-h">
     <div class="card-head"><h2 id="st-out-h">Outcomes</h2></div>
     <div class="card-body stack" style="gap:12px">
@@ -205,7 +220,7 @@ function stats_Outcomes({ applied }) {
       </div>
       <div class="st-out-rows">
         ${rows.map((r) => html`<div class="st-out-row" key=${r.id}>
-          <span class="st-out-sw" style=${`background:${r.color}`}></span><span>${r.label}</span><span class="num">${r.n}</span><span class="faint">${total ? fmt.pct(r.n / total) : "—"}</span>
+          <span class="st-out-sw" style=${`background:${r.color}`}></span><span>${r.label}</span><span class="num">${r.n}</span><span class="faint">${total ? `${pcts[rows.indexOf(r)]}%` : "—"}</span>
         </div>`)}
       </div>
     </div>
@@ -291,7 +306,7 @@ function stats_View() {
       : html`
         <${stats_Kpis} st=${st} saved=${apps.filter((a) => a.stage === "saved").length} />
         <div class="st-grid st-grid-top">
-          <section class="card" aria-labelledby="st-week-h">
+          <section class="card st-chart-card" aria-labelledby="st-week-h">
             <div class="card-head"><h2 id="st-week-h">Applications per week</h2></div>
             <div class="st-chart-wrap"><${stats_WeeklyChart} weeks=${st.weeks} /></div>
           </section>

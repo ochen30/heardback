@@ -2,7 +2,7 @@
 
 const PL_MAIN = ["saved", "applied", "screen", "interview", "offer"];
 const PL_CLOSED = ["rejected", "ghosted"];
-const PL_OUTCOMES = [{ id: "pending", label: "Pending" }, { id: "passed", label: "Passed" }, { id: "failed", label: "Didn't pass" }, { id: "cancelled", label: "Cancelled" }];
+const PL_OUTCOMES = [{ id: "pending", label: "Pending" }, { id: "passed", label: "Passed" }, { id: "failed", label: "Didn’t pass" }, { id: "cancelled", label: "Cancelled" }];
 
 /* ---------- helpers ---------- */
 function plUi(patch) { store.set((s) => ({ ...s, ui: { ...s.ui, ...patch } })); }
@@ -77,22 +77,22 @@ function plNextStep(a, st) {
   const silent = Apps.daysSilent(a);
   const label = (r) => ROUND[r.type]?.label || "Interview";
   if (PL_CLOSED.includes(a.stage)) return a.stage === "rejected"
-    ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it's fair to ask for brief feedback. Otherwise, let it go." }
+    ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it’s fair to ask for brief feedback. Otherwise, let it go." }
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };
   if (a.stage === "offer") return { kind: "offer", icon: "trophy", tone: "ok", short: "Get the offer in writing", title: "You have an offer", sub: "Ask for the offer in writing and the decision deadline before you reply." };
   if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${up.interviewers ? " · with " + up.interviewers : ""}` };
   const past = (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0];
   if (past && !past.thanked && t - past.at < 2 * DAY) return { kind: "thanks", icon: "send", tone: "info", round: past, short: "Send a thank-you", title: "Send a thank-you note", sub: `Your ${label(past).toLowerCase()} was ${fmt.ago(past.at)}. A short note within 24 hours helps.` };
   if (past) return { kind: "outcome", icon: "flag", round: past, short: "Log the outcome", title: `How did the ${label(past).toLowerCase()} go?`, sub: `It was ${fmt.ago(past.at)}. Log the outcome and a few notes while you remember.` };
-  if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It's no longer in the live listings. Check the company's careers page, or remove it from your board." };
+  if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It’s no longer in the live listings. Check the company’s careers page, or remove it from your board." };
   if (a.stage === "saved") return { kind: "saved", icon: "bolt", short: "Apply", title: "Apply, then mark it applied", sub: `You saved this ${fmt.ago(a.createdAt)}. Early applicants tend to hear back more often.` };
-  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they're interested. Marking it keeps your board honest. You can move it back any time." };
-  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven't heard back. A short, specific note is fine.` };
+  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they’re interested. Marking it keeps your board honest. You can move it back any time." };
+  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven’t heard back. A short, specific note is fine.` };
   if (a.stage === "applied") {
     const due = (a.followedUpAt || a.appliedAt || t) + st.followUpDays * DAY;
-    return { kind: "wait", icon: "clock", short: a.followedUpAt ? "Waiting after follow-up" : "Wait for a reply", title: "Waiting for a reply", sub: a.followedUpAt ? `You followed up ${fmt.ago(a.followedUpAt)}.` : `Heardback will suggest a follow-up on ${fmt.date(due)} if you haven't heard back.` };
+    return { kind: "wait", icon: "clock", short: a.followedUpAt ? "Waiting after follow-up" : "Wait for a reply", title: "Waiting for a reply", sub: a.followedUpAt ? `You followed up ${fmt.ago(a.followedUpAt)}.` : `Heardback will suggest a follow-up on ${fmt.date(due)} if you haven’t heard back.` };
   }
-  return { kind: "schedule", icon: "cal", short: "Add next round", title: "Add the next round when it's scheduled", sub: "Log the date, type and interviewers so Heardback can remind you to prep and send a thank-you." };
+  return { kind: "schedule", icon: "cal", short: "Add next round", title: "Add the next round when it’s scheduled", sub: "Log the date, type and interviewers so Heardback can remind you to prep and send a thank-you." };
 }
 
 /* Interview time finder: month-name or US numeric dates, skips deadlines, honors a stated time zone */
@@ -220,7 +220,7 @@ VIEWS.pipeline = function PipelineView() {
 
   return html`<div class=${cx("page wide pl-page", view === "board" && "pl-page-board", sel.size && "pl-selecting")}>
     <div class="page-head pl-head">
-      <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${plSepText(sub)}</p></div>
+      <div class="pl-head-title"><h1>Pipeline</h1>${plSepText(sub, "num", "p")}</div>
       <span class="spacer"></span>
       <div class="pl-tools">
         <div class="input-icon pl-filter">
@@ -245,10 +245,10 @@ VIEWS.pipeline = function PipelineView() {
 /* ---------- Selection + bulk actions ---------- */
 /* Selection lives in the view. Range order is the on-screen order (board: column by column; table: row order). */
 function plOrder() { return [...document.querySelectorAll(".pl-page [data-card], .pl-page tr[data-row]")].map((el) => el.dataset.card || el.dataset.row); }
-/* "a · b · c" as text where each "· item" wraps as one unit, so a separator never ends a line */
-function plSepText(str) {
+/* "a · b · c" as a dotted meta line (today_meta): a wrapped line never starts or ends with "·" */
+function plSepText(str, cls, tag) {
   const parts = String(str ?? "").split(" · ");
-  return parts.flatMap((p, i) => (i === 0 ? [p] : [" ", html`<span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${p}</span>`]));
+  return parts.length < 2 ? parts[0] : today_meta(parts, cls, tag);
 }
 /* Keys typed into a field are text, never shortcuts */
 function plEditable(el) { return !!el && (el.isContentEditable || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el.tagName === "INPUT" && !["checkbox", "radio", "button", "submit", "reset"].includes(el.type))); }
@@ -344,7 +344,7 @@ function PlBulkBar({ sel, view }) {
     <span class="pl-bulk-count num" aria-live="polite">${sel.size} selected</span>
     <span class="pl-bulk-sep" aria-hidden="true"></span>
     <${Btn} kind="ghost" size="sm" iconRight="chevD" cls="pl-bulk-move" aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"} onClick=${(e) => { const el = e.currentTarget; setMenu((m) => (m ? null : el)); }}>Move to…</${Btn}>
-    <${Btn} kind="ghost" size="sm" icon="ghost" cls="pl-bulk-ic" disabled=${cur === "ghosted"} aria-label="Mark ghosted" title="Mark ghosted" onClick=${() => move("ghosted")}><span class="pl-bulk-lbl">Mark ghosted</span></${Btn}>
+    <${Btn} kind="ghost" size="sm" icon="ghost" cls="pl-bulk-ic" disabled=${cur === "ghosted"} aria-label="Mark as ghosted" title="Mark as ghosted" onClick=${() => move("ghosted")}><span class="pl-bulk-lbl">Mark as ghosted</span></${Btn}>
     <${Btn} kind="ghost" size="sm" icon="download" cls="pl-bulk-ic" aria-label="Export CSV" title="Export the selection as CSV" onClick=${() => plExportCSV(ids)}><span class="pl-bulk-lbl">Export CSV</span></${Btn}>
     <${Btn} kind="ghost" size="sm" icon="trash" cls="pl-bulk-ic danger" aria-label="Delete" title="Delete selected applications" onClick=${() => plBulkDelete(ids, after)}><span class="pl-bulk-lbl">Delete</span></${Btn}>
     <span class="pl-bulk-sep" aria-hidden="true"></span>
@@ -366,8 +366,8 @@ function PlEmpty() {
     </div>
     <div class="pl-empty-links">
       <button type="button" class="pl-linkbtn" onClick=${() => openModal("paste")}>Log an email</button>
-      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button></span>
-      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button></span>
+      <button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button>
+      <button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button>
     </div>
   </div>`;
 }
@@ -591,8 +591,8 @@ function PlTable({ apps, settings, sort, sel }) {
             return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
               onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
               <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
-              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.kind === "ghost" ? `No reply in ${silent} days` : `${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}`}</span></div></div></td>
-              <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
+              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${today_meta([STAGE[a.stage]?.label, ...(ns.kind === "closed" ? [] : ns.kind === "ghost" ? [`No reply in ${silent} days`] : [ns.short, silent != null && silent >= settings.followUpDays ? `${silent}d silent` : null])])}</span></div></div></td>
+              <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} title=${`Stage: ${STAGE[a.stage]?.label}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
               <td class="num muted">${a.appliedAt ? fmt.date(a.appliedAt) : html`<span class="faint">—</span>`}</td>
               <td class="num muted">${fmt.ago(a.lastActivityAt)}</td>
               <td><span class=${cx("pl-next", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}</span></td>
@@ -632,7 +632,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const [t, setT] = useState(tab || "overview");
   useEffect(() => { if (tab) setT(tab); }, [tab]);
   if (!a) return html`<${Drawer} onClose=${closeDrawer} label="Application" head=${html`<div class="pl-dhead"><h2 class="pl-dtitle">Application not found</h2></div>`}>
-    <${Empty} icon="info" title="This application isn't here anymore">It may have been deleted, or cleared along with the example data.</${Empty}>
+    <${Empty} icon="info" title="This application isn’t here anymore">It may have been deleted, or cleared along with the example data.</${Empty}>
   </${Drawer}>`;
   const hasCo = jobs.status === "ready" && (jobs.byCompany.has(a.company) || jobs.cstats[a.company]);
   const del = () => askConfirm({ title: `Delete ${a.company}?`, body: `This removes ${a.title || "this application"} with its rounds, notes and timeline from this device. You can undo right after.`, confirmLabel: "Delete application", danger: true, onConfirm: () => { closeDrawer(); Apps.remove(a.id); } });
@@ -695,7 +695,7 @@ function PlStepper({ a }) {
       <span class="pl-small muted"><span class=${cx("dot", a.stage)}></span>${STAGE[a.stage].label}${since ? ` since ${fmt.date(since)}` : ""}</span>
       <span class="spacer" style="flex:1"></span>
       ${PL_CLOSED.map((id) => html`<button type="button" key=${id} class=${cx("pl-close-btn", id, a.stage === id && "on")} aria-pressed=${a.stage === id ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})`}>
-        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark rejected" : "Mark ghosted"}
+        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted"}
       </button>`)}
     </div>
   </div>`;
@@ -783,7 +783,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
       <div class="pl-job">
         <div class="stack-sm" style="flex:1;min-width:0;gap:2px">
           <span class="truncate" style="font-weight:500">${job.t}</span>
-          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="sep-item"><span class="pl-sep" aria-hidden="true">·</span> Posted ${fmt.ago(job.p)}</span></span>
+          ${today_meta([html`<${GhostScore} g=${job.g} />`, `Posted ${fmt.ago(job.p)}`], "pl-small muted pl-job-meta")}
         </div>
         <${Btn} size="sm" iconRight="chevR" onClick=${() => openJob(job.id)}>View listing</${Btn}>
       </div>
@@ -891,7 +891,7 @@ function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
   const t = now();
-  const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can't be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
+  const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can’t be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
   return html`<div class="round pl-round pl-round-open" data-round=${r.id}>
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
@@ -989,7 +989,7 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
   const ctrl = useRef(null);
   const before = useRef(tpl);
   useEffect(() => () => ctrl.current?.abort(), []);
-  if (!a) return html`<${Modal} title="Draft" onClose=${closeModal}><p class="muted">This application isn't here anymore.</p></${Modal}>`;
+  if (!a) return html`<${Modal} title="Draft" onClose=${closeModal}><p class="muted">This application isn’t here anymore.</p></${Modal}>`;
 
   const improve = async () => {
     setErr(""); setBusy(true); before.current = text;

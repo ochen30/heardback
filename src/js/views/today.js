@@ -13,9 +13,12 @@ function today_dayLabel(ts) {
   if (diff === 1) return "Tomorrow";
   return fmt.date(ts, { weekday: "short", month: "short", day: "numeric" });
 }
-/* "a · b": each "· item" wraps as one unit, so a separator never ends a line. */
-function today_seps(parts) {
-  return parts.filter(Boolean).map((x, i) => (i ? html` <span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${x}</span>` : html`<span key=${i}>${x}</span>`));
+/* Dotted meta line ("a · b · c"), shared by Today, Insights, Pipeline and Prep.
+   Every item carries its dot in its own left gutter; .td-meta clips the gutter at the start of each
+   visual line, so a wrapped line never begins with "·" and a line never ends with one. */
+function today_meta(parts, cls, tag = "span") {
+  const items = (parts || []).filter((x) => x != null && x !== false && x !== "");
+  return html`<${tag} class=${cx("td-meta", cls)}>${items.map((x, i) => html`<span key=${i}>${x}</span>`)}</${tag}>`;
 }
 function today_setPrepFocus(focus) { store.set((s) => ({ ...s, ui: { ...s.ui, prepFocus: focus } })); }
 function today_undismiss(key, prev) {
@@ -134,7 +137,7 @@ function today_TaskRow({ tk, first }) {
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
-      <div class="task-sub">${copy.sub}</div>
+      ${typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`}
     </div>
     <div class="task-actions td-task-actions">
       ${primary}
@@ -232,7 +235,7 @@ function today_NewForYou({ jobs, m }) {
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-        <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+        ${today_meta([j.co, `${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
       <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
@@ -346,7 +349,7 @@ function today_View() {
     <header class="greeting td-head">
       <div style="min-width:0">
         <h1>${today_greeting()}${name ? `, ${name}` : ""}</h1>
-        <p>${today_seps(parts)}</p>
+        ${today_meta(parts, null, "p")}
       </div>
       <span class="spacer"></span>
       <span class="td-date hide-sm">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>

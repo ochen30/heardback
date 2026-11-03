@@ -14,6 +14,11 @@ function computeTasks(s = store.get()) {
     for (const r of a.rounds || []) {
       if (!r.at) continue;
       const until = r.at - t;
+      const fromEmail = (a.events || []).some((e) => e.kind === "email" && t - e.at < 3 * DAY);
+      if (until > 0 && fromEmail && !r.confirmed) {
+        const key = `confirm:${a.id}:${r.id}`;
+        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${(ROUND[r.type]?.label || "interview").toLowerCase()} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
+      }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
         if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${ROUND[r.type]?.label || "Interview"} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
@@ -107,10 +112,10 @@ function loadExamples() {
     mk({ company: "Northwind Labs", title: "Software Engineer Intern, Summer 2027", location: "Seattle, WA", stage: "interview", createdAt: d(19), appliedAt: d(18), lastReplyAt: d(9),
       extra: [{ at: d(9), kind: "stage", from: "applied", to: "screen", text: "Moved to Screen" }, { at: d(4), kind: "stage", from: "screen", to: "interview", text: "Moved to Interviews" }],
       rounds: [{ id: uid("r_"), type: "recruiter", at: d(7), interviewers: "Dana (Recruiter)", prep: "", reflection: "Friendly. Asked about timeline and interests.", outcome: "passed", thanked: true },
-               { id: uid("r_"), type: "technical", at: t + 1 * DAY + 3 * 3600000, interviewers: "Priya S., Tom L.", prep: "Graphs, BFS/DFS, one design question", reflection: "", outcome: "pending", thanked: false }] }),
+               { id: uid("r_"), type: "technical", at: t + 1 * DAY + 3 * 3600000, interviewers: "Priya S., Tom L.", prep: "Graphs, BFS/DFS, one design question", reflection: "", outcome: "pending", thanked: false, confirmed: true }] }),
     mk({ company: "Fernhill Capital", title: "Quantitative Research Intern", location: "New York, NY", stage: "screen", createdAt: d(12), appliedAt: d(12), lastReplyAt: d(2),
       extra: [{ at: d(2), kind: "stage", from: "applied", to: "screen", text: "Moved to Screen" }],
-      rounds: [{ id: uid("r_"), type: "recruiter", at: d(1) + 2 * 3600000, interviewers: "Marcus", prep: "", reflection: "", outcome: "pending", thanked: false }] }),
+      rounds: [{ id: uid("r_"), type: "recruiter", at: d(1) + 2 * 3600000, interviewers: "Marcus", prep: "", reflection: "", outcome: "pending", thanked: false, confirmed: true }] }),
     mk({ company: "Lumen Robotics", title: "Embedded Software Engineer, New Grad", location: "Boston, MA", stage: "applied", createdAt: d(11), appliedAt: d(10) }),
     mk({ company: "Quarry Analytics", title: "Data Science Intern", location: "Remote", stage: "applied", createdAt: d(27), appliedAt: d(26) }),
     mk({ company: "Bluepeak Health", title: "Product Manager Intern", location: "San Francisco, CA", stage: "rejected", createdAt: d(30), appliedAt: d(29), lastReplyAt: d(15),

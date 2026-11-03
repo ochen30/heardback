@@ -230,7 +230,7 @@ const Apps = {
     if (["screen", "interview", "offer", "rejected"].includes(stage) && STAGE[a.stage].i < STAGE[stage].i) patch.lastReplyAt = t;
     Apps.update(id, patch);
     if (stage === "offer" && !opts.silent) celebrate(a);
-    if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}`, { undo: () => Apps.update(id, a) });
+    if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}${stage === "applied" && !a.appliedAt ? " (applied today)" : ""}`, { undo: () => Apps.update(id, a), ...(stage === "applied" && !a.appliedAt ? { action: { label: "Change date", run: () => openApp(id, "overview") } } : {}) });
   },
   remove(id) {
     const a = Apps.get(id);
@@ -246,7 +246,7 @@ const Apps = {
   updateRound(id, rid, patch) { Apps.update(id, (a) => ({ rounds: a.rounds.map((r) => (r.id === rid ? { ...r, ...patch } : r)) })); },
   removeRound(id, rid) { Apps.update(id, (a) => ({ rounds: a.rounds.filter((r) => r.id !== rid) })); },
   byJob(jobId) { return Object.values(store.get().apps).find((a) => a.jobId === jobId); },
-  daysSilent(a) { const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0, a.lastActivityAt || 0); return ref ? Math.floor((now() - ref) / DAY) : 0; },
+  daysSilent(a) { const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0) || a.createdAt || 0; return ref ? Math.max(0, Math.floor((now() - ref) / DAY)) : 0; },
 };
 
 /* ---------- Router (plain #name hashes only) ---------- */

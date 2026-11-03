@@ -33,6 +33,9 @@ async function step1(page) {
   await page.fill('#onb-name', 'Alex');
 }
 module.exports = {
+  // REVIEW5 #1: dotted meta lines (prep header, When, role line, transcript) never start with "·"
+  async dots(page) { await require('./actions-today.js').dotCheck(page); },
+  async mockEndDots(page) { await module.exports.mockEnd(page); await page.evaluate(() => { const d = document.querySelector('.prep-mock-details'); if (d) d.open = true; }); await page.waitForTimeout(150); await require('./actions-today.js').dotCheck(page); },
   async onbStep1(page) { await step1(page); },
   async onbLocMore(page) {
     await step1(page);

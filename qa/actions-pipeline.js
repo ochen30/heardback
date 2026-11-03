@@ -431,10 +431,10 @@ const actions = {
   },
   async tableBulkGhost(page) {
     await actions.tableSelect(page);
-    await page.click('.pl-bulk button[aria-label="Mark ghosted"]');
+    await page.click('.pl-bulk button[aria-label="Mark as ghosted"]');
     await page.waitForTimeout(150);
     const n = await page.evaluate(() => Object.values(store.get().apps).filter((a) => a.stage === 'ghosted').length);
-    assert(n >= 4, `Mark ghosted moves the selection (ghosted now ${n})`);
+    assert(n >= 4, `Mark as ghosted moves the selection (ghosted now ${n})`);
   },
   async tableBulkDelete(page) {
     await actions.tableSelect(page);
@@ -618,6 +618,22 @@ const actions = {
       return [tx(v), tx(i)];
     });
     assert(Math.abs(x[0] - x[1]) < 0.6, `Last reply value aligns with inline values (${x.map((n) => n.toFixed(1))})`);
+  },
+  // REVIEW5 #1 and #4: dotted meta lines never start with "·"; one wording for the ghost action
+  async dots(page) { await require('./actions-today.js').dotCheck(page); },
+  async drawerDots(page) { await actions.drawer(page); await require('./actions-today.js').dotCheck(page); },
+  async tableDots(page) { await actions.table(page); await require('./actions-today.js').dotCheck(page); },
+  async ghostWording(page) {
+    await actions.drawer(page);
+    const close = await page.$$eval('.drawer .pl-close-btn', (els) => els.map((e) => e.textContent.trim()));
+    assert(close.includes('Mark as ghosted') && close.includes('Mark as rejected'), `drawer close buttons say "Mark as …" (${close.join(', ')})`);
+    await page.keyboard.press('Escape'); await wait(page, 200);
+    await page.evaluate(() => { store.set((s) => ({ ...s, ui: { ...s.ui, pipelineView: 'table' } })); }); await wait(page, 250);
+    await page.locator('tr[data-row] .pl-chk-cell').first().click(); await wait(page, 200);
+    const bulk = await page.$eval('.pl-bulk', (el) => el.textContent + ' ' + [...el.querySelectorAll('[aria-label]')].map((b) => b.getAttribute('aria-label')).join(' '));
+    assert(/Mark as ghosted/.test(bulk) && !/Mark ghosted/.test(bulk), 'bulk bar says "Mark as ghosted"');
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(!/[A-Za-z]'[A-Za-z]/.test(txt), 'no straight apostrophes in visible UI text');
   },
   async scrollBoard(page) { await page.evaluate(() => document.querySelector('.pl-board').scrollBy({ left: 300, behavior: 'instant' })); await wait(page, 300); },
 };

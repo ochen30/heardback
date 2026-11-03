@@ -1,5 +1,13 @@
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
+/* Dotted meta line. Each item owns a leading gutter with its "·"; a column gap cancels the gutter's negative
+   margin between items, so the dot sits between them. The first item on every visual line (first item or
+   wrapped) hangs its gutter outside the box, where clip-path cuts it: no line ever starts with "·". */
+.meta-list { --ml-dot: 13px; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--ml-dot); min-width: 0; clip-path: inset(-6px -6px -6px 0); }
+.meta-list > * { position: relative; margin-left: calc(-1 * var(--ml-dot)); padding-left: var(--ml-dot); white-space: nowrap; min-width: 0; }
+.meta-list > *::before { content: "·"; position: absolute; left: 0; top: 0; width: var(--ml-dot); text-align: center; color: var(--fg-3); font-weight: 400; pointer-events: none; }
+.find-sub { color: var(--fg-2); }
+.find-sub-main { white-space: normal; }
 .find-aside { top: 16px; max-height: calc(100vh - var(--top) - 32px); overflow-y: auto; padding: 2px 4px 8px 2px; margin: -2px 0 0 -2px; scrollbar-width: thin; }
 .find-fgroups { display: flex; flex-direction: column; gap: 20px; }
 .find-fgroups .filter-group h4 { margin: 0; }
@@ -36,12 +44,10 @@
 .find-fcount { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-fg); font-size: var(--fs-xs); font-weight: 600; }
 .find-bar { display: flex; align-items: center; gap: 12px; min-height: 34px; flex-wrap: wrap; }
 .find-bar .spacer { flex: 1; }
-.find-count { font-size: var(--fs-sm); color: var(--fg-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.find-count { font-size: var(--fs-sm); color: var(--fg-2); row-gap: 2px; }
 .find-count strong { color: var(--fg); font-weight: 600; }
-.find-prefs { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-3); }
-.find-prefs .sep { color: var(--line-strong); }
+.find-prefs { color: var(--fg-3); }
 .find-raw, .find-n { white-space: nowrap; }
-.find-dsub .sep { color: var(--fg-3); }
 .find-link { border: 0; background: none; padding: 0; color: var(--accent-text); font-size: inherit; font-weight: 500; cursor: pointer; }
 .find-link:hover { text-decoration: underline; text-underline-offset: 2px; }
 .find-sort-sm { width: auto; min-width: 150px; }
@@ -54,16 +60,23 @@
   display: block; max-width: 100%; border: 0; background: none; padding: 0; text-align: left; color: var(--fg);
   font-weight: 500; font-size: var(--fs-md); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
-.find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
+.find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.4; }
+/* one line on wide screens; the last items give way with an ellipsis */
+.find-row-meta.meta-list { flex-wrap: nowrap; overflow: hidden; }
+.find-row-meta.meta-list > * { overflow: hidden; text-overflow: ellipsis; }
+.find-row-meta.meta-list > :first-child { flex-shrink: 0; max-width: 60%; }
 /* One order everywhere (matches Today): signals · age · Fit · action.
    Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
-.find-side { display: grid; grid-template-columns: auto 84px 60px 36px; align-items: center; gap: 8px; justify-items: end; }
-.find-has-stage .find-side { grid-template-columns: auto 84px 60px 92px; }
+.find-side { display: grid; grid-template-columns: auto 68px 60px 36px; align-items: center; gap: 8px; justify-items: end; }
+.find-has-stage .find-side { grid-template-columns: auto 68px 60px 92px; }
 .find-c-ghost { grid-column: 1; } .find-c-fresh { grid-column: 2; } .find-c-fit { grid-column: 3; } .find-c-act { grid-column: 4; }
 .find-c-ghost:empty { display: none; }
 .find-c-fit, .find-c-ghost, .find-c-fresh, .find-c-act { display: inline-flex; align-items: center; justify-content: flex-end; }
-.find-c-fit .fit { min-width: 56px; white-space: nowrap; }
-.find-c-fresh .fresh { text-align: right; }
+.find-c-fit .fit { white-space: nowrap; }
+/* the highlight pads outward, so its text keeps the right edge of the plain Fit values above and below */
+.find-c-fit .fit.hi, #find-fit-h .fit.hi { margin-right: -7px; }
+/* age reads left-aligned so the green "new" dots form a column */
+.find-c-fresh { justify-self: stretch; justify-content: flex-start; }
 .find-save.on { color: var(--accent-text); }
 /* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
 .find-row[aria-selected="true"] .find-row-title:focus-visible { box-shadow: none; }
@@ -74,13 +87,13 @@
 .find-keys .kbd { margin-left: 6px; }
 .find-foot { padding-top: 0; }
 .find-row-co { grid-template-columns: minmax(0, 1fr) auto; }
-.find-results-tight .find-side { grid-template-columns: auto 64px 60px 36px; }
+.find-results-tight .find-side { grid-template-columns: auto 60px 56px 36px; }
 .find-results-tight .find-c-act .badge { display: none; }
 
 /* drawer */
 .find-dhead { flex: 1; min-width: 0; display: flex; gap: 14px; align-items: flex-start; }
 .find-dtitle { font-size: var(--fs-lg); line-height: 1.3; letter-spacing: -0.015em; }
-.find-dsub { font-size: var(--fs-sm); gap: 6px; }
+.find-dsub { font-size: var(--fs-sm); gap: 6px 10px; }
 .find-co { font-size: var(--fs-sm); }
 .find-ext { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); }
 .find-kv { grid-template-columns: 120px minmax(0, 1fr); row-gap: 10px; }
@@ -167,8 +180,8 @@ a.find-link { cursor: pointer; }
 .find-coname { font-weight: 500; }
 .find-cotable tbody tr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
 .find-split { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); }
-.find-split-bar { width: 56px; height: 6px; border-radius: 99px; background: var(--info-soft); overflow: hidden; flex: none; }
-.find-split-bar i { display: block; height: 100%; background: var(--accent); }
+.find-split-bar { width: 56px; height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; flex: none; }
+.find-split-bar i { display: block; height: 100%; background: var(--fg-3); }
 .find-th-help { display: inline-flex; align-items: center; gap: 4px; cursor: help; }
 .find-th-help .ico { color: var(--fg-3); opacity: .7; }
 .find-gshare { color: var(--fg-2); }
@@ -189,13 +202,13 @@ a.find-link { cursor: pointer; }
   /* sort select shares the matches row; the count wraps beside it */
   .find-bar { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
   .find-bar .spacer { display: none; }
-  .find-count { display: block; flex: 1; min-width: 0; padding-top: 8px; line-height: 1.5; }
-  .find-count .find-prefs { display: inline; }
-  .find-count .find-prefs .sep { margin: 0 4px; }
+  .find-count { flex: 1; padding-top: 8px; line-height: 1.5; }
   .find-bar .find-sort-sm { min-width: 0; width: auto; flex: none; height: 36px; }
   .find-co-toolbar .find-search { flex-basis: 100%; }
   .find-co-toolbar .find-sort-sm { width: 100%; }
-  .find-row { align-items: start; padding: 12px 16px; row-gap: 6px; }
+  .find-row { align-items: start; padding: 12px 16px; row-gap: 2px; }
+  .find-side { margin-top: 0; min-height: 28px; }
+  .find-c-act .btn.sm.icon { margin: -4px -6px -4px 0; }
   /* one calm row so the primary CTA sits clear of toasts */
   .drawer-foot:has(.find-apply) { flex-wrap: nowrap; gap: 8px; }
   .drawer-foot:has(.find-apply) > .btn { height: 44px; flex: none; }
@@ -203,7 +216,7 @@ a.find-link { cursor: pointer; }
   .find-row-co { grid-template-columns: minmax(0, 1fr); }
   .find-row-co .find-side { grid-column: 1; }
   .find-row-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .find-row-meta { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .find-row-meta.meta-list { flex-wrap: wrap; max-height: calc(2 * 1.4em); }
   .find-side { grid-column: 2; display: flex; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
   .find-c-fit:empty { display: none; }
   .find-c-act { margin-left: auto; }
@@ -214,6 +227,16 @@ a.find-link { cursor: pointer; }
   .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }
-/* company drawer rows: the signal label shows from 768px; on phones, bars only (the label lives in the tooltip) */
+/* Header subtitle: two deliberate lines once the filter sidebar folds away (the facts, then a quieter
+   "Updated · How we score listings" line), instead of one stray wrapped item. */
+@media (max-width: 1100px) {
+  .find-sub-main { flex-basis: calc(100% + var(--ml-dot)); }
+  .find-sub-x { color: var(--fg-3); }
+}
+/* Company drawer role list. The drawer is a fixed width, so size by the list itself, not the viewport:
+   the signal shows as bars only (its label lives in the tooltip) and titles get two lines, so roles that
+   differ only at the end ("… – Summer 2027" / "… – Fall 2026") stay distinguishable. */
+.find-results-tight { container-type: inline-size; }
 .find-results-tight .find-g-l { white-space: nowrap; }
-@media (max-width: 767px) { .find-results-tight .find-g-l { display: none; } }
+.find-results-tight .find-row-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+@container (max-width: 640px) { .find-results-tight .find-g-l { display: none; } }

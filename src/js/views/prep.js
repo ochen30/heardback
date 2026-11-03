@@ -443,7 +443,7 @@ function prepMockCard(r) {
 function PrepMockTurn({ t, live }) {
   const me = t.role === "user";
   return html`<li class=${cx("prep-mock-turn", me ? "me" : "them")}>
-    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html` <span class="faint sep-item"><span aria-hidden="true">·</span> stopped</span>`}</span>
+    ${today_meta([me ? "You" : "Interviewer", t.stopped && html`<span class="faint">stopped</span>`], "prep-mock-who")}
     <p class="prep-mock-text">${t.text}${live && html`<span class="prep-mock-caret" aria-hidden="true"></span>`}</p>
   </li>`;
 }
@@ -604,7 +604,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     <div class="card-body prep-mock-body">
       ${phase === "end"
         ? html`<${PrepMockScore} card=${card} />
-          <details class="prep-mock-details"><summary>Transcript <span class="faint num sep-item"><span aria-hidden="true">·</span> ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
+          <details class="prep-mock-details"><summary>${today_meta(["Transcript", html`<span class="faint num">${pluralize(turns.length, "message")}</span>`])}</summary>${transcript}</details>`
         : transcript}
       ${statusRow}
       ${err && html`<div class="callout wait prep-mock-err" role="alert"><${Icon} name="alert" /><span class="prep-mock-err-text">${err}</span><${Btn} size="sm" icon="refresh" onClick=${retry} id="prep-mock-retry">${phase === "scoring" ? "Try the scorecard again" : "Ask again"}</${Btn}></div>`}
@@ -687,7 +687,7 @@ function PrepWorkspace({ a, r }) {
             <${Logo} name=${a.company} size="lg" />
             <div class="prep-head-text">
               <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2></div>
-              <span class="prep-role">${a.title} <span class="prep-role-type sep-item"><span aria-hidden="true">·</span> ${ROUND[r.type]?.label || "Interview"}</span></span>
+              ${today_meta([a.title, ROUND[r.type]?.label || "Interview"], "prep-role")}
             </div>
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
@@ -696,7 +696,7 @@ function PrepWorkspace({ a, r }) {
             </div>
           </div>
           <dl class="prep-facts">
-            <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint sep-item", r.at > now() && r.at - now() < DAY && "prep-soon")}><span aria-hidden="true">·</span> ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
+            <div><dt>When</dt><dd class="num">${r.at ? today_meta([fmt.dateTime(r.at), html`<span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>${fmt.until(r.at)}</span>`]) : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
@@ -736,7 +736,7 @@ VIEWS.prep = function PrepView() {
   }
   const value = sel?.practice ? "practice" : sel ? `${sel.a.id}|${sel.r.id}` : "";
   return html`<div class="page">
-    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? html`${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? html` <span class="sep-item"><span aria-hidden="true">·</span> next ${fmt.until(up[0].r.at)}</span>` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
+    <div class="page-head"><div><h1>Interview prep</h1>${up.length ? today_meta([pluralize(up.length, "upcoming round"), up[0]?.r.at && `next ${fmt.until(up[0].r.at)}`], null, "p") : html`<p>No upcoming rounds. Practice keeps you sharp.</p>`}</div>
 </div>
     <div class="prep-layout">
       <aside class="prep-side">

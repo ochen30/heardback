@@ -615,6 +615,14 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
+/* Dotted meta line. Each item owns a leading gutter with its "·"; a column gap cancels the gutter's negative
+   margin between items, so the dot sits between them. The first item on every visual line (first item or
+   wrapped) hangs its gutter outside the box, where clip-path cuts it: no line ever starts with "·". */
+.meta-list { --ml-dot: 13px; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--ml-dot); min-width: 0; clip-path: inset(-6px -6px -6px 0); }
+.meta-list > * { position: relative; margin-left: calc(-1 * var(--ml-dot)); padding-left: var(--ml-dot); white-space: nowrap; min-width: 0; }
+.meta-list > *::before { content: "·"; position: absolute; left: 0; top: 0; width: var(--ml-dot); text-align: center; color: var(--fg-3); font-weight: 400; pointer-events: none; }
+.find-sub { color: var(--fg-2); }
+.find-sub-main { white-space: normal; }
 .find-aside { top: 16px; max-height: calc(100vh - var(--top) - 32px); overflow-y: auto; padding: 2px 4px 8px 2px; margin: -2px 0 0 -2px; scrollbar-width: thin; }
 .find-fgroups { display: flex; flex-direction: column; gap: 20px; }
 .find-fgroups .filter-group h4 { margin: 0; }
@@ -651,12 +659,10 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .find-fcount { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-fg); font-size: var(--fs-xs); font-weight: 600; }
 .find-bar { display: flex; align-items: center; gap: 12px; min-height: 34px; flex-wrap: wrap; }
 .find-bar .spacer { flex: 1; }
-.find-count { font-size: var(--fs-sm); color: var(--fg-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.find-count { font-size: var(--fs-sm); color: var(--fg-2); row-gap: 2px; }
 .find-count strong { color: var(--fg); font-weight: 600; }
-.find-prefs { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-3); }
-.find-prefs .sep { color: var(--line-strong); }
+.find-prefs { color: var(--fg-3); }
 .find-raw, .find-n { white-space: nowrap; }
-.find-dsub .sep { color: var(--fg-3); }
 .find-link { border: 0; background: none; padding: 0; color: var(--accent-text); font-size: inherit; font-weight: 500; cursor: pointer; }
 .find-link:hover { text-decoration: underline; text-underline-offset: 2px; }
 .find-sort-sm { width: auto; min-width: 150px; }
@@ -669,16 +675,23 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
   display: block; max-width: 100%; border: 0; background: none; padding: 0; text-align: left; color: var(--fg);
   font-weight: 500; font-size: var(--fs-md); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
-.find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
+.find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.4; }
+/* one line on wide screens; the last items give way with an ellipsis */
+.find-row-meta.meta-list { flex-wrap: nowrap; overflow: hidden; }
+.find-row-meta.meta-list > * { overflow: hidden; text-overflow: ellipsis; }
+.find-row-meta.meta-list > :first-child { flex-shrink: 0; max-width: 60%; }
 /* One order everywhere (matches Today): signals · age · Fit · action.
    Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
-.find-side { display: grid; grid-template-columns: auto 84px 60px 36px; align-items: center; gap: 8px; justify-items: end; }
-.find-has-stage .find-side { grid-template-columns: auto 84px 60px 92px; }
+.find-side { display: grid; grid-template-columns: auto 68px 60px 36px; align-items: center; gap: 8px; justify-items: end; }
+.find-has-stage .find-side { grid-template-columns: auto 68px 60px 92px; }
 .find-c-ghost { grid-column: 1; } .find-c-fresh { grid-column: 2; } .find-c-fit { grid-column: 3; } .find-c-act { grid-column: 4; }
 .find-c-ghost:empty { display: none; }
 .find-c-fit, .find-c-ghost, .find-c-fresh, .find-c-act { display: inline-flex; align-items: center; justify-content: flex-end; }
-.find-c-fit .fit { min-width: 56px; white-space: nowrap; }
-.find-c-fresh .fresh { text-align: right; }
+.find-c-fit .fit { white-space: nowrap; }
+/* the highlight pads outward, so its text keeps the right edge of the plain Fit values above and below */
+.find-c-fit .fit.hi, #find-fit-h .fit.hi { margin-right: -7px; }
+/* age reads left-aligned so the green "new" dots form a column */
+.find-c-fresh { justify-self: stretch; justify-content: flex-start; }
 .find-save.on { color: var(--accent-text); }
 /* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
 .find-row[aria-selected="true"] .find-row-title:focus-visible { box-shadow: none; }
@@ -689,13 +702,13 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .find-keys .kbd { margin-left: 6px; }
 .find-foot { padding-top: 0; }
 .find-row-co { grid-template-columns: minmax(0, 1fr) auto; }
-.find-results-tight .find-side { grid-template-columns: auto 64px 60px 36px; }
+.find-results-tight .find-side { grid-template-columns: auto 60px 56px 36px; }
 .find-results-tight .find-c-act .badge { display: none; }
 
 /* drawer */
 .find-dhead { flex: 1; min-width: 0; display: flex; gap: 14px; align-items: flex-start; }
 .find-dtitle { font-size: var(--fs-lg); line-height: 1.3; letter-spacing: -0.015em; }
-.find-dsub { font-size: var(--fs-sm); gap: 6px; }
+.find-dsub { font-size: var(--fs-sm); gap: 6px 10px; }
 .find-co { font-size: var(--fs-sm); }
 .find-ext { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); }
 .find-kv { grid-template-columns: 120px minmax(0, 1fr); row-gap: 10px; }
@@ -782,8 +795,8 @@ a.find-link { cursor: pointer; }
 .find-coname { font-weight: 500; }
 .find-cotable tbody tr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
 .find-split { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); }
-.find-split-bar { width: 56px; height: 6px; border-radius: 99px; background: var(--info-soft); overflow: hidden; flex: none; }
-.find-split-bar i { display: block; height: 100%; background: var(--accent); }
+.find-split-bar { width: 56px; height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; flex: none; }
+.find-split-bar i { display: block; height: 100%; background: var(--fg-3); }
 .find-th-help { display: inline-flex; align-items: center; gap: 4px; cursor: help; }
 .find-th-help .ico { color: var(--fg-3); opacity: .7; }
 .find-gshare { color: var(--fg-2); }
@@ -804,13 +817,13 @@ a.find-link { cursor: pointer; }
   /* sort select shares the matches row; the count wraps beside it */
   .find-bar { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
   .find-bar .spacer { display: none; }
-  .find-count { display: block; flex: 1; min-width: 0; padding-top: 8px; line-height: 1.5; }
-  .find-count .find-prefs { display: inline; }
-  .find-count .find-prefs .sep { margin: 0 4px; }
+  .find-count { flex: 1; padding-top: 8px; line-height: 1.5; }
   .find-bar .find-sort-sm { min-width: 0; width: auto; flex: none; height: 36px; }
   .find-co-toolbar .find-search { flex-basis: 100%; }
   .find-co-toolbar .find-sort-sm { width: 100%; }
-  .find-row { align-items: start; padding: 12px 16px; row-gap: 6px; }
+  .find-row { align-items: start; padding: 12px 16px; row-gap: 2px; }
+  .find-side { margin-top: 0; min-height: 28px; }
+  .find-c-act .btn.sm.icon { margin: -4px -6px -4px 0; }
   /* one calm row so the primary CTA sits clear of toasts */
   .drawer-foot:has(.find-apply) { flex-wrap: nowrap; gap: 8px; }
   .drawer-foot:has(.find-apply) > .btn { height: 44px; flex: none; }
@@ -818,7 +831,7 @@ a.find-link { cursor: pointer; }
   .find-row-co { grid-template-columns: minmax(0, 1fr); }
   .find-row-co .find-side { grid-column: 1; }
   .find-row-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .find-row-meta { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .find-row-meta.meta-list { flex-wrap: wrap; max-height: calc(2 * 1.4em); }
   .find-side { grid-column: 2; display: flex; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
   .find-c-fit:empty { display: none; }
   .find-c-act { margin-left: auto; }
@@ -829,9 +842,19 @@ a.find-link { cursor: pointer; }
   .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }
-/* company drawer rows: the signal label shows from 768px; on phones, bars only (the label lives in the tooltip) */
+/* Header subtitle: two deliberate lines once the filter sidebar folds away (the facts, then a quieter
+   "Updated · How we score listings" line), instead of one stray wrapped item. */
+@media (max-width: 1100px) {
+  .find-sub-main { flex-basis: calc(100% + var(--ml-dot)); }
+  .find-sub-x { color: var(--fg-3); }
+}
+/* Company drawer role list. The drawer is a fixed width, so size by the list itself, not the viewport:
+   the signal shows as bars only (its label lives in the tooltip) and titles get two lines, so roles that
+   differ only at the end ("… – Summer 2027" / "… – Fall 2026") stay distinguishable. */
+.find-results-tight { container-type: inline-size; }
 .find-results-tight .find-g-l { white-space: nowrap; }
-@media (max-width: 767px) { .find-results-tight .find-g-l { display: none; } }
+.find-results-tight .find-row-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+@container (max-width: 640px) { .find-results-tight .find-g-l { display: none; } }
 
 /* ===== Pipeline ===== */
 .pl-page.wide { max-width: 1680px; }
@@ -844,8 +867,6 @@ a.find-link { cursor: pointer; }
 .pl-linkbtn { border: 0; background: none; padding: 0; color: var(--accent-text); font: inherit; font-weight: 500; cursor: pointer; }
 .pl-linkbtn:hover { text-decoration: underline; text-underline-offset: 2px; }
 .pl-small { font-size: var(--fs-xs); }
-.pl-sep { color: var(--line-strong); }
-.pl-sep-pair { display: inline-flex; align-items: center; gap: 8px; }
 .pl-warn { color: var(--wait); font-weight: 600; }
 .pl-err { font-size: var(--fs-xs); color: var(--bad); }
 .input[aria-invalid="true"] { border-color: var(--bad); }
@@ -982,7 +1003,7 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 .pl-empty-col { width: 40px; height: 72px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); padding: 6px 5px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .pl-empty-col i { width: 100%; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); }
 .pl-empty-main { margin-top: 8px; }
-.pl-empty-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; font-size: var(--fs-sm); }
+.pl-empty-links { display: flex; align-items: center; gap: 4px 20px; flex-wrap: wrap; justify-content: center; font-size: var(--fs-sm); }
 /* Drawer */
 .pl-dhead { flex: 1; display: flex; gap: 14px; align-items: center; min-width: 0; }
 .pl-dhead-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
@@ -1172,6 +1193,8 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
   .pl-tcell { align-items: flex-start; }
   .pl-tcell .badge { display: none; }
   .pl-next.pl-tnext-m { display: flex; margin-top: 2px; white-space: normal; }
+  .pl-next.pl-tnext-m > .dot { display: none; }
+  .pl-next.pl-tnext-m .td-meta > :first-child { color: var(--fg-2); font-weight: 400; }
   .pl-more { width: 36px; height: 36px; margin: -8px -6px -8px 0; }
   .pl-step { min-height: 36px; justify-content: flex-end; }
   .pl-dtabs { gap: 16px; }
@@ -1407,7 +1430,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .prep-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .prep-head-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 .prep-role { font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.45; overflow-wrap: anywhere; }
-.prep-role-type { white-space: nowrap; }
+.prep-role > :first-child { white-space: normal; }
 .prep-head-actions { flex: none; display: flex; align-items: center; gap: 8px; }
 .prep-cal:empty { display: none; }
 .prep-head-ico { width: 48px; height: 48px; flex: none; border-radius: var(--r-lg); display: grid; place-items: center; background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line); }
@@ -1461,11 +1484,11 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .prep-saved { display: inline-flex; align-items: center; gap: 4px; }
 
 /* practice */
-.prep-practice { border-color: var(--accent); }
+.prep-practice { border-color: var(--line); }
 .prep-practice-body { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 24px; align-items: start; }
 .prep-q-big { font-size: var(--fs-lg); font-weight: 600; line-height: 1.4; letter-spacing: -0.01em; }
 .prep-timer-col { display: flex; flex-direction: column; }
-.prep-timer { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); text-align: center; }
+.prep-timer { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 0 12px 12px; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: transparent; text-align: center; }
 .prep-clock { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.02em; font-family: var(--mono); line-height: 1.1; }
 .prep-clock.low { color: var(--wait); }
 .prep-clock.done { color: var(--bad); }
@@ -1489,7 +1512,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .prep-list-card { display: none; }
   .prep-practice-body { grid-template-columns: minmax(0, 1fr); }
   .prep-timer-col { order: -1; }
-  .prep-timer { flex-direction: row; flex-wrap: wrap; justify-content: space-between; padding: 12px 14px; text-align: left; }
+  .prep-timer { flex-direction: row; flex-wrap: wrap; justify-content: space-between; padding: 0 0 14px; border-left: 0; border-bottom: 1px solid var(--line); text-align: left; }
   .prep-timer .hint { flex-basis: 100%; }
   .prep-facts { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .prep-facts > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 12px; }
@@ -1565,7 +1588,6 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .prep-mock-details { border-top: 1px solid var(--line); padding-top: 12px; }
 .prep-mock-details summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 500; color: var(--fg-2); min-height: 32px; display: flex; align-items: center; list-style: none; }
 .prep-mock-details summary::-webkit-details-marker { display: none; }
-.prep-mock-details summary .sep-item { margin-left: 5px; }
 .prep-mock-details summary::before { content: ""; width: 6px; height: 6px; margin: 0 10px 0 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform var(--t-fast) var(--ease); }
 .prep-mock-details[open] summary::before { transform: rotate(45deg); }
 .prep-mock-details[open] .prep-mock-log { margin-top: 12px; }
@@ -1691,7 +1713,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 
 /* new for you */
 .td-job .job-title { font-size: var(--fs-sm); }
-.td-job .job-meta { flex-wrap: nowrap; font-size: var(--fs-xs); }
+.td-job .job-meta { flex-wrap: nowrap; font-size: var(--fs-xs); gap: 0; }
 .td-job .job-side { display: flex; align-items: center; gap: 12px; }
 
 /* this week: one compact widget (the sidebar goal card is hidden on Today) */
@@ -1756,6 +1778,13 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 }
 @media (max-width: 520px) { .td-banner-more { display: none; } }
 
+/* ===== Dotted meta line (today_meta in today.js; used by Today, Insights, Pipeline, Prep) =====
+   Each item owns a 12px left gutter holding its dot. The list is pulled 12px left and clip-path hides
+   that first 9px column, so the dot of whichever item starts a visual line is never shown. */
+.td-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0; min-width: 0; margin-left: -12px; clip-path: inset(-6px -6px -6px 9px); }
+.td-meta > * { position: relative; padding-left: 12px; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-meta > *::before { content: "·"; display: inline-block; width: 12px; margin-left: -12px; text-align: center; color: var(--fg-3); font-weight: 400; }
+
 /* ===== Insights (stats) ===== */
 .st-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start; }
 .st-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -1764,16 +1793,17 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .st-kpis .stat-sub { margin-top: 2px; }
 .st-unit { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); margin-left: 2px; letter-spacing: 0; }
 .st-small-n { color: var(--wait); white-space: nowrap; }
-@media (max-width: 520px) { .st-sep { display: none; } .st-small-n { display: block; } }
-.st-nw { white-space: nowrap; }
 .st-head-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--fg-2); min-height: 34px; }
-.st-chart-wrap { position: relative; padding: 12px 16px 8px; }
+.st-chart-wrap { position: relative; padding: 12px 16px 8px; flex: 1; display: flex; flex-direction: column; }
+.st-chart-card { display: flex; flex-direction: column; }
+.st-chart-inner { position: relative; flex: 1; }
+.st-chart-inner > .chart { position: absolute; left: 0; top: 0; }
 .st-chart text { fill: var(--fg-3); font-size: 11px; font-family: var(--font); font-variant-numeric: tabular-nums; }
 .st-chart .st-val { fill: var(--fg); font-weight: 600; }
 .st-chart .st-xl.now { fill: var(--fg); font-weight: 600; }
 .st-chart .grid-line { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
 .st-chart .base-line { stroke: var(--line-strong); stroke-width: 1; shape-rendering: crispEdges; }
-.st-chart .st-bar { fill: color-mix(in srgb, var(--accent) 50%, var(--surface)); }
+.st-chart .st-bar { fill: color-mix(in srgb, var(--accent) 70%, var(--surface)); }
 .st-chart .st-bar.now { fill: var(--accent); }
 .st-chart .st-row-label { fill: var(--fg-2); }
 .st-chart .st-reply { fill: var(--fg-3); }
@@ -1786,7 +1816,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   padding: 8px 10px; font-size: var(--fs-xs); color: var(--fg-2); white-space: nowrap; display: flex; flex-direction: column; gap: 3px;
 }
 .st-tip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
-.st-tip .st-tip-row { display: flex; align-items: center; gap: 6px; }
+.st-tip .st-tip-row { flex-wrap: nowrap; }
 
 .st-funnel { display: flex; flex-direction: column; gap: 6px; }
 .st-funnel .funnel-row { grid-template-columns: 96px minmax(0, 1fr) 84px; min-height: 32px; }
@@ -1804,9 +1834,9 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .st-outcome-bar i:last-child { border-radius: 0 99px 99px 0; }
 .st-outcome-bar i:only-child { border-radius: 99px; }
 .st-out-rows { display: flex; flex-direction: column; }
-.st-out-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 48px; gap: 10px; align-items: center; padding: 7px 0; font-size: var(--fs-sm); }
+.st-out-row { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto 48px; gap: 10px; align-items: center; padding: 7px 0; font-size: var(--fs-sm); }
 .st-out-row + .st-out-row { border-top: 1px solid var(--line); }
-.st-out-sw { width: 10px; height: 10px; border-radius: 3px; }
+.st-out-sw { width: 8px; height: 8px; border-radius: 50%; }
 .st-out-row .num { font-weight: 500; text-align: right; }
 .st-out-row .faint { text-align: right; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 
@@ -1832,7 +1862,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .st-funnel .funnel-row { grid-template-columns: 78px minmax(0, 1fr) 76px; gap: 10px; }
   .st-chart-wrap { padding: 12px 8px 8px; }
 }
-.st-grid-top { align-items: start; }
+.st-grid-top { align-items: stretch; }
 .st-funnel-card { display: flex; flex-direction: column; }
 .st-funnel-card .st-funnel { flex: 1; }
 .st-steps { display: flex; flex-direction: column; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }
@@ -1853,6 +1883,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .td-grow { flex: 1 1 240px; min-width: 0; }
 .td-page .card-head h2, .st-page .card-head h2 { white-space: nowrap; }
 @media (max-width: 640px) { .card-head .td-link { min-height: 44px; margin: -8px 0; } }
+@media (max-width: 860px) { .st-page .page-head { align-items: center; } .st-page .page-head p { margin-top: 0; } }
 
 </style>
 <div id="app"><div style="display:grid;place-items:center;height:100vh;color:#6b7482;font:14px system-ui">Loading Heardback…</div></div>
@@ -2093,7 +2124,7 @@ const Apps = {
     if (["screen", "interview", "offer", "rejected"].includes(stage) && STAGE[a.stage].i < STAGE[stage].i) patch.lastReplyAt = t;
     Apps.update(id, patch);
     if (stage === "offer" && !opts.silent) celebrate(a);
-    if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}`, { undo: () => Apps.update(id, a) });
+    if (!opts.silent) toast(`${a.company} moved to ${STAGE[stage].label}${stage === "applied" && !a.appliedAt ? " (applied today)" : ""}`, { undo: () => Apps.update(id, a), ...(stage === "applied" && !a.appliedAt ? { action: { label: "Change date", run: () => openApp(id, "overview") } } : {}) });
   },
   remove(id) {
     const a = Apps.get(id);
@@ -2109,7 +2140,7 @@ const Apps = {
   updateRound(id, rid, patch) { Apps.update(id, (a) => ({ rounds: a.rounds.map((r) => (r.id === rid ? { ...r, ...patch } : r)) })); },
   removeRound(id, rid) { Apps.update(id, (a) => ({ rounds: a.rounds.filter((r) => r.id !== rid) })); },
   byJob(jobId) { return Object.values(store.get().apps).find((a) => a.jobId === jobId); },
-  daysSilent(a) { const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0, a.lastActivityAt || 0); return ref ? Math.floor((now() - ref) / DAY) : 0; },
+  daysSilent(a) { const ref = Math.max(a.lastReplyAt || 0, a.appliedAt || 0) || a.createdAt || 0; return ref ? Math.max(0, Math.floor((now() - ref) / DAY)) : 0; },
 };
 
 /* ---------- Router (plain #name hashes only) ---------- */
@@ -2687,6 +2718,11 @@ function computeTasks(s = store.get()) {
     for (const r of a.rounds || []) {
       if (!r.at) continue;
       const until = r.at - t;
+      const fromEmail = (a.events || []).some((e) => e.kind === "email" && t - e.at < 3 * DAY);
+      if (until > 0 && fromEmail && !r.confirmed) {
+        const key = `confirm:${a.id}:${r.id}`;
+        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${(ROUND[r.type]?.label || "interview").toLowerCase()} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
+      }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
         if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${ROUND[r.type]?.label || "Interview"} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
@@ -2780,10 +2816,10 @@ function loadExamples() {
     mk({ company: "Northwind Labs", title: "Software Engineer Intern, Summer 2027", location: "Seattle, WA", stage: "interview", createdAt: d(19), appliedAt: d(18), lastReplyAt: d(9),
       extra: [{ at: d(9), kind: "stage", from: "applied", to: "screen", text: "Moved to Screen" }, { at: d(4), kind: "stage", from: "screen", to: "interview", text: "Moved to Interviews" }],
       rounds: [{ id: uid("r_"), type: "recruiter", at: d(7), interviewers: "Dana (Recruiter)", prep: "", reflection: "Friendly. Asked about timeline and interests.", outcome: "passed", thanked: true },
-               { id: uid("r_"), type: "technical", at: t + 1 * DAY + 3 * 3600000, interviewers: "Priya S., Tom L.", prep: "Graphs, BFS/DFS, one design question", reflection: "", outcome: "pending", thanked: false }] }),
+               { id: uid("r_"), type: "technical", at: t + 1 * DAY + 3 * 3600000, interviewers: "Priya S., Tom L.", prep: "Graphs, BFS/DFS, one design question", reflection: "", outcome: "pending", thanked: false, confirmed: true }] }),
     mk({ company: "Fernhill Capital", title: "Quantitative Research Intern", location: "New York, NY", stage: "screen", createdAt: d(12), appliedAt: d(12), lastReplyAt: d(2),
       extra: [{ at: d(2), kind: "stage", from: "applied", to: "screen", text: "Moved to Screen" }],
-      rounds: [{ id: uid("r_"), type: "recruiter", at: d(1) + 2 * 3600000, interviewers: "Marcus", prep: "", reflection: "", outcome: "pending", thanked: false }] }),
+      rounds: [{ id: uid("r_"), type: "recruiter", at: d(1) + 2 * 3600000, interviewers: "Marcus", prep: "", reflection: "", outcome: "pending", thanked: false, confirmed: true }] }),
     mk({ company: "Lumen Robotics", title: "Embedded Software Engineer, New Grad", location: "Boston, MA", stage: "applied", createdAt: d(11), appliedAt: d(10) }),
     mk({ company: "Quarry Analytics", title: "Data Science Intern", location: "Remote", stage: "applied", createdAt: d(27), appliedAt: d(26) }),
     mk({ company: "Bluepeak Health", title: "Product Manager Intern", location: "San Francisco, CA", stage: "rejected", createdAt: d(30), appliedAt: d(29), lastReplyAt: d(15),
@@ -2867,7 +2903,7 @@ function Topbar({ route }) {
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
       </button>
       <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Log an email (E)">Log an email</${Btn}>
-      <${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
+      <${Btn} kind="primary" icon="plus" onClick=${() => openModal(matchMedia("(max-width: 860px)").matches ? "quickadd" : "add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
     </div>
   </header>`;
 }
@@ -2884,6 +2920,12 @@ MODALS.more = () => {
     <div class="list">${items.map((it) => html`<button type="button" class="nav-item" style="min-height:48px" onClick=${() => { closeModal(); setTimeout(it.run, 0); }}><${Icon} name=${it.icon} />${it.label}<span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>`)}</div>
   </${Modal}>`;
 };
+MODALS.quickadd = () => html`<${Modal} title="Add" onClose=${closeModal}>
+  <div class="list">
+    <button type="button" class="nav-item" style="min-height:52px" onClick=${() => { closeModal(); setTimeout(() => openModal("add"), 0); }}><${Icon} name="plus" />Add an application<span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>
+    <button type="button" class="nav-item" style="min-height:52px" onClick=${() => { closeModal(); setTimeout(() => openModal("paste"), 0); }}><${Icon} name="mail" />Log an email<span class="hint" style="margin-left:8px">Paste a recruiter email</span><span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>
+  </div>
+</${Modal}>`;
 function BottomNav({ route }) {
   const items = [NAV[0], NAV[1], NAV[2], NAV[4], { id: "prefs", label: "More", icon: "menu" }];
   return html`<nav class="bottom-nav" aria-label="Main">
@@ -3199,11 +3241,15 @@ function find_metaParts(job) { return [job.co, find_locText(job), FIND_LV[job.lv
 function find_metaText(job) { return find_metaParts(job).join(" · "); }
 /* Display title: raw " - " separators read as en dashes, like the rest of the UI. */
 const find_title = (t) => String(t || "").replace(/\s+-\s+/g, " – ");
-/* "a · b · c" where each "· item" wraps as one unit, so a separator never ends a line. */
-function find_Seps({ parts }) {
+/* "a · b · c" as a .meta-list (find.css): each item carries its own leading dot, and the dot of the first item
+   on every visual line is clipped, so a line never starts or ends with "·". */
+function find_Meta({ parts, cls, title, tag }) {
   const xs = (parts || []).filter((x) => x != null && x !== false && x !== "");
-  return xs.map((x, i) => (i ? html` <span class="sep-item" key=${i}>· ${x}</span>` : html`<span key=${i}>${x}</span>`));
+  const T = tag || "span";
+  return html`<${T} class=${cx("meta-list", cls)} title=${title}>${xs.map((x, i) => html`<span key=${i}>${x}</span>`)}</${T}>`;
 }
+/* UI copy uses curly apostrophes; some strings come from shared data/logic with straight ones. */
+const find_curly = (t) => (typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t);
 function find_atsName(job) {
   if (FIND_ATS[job.ats]) return FIND_ATS[job.ats];
   try { return new URL(job.url).hostname.replace(/^www\./, ""); } catch { return "Employer site"; }
@@ -3226,10 +3272,20 @@ const find_daysText = (d) => (d == null ? null : `~${Math.max(1, Math.round(d))}
 const find_typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
 /* ---------- shared bits ---------- */
-const find_fitHi = (score) => score >= 95;
-function find_FitPill({ fit, sponsor }) {
+/* Accent only for a standout fit: never on a listing with ghost signals (we would be promoting what we warn
+   about), and in a company's role list only for its top few (hiMin), so the pill never becomes wallpaper. */
+const find_fitHi = (score, job, hiMin) => score >= Math.max(95, hiMin ?? 0) && (!job || ghostLevel(job.g || 0) === "low");
+function find_hiMin(jobsArr, profile) {
+  const sc = jobsArr.filter((j) => ghostLevel(j.g || 0) === "low").map((j) => find_fit(j, profile)?.score ?? -1).sort((a, b) => b - a);
+  const k = Math.min(3, Math.max(1, Math.floor(jobsArr.length / 4)));
+  if (!sc.length) return 101;
+  const t = sc[Math.min(k, sc.length) - 1];
+  // ties at the cut-off would spread the accent across the list, so a tie raises the bar
+  return sc.filter((x) => x >= t).length > k ? t + 1 : t;
+}
+function find_FitPill({ fit, sponsor, job, hiMin }) {
   if (!fit) return null;
-  return html`<span class=${cx("fit", find_fitHi(fit.score) && "hi")} title=${`Fit ${fit.score} out of 100, from role, level, location${sponsor ? ", visa" : ""} and skills`}>Fit ${fit.score}</span>`;
+  return html`<span class=${cx("fit", find_fitHi(fit.score, job, hiMin) && "hi")} title=${`Fit ${fit.score} out of 100, from role, level, location${sponsor ? ", visa" : ""} and skills`}>Fit ${fit.score}</span>`;
 }
 /* Row-level stale-listing hint: nothing when the risk is low. */
 function find_GhostHint({ g }) {
@@ -3247,7 +3303,7 @@ function find_useNarrow() {
 }
 
 /* ---------- shared row ---------- */
-function find_Row({ job, app, profile, i, sel, onSelect, inCompany }) {
+function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
   const fit = profile ? find_fit(job, profile) : null;
   const open = () => { onSelect && onSelect(i); openJob(job.id); };
   const saved = app && app.stage === "saved";
@@ -3258,12 +3314,12 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany }) {
     ${!inCompany && html`<${Logo} name=${job.co} />`}
     <div class="find-row-main">
       <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${title}>${title}</button>
-      <div class="find-row-meta" title=${metaT}><${find_Seps} parts=${metaP} /></div>
+      <${find_Meta} tag="div" cls="find-row-meta" title=${metaT} parts=${metaP} />
     </div>
     <div class="find-side">
       <span class="find-c-ghost"><${find_GhostHint} g=${job.g} /></span>
       <span class="find-c-fresh"><${Fresh} ts=${job.p} /></span>
-      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} /></span>
+      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} job=${job} hiMin=${hiMin} /></span>
       <span class="find-c-act" onClick=${(e) => e.stopPropagation()}>
         ${app && !saved
           ? html`<button type="button" class="find-stage" onClick=${() => openApp(app.id)} title="Open in pipeline"><${StageBadge} stage=${app.stage} /></button>`
@@ -3424,9 +3480,9 @@ VIEWS.find = function FindView() {
   const head = html`<div class="page-head">
     <div>
       <h1>Find jobs</h1>
-      <p>${ready
-        ? html`<span class="num">${fmt.num(jobs.jobs.length)}</span> open internship and new-grad roles${st.active > jobs.jobs.length ? html` <span class="faint find-raw" title="Identical repeats of the same listing are shown once">(<span class="num">${fmt.num(st.active)}</span> postings)</span>` : null} from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? html` <span class="sep-item">· updated ${fmt.ago(genAt)}</span>` : ""} <span class="sep-item">· <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></span>`
-        : "Open internship and new-grad roles, checked for ghost-job signals."}</p>
+      ${ready
+        ? html`<p class="meta-list find-sub"><span class="find-sub-main"><span class="num">${fmt.num(jobs.jobs.length)}</span> open internship and new-grad roles${st.active > jobs.jobs.length ? html` <span class="faint find-raw" title="Identical repeats of the same listing are shown once">(<span class="num">${fmt.num(st.active)}</span> postings)</span>` : null} from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies</span>${genAt ? html`<span class="find-sub-x">Updated ${fmt.ago(genAt)}</span>` : null}<span class="find-sub-x"><button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></span></p>`
+        : html`<p>Open internship and new-grad roles, checked for ghost-job signals.</p>`}
     </div>
   </div>`;
 
@@ -3473,12 +3529,12 @@ VIEWS.find = function FindView() {
           <${Btn} cls="find-fbtn" icon="filter" onClick=${() => openModal("findFilters")} aria-label=${`Filters${nActive ? `, ${nActive} active` : ""}`}>Filters${nActive ? html`<span class="find-fcount num">${nActive}</span>` : null}</${Btn}>
         </div>
         <div class="find-bar">
-          <div class="find-count">
+          <div class="find-count meta-list">
             <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
-            ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html` <span class="find-prefs sep-item"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
+            ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
             ${find_hasPrefs(profile) && (usingPrefs
-              ? html` <span class="find-prefs sep-item"><span class="sep">·</span>Using your preferences</span> <span class="find-prefs sep-item"><span class="sep">·</span><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`
-              : html` <span class="find-prefs sep-item"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
+              ? [html`<span class="find-prefs" key="up">Using your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
+              : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
           </div>
           <span class="spacer"></span>
           <div class="find-sort hide-sm"><${Seg} label="Sort by" value=${sort} options=${FIND_SORTS} onChange=${(v) => store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } }))} /></div>
@@ -3609,7 +3665,7 @@ function find_AskClaude({ job, profile }) {
 /* ---------- DRAWERS.job ---------- */
 function find_FitRow({ p }) {
   const ico = p.ok === true ? html`<span class="find-fit-ico ok"><${Icon} name="check" size=${14} /></span>` : p.ok === false ? html`<span class="find-fit-ico bad"><${Icon} name="x" size=${14} /></span>` : html`<span class="find-fit-ico none" aria-hidden="true">–</span>`;
-  return html`<li>${ico}<span class="find-fit-k">${p.k}</span><span class="muted">${p.text}</span></li>`;
+  return html`<li>${ico}<span class="find-fit-k">${p.k}</span><span class="muted">${find_curly(p.text)}</span></li>`;
 }
 function find_postedText(ts) {
   const d = fmt.days(ts);
@@ -3652,7 +3708,7 @@ DRAWERS.job = ({ id }) => {
     <${Logo} name=${job.co} size="lg" />
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${find_title(job.t)}</h2>
-      <div class="row wrap find-dsub"><button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button><span class="sep-item"><span class="sep">·</span> <span class="muted" title=${fmt.dateY(job.p)}>Posted ${find_postedText(job.p).toLowerCase()}</span></span>${app && html`<${StageBadge} stage=${app.stage} />`}</div>
+      <div class="row wrap find-dsub"><${find_Meta} parts=${[html`<button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button>`, html`<span class="muted" title=${fmt.dateY(job.p)}>Posted ${find_postedText(job.p).toLowerCase()}</span>`]} />${app && html`<${StageBadge} stage=${app.stage} />`}</div>
     </div>
   </div>`;
 
@@ -3684,13 +3740,13 @@ DRAWERS.job = ({ id }) => {
     <section class="dsec" aria-labelledby="find-gh-h">
       <h3 id="find-gh-h">Listing check</h3>
       <div class=${cx("find-gline", lv)} title=${`${job.g}/100`}><span class=${cx("gscore", lv)} aria-hidden="true"><span class="gbars"><i></i><i></i><i></i></span></span><span>${find_ghostLine(job)}</span></div>
-      ${(job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${r}</li>`)}</ul>`}
+      ${(job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${find_curly(r)}</li>`)}</ul>`}
       ${job.dup ? html`<p class="muted find-small">Also posted ${job.dup === 1 ? "once more" : job.dup === 2 ? "twice more" : `${fmt.num(job.dup)} more times`} with the same title. Shown once.</p>` : null}
-      <p class="hint">Scored ${job.g}/100 from public listing data such as age, reposts and location count. More signals means worth a check, not that the job isn’t real. <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></p>
+      <p class="hint">${job.g ? `Ghost-signal score ${job.g} of 100 (lower is better), from public listing data such as age, reposts and location count.` : "No ghost signals in the public listing data we check, such as age, reposts and location count."} More signals means worth a check, not that the job isn’t real. <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></p>
     </section>
 
     <section class="dsec" aria-labelledby="find-fit-h">
-      <h3 id="find-fit-h">Your fit<span class="spacer"></span><${find_FitPill} fit=${fit} sponsor=${profile.needsSponsor} /></h3>
+      <h3 id="find-fit-h">Your fit<span class="spacer"></span><${find_FitPill} fit=${fit} sponsor=${profile.needsSponsor} job=${job} /></h3>
       ${fit
         ? html`<ul class="find-fit-list">${fit.parts.map((p) => html`<${find_FitRow} key=${p.k} p=${p} />`)}</ul>
           ${(profile.skills || []).length > 0 && fit.expected.length > 0 && html`<div class="stack-sm">
@@ -3704,7 +3760,7 @@ DRAWERS.job = ({ id }) => {
     ${capsNow.sample && html`<${find_AskClaude} job=${job} profile=${profile} />`}
 
     <section class="dsec" aria-labelledby="find-co-h">
-      <h3 id="find-co-h"><span class="truncate">${job.co}</span><span class="spacer"></span><button type="button" class="find-link find-h-meta" onClick=${() => openCompany(job.co)}>View company</button></h3>
+      <h3 id="find-co-h"><span class="truncate">About ${job.co}</span><span class="spacer"></span><button type="button" class="find-link find-h-meta" onClick=${() => openCompany(job.co)}>View company</button></h3>
       ${cs ? html`<div class="find-stats">
         <${find_Stat} label="Open roles" value=${fmt.num(coOpen || cs.open)} />
         <${find_TimeOpenStat} cs=${cs} />
@@ -3789,7 +3845,7 @@ VIEWS.companies = function CompaniesView() {
     <div class="card hide-sm">
       <table class="table find-cotable">
         <thead><tr>
-          <th>Company</th><th class="r">Open roles</th><th>Intern / new grad</th><th class="r" title="Median days a closed listing stayed open"><span class="find-th-help">Typical time open<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this season's internship postings still open"><span class="find-th-help">Still hiring<${Icon} name="info" size=${12} /></span></th><th class="r" title=${FIND_REPOST_HELP}><span class="find-th-help">Reposted<${Icon} name="info" size=${12} /></span></th>${anyApps && html`<th class="r">Your apps</th>`}
+          <th>Company</th><th class="r">Open roles</th><th>Intern / new grad</th><th class="r" title="Median days a closed listing stayed open"><span class="find-th-help">Typical time open<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this season’s internship postings still open"><span class="find-th-help">Still hiring<${Icon} name="info" size=${12} /></span></th><th class="r" title=${FIND_REPOST_HELP}><span class="find-th-help">Reposted<${Icon} name="info" size=${12} /></span></th>${anyApps && html`<th class="r">Your apps</th>`}
         </tr></thead>
         <tbody>${rows.map((x) => {
           const n = appsBy.get(x.k) || 0;
@@ -3810,7 +3866,7 @@ VIEWS.companies = function CompaniesView() {
       const n = appsBy.get(x.k) || 0;
       return html`<button type="button" class="find-corow" key=${x.name} onClick=${() => openCompany(x.name)}>
         <${Logo} name=${x.name} />
-        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta"><${find_Seps} parts=${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (rs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(rs.get(x.name))} reposted` : ""]} /></span></div>
+        <div class="find-row-main"><span class="find-row-title">${x.name}</span><${find_Meta} cls="find-row-meta" parts=${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (rs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(rs.get(x.name))} reposted` : ""]} /></div>
         ${n ? html`<span class="badge accent">${n}</span>` : html`<${Icon} name="chevR" cls="faint" />`}
       </button>`;
     })}</div></div>
@@ -3890,8 +3946,11 @@ DRAWERS.company = ({ id }) => {
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${name}</h2>
       <div class="row wrap find-dsub find-dsub-co">
-        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${(() => { const ni = open.filter((j) => j.lvl === "intern").length, ng = open.length - ni; return ni && ng ? html` <span class="sep-item">· ${fmt.num(ni)} internship, ${fmt.num(ng)} new grad</span>` : null; })()}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
-        ${cs?.site && html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>`}
+        ${(() => {
+          const ni = open.filter((j) => j.lvl === "intern").length, ng = open.length - ni;
+          const lead = cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`;
+          return html`<${find_Meta} parts=${[lead, ni && ng ? html`<span class="muted">${fmt.num(ni)} internship, ${fmt.num(ng)} new grad</span>` : null, cs?.site ? html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>` : null]} />`;
+        })()}
       </div>
     </div>
   </div>`;
@@ -3901,6 +3960,7 @@ DRAWERS.company = ({ id }) => {
   const rSort = canFit ? roleSort || "fit" : "new";
   const sorted = useMemo(() => (rSort === "fit" ? find_sort(open, "fit", s.profile) : [...open].sort((a, b) => b.p - a.p)), [open, rSort, s.profile]);
   const roles = allRoles ? sorted : sorted.slice(0, 8);
+  const hiMin = useMemo(() => (canFit ? find_hiMin(open, s.profile) : 101), [open, canFit, s.profile]);
   const season = find_season(cs);
   return html`<${Drawer} onClose=${closeDrawer} label=${name} head=${head}>
     ${loading && html`<${Skeleton} rows=${4} />`}
@@ -3931,7 +3991,7 @@ DRAWERS.company = ({ id }) => {
     ${myApps.length > 0 && html`<section class="dsec" aria-labelledby="find-my-h">
       <h3 id="find-my-h">Your applications <span class="count">${myApps.length}</span></h3>
       <div class="list find-dlist">${myApps.map((a) => html`<button type="button" class="find-applink" key=${a.id} onClick=${() => openApp(a.id)}>
-          <div class="find-row-main"><span class="find-row-title">${a.title || "Untitled role"}</span><span class="find-row-meta">${a.appliedAt ? `Applied ${fmt.date(a.appliedAt)}` : `Saved ${fmt.date(a.createdAt)}`}${a.location ? ` · ${a.location}` : ""}</span></div>
+          <div class="find-row-main"><span class="find-row-title">${a.title || "Untitled role"}</span><${find_Meta} cls="find-row-meta" parts=${[a.appliedAt ? `Applied ${fmt.date(a.appliedAt)}` : `Saved ${fmt.date(a.createdAt)}`, a.location]} /></div>
           <${StageBadge} stage=${a.stage} /><${Icon} name="chevR" cls="faint" />
         </button>`)}</div>
     </section>`}
@@ -3941,7 +4001,7 @@ DRAWERS.company = ({ id }) => {
     ${(open.length > 0 || !loading) && html`<section class="dsec" aria-labelledby="find-open-h">
       <h3 id="find-open-h">Roles <span class="count">${fmt.num(open.length)}</span>${canFit && html`<span class="spacer"></span><${Seg} label="Sort roles" value=${rSort} options=${FIND_CO_ROLE_SORTS} onChange=${setRoleSort} />`}</h3>
       ${open.length
-        ? html`<div class="find-dlist find-results-tight"><div class="list" role="list">${roles.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${s.profile} i=${i} inCompany />`)}</div></div>
+        ? html`<div class="find-dlist find-results-tight"><div class="list" role="list">${roles.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${s.profile} i=${i} inCompany hiMin=${hiMin} />`)}</div></div>
           ${open.length > 8 && html`<div><${Btn} size="sm" onClick=${() => setAllRoles(!allRoles)}>${allRoles ? "Show fewer" : `Show all ${fmt.num(open.length)}`}</${Btn}></div>`}`
         : html`<p class="muted find-small">No open internship or new-grad listings right now.</p>`}
     </section>`}
@@ -4275,7 +4335,7 @@ VIEWS.__onboarding = function Onboarding() {
 
 const PL_MAIN = ["saved", "applied", "screen", "interview", "offer"];
 const PL_CLOSED = ["rejected", "ghosted"];
-const PL_OUTCOMES = [{ id: "pending", label: "Pending" }, { id: "passed", label: "Passed" }, { id: "failed", label: "Didn't pass" }, { id: "cancelled", label: "Cancelled" }];
+const PL_OUTCOMES = [{ id: "pending", label: "Pending" }, { id: "passed", label: "Passed" }, { id: "failed", label: "Didn’t pass" }, { id: "cancelled", label: "Cancelled" }];
 
 /* ---------- helpers ---------- */
 function plUi(patch) { store.set((s) => ({ ...s, ui: { ...s.ui, ...patch } })); }
@@ -4350,22 +4410,22 @@ function plNextStep(a, st) {
   const silent = Apps.daysSilent(a);
   const label = (r) => ROUND[r.type]?.label || "Interview";
   if (PL_CLOSED.includes(a.stage)) return a.stage === "rejected"
-    ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it's fair to ask for brief feedback. Otherwise, let it go." }
+    ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it’s fair to ask for brief feedback. Otherwise, let it go." }
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };
   if (a.stage === "offer") return { kind: "offer", icon: "trophy", tone: "ok", short: "Get the offer in writing", title: "You have an offer", sub: "Ask for the offer in writing and the decision deadline before you reply." };
   if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${up.interviewers ? " · with " + up.interviewers : ""}` };
   const past = (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0];
   if (past && !past.thanked && t - past.at < 2 * DAY) return { kind: "thanks", icon: "send", tone: "info", round: past, short: "Send a thank-you", title: "Send a thank-you note", sub: `Your ${label(past).toLowerCase()} was ${fmt.ago(past.at)}. A short note within 24 hours helps.` };
   if (past) return { kind: "outcome", icon: "flag", round: past, short: "Log the outcome", title: `How did the ${label(past).toLowerCase()} go?`, sub: `It was ${fmt.ago(past.at)}. Log the outcome and a few notes while you remember.` };
-  if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It's no longer in the live listings. Check the company's careers page, or remove it from your board." };
+  if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It’s no longer in the live listings. Check the company’s careers page, or remove it from your board." };
   if (a.stage === "saved") return { kind: "saved", icon: "bolt", short: "Apply", title: "Apply, then mark it applied", sub: `You saved this ${fmt.ago(a.createdAt)}. Early applicants tend to hear back more often.` };
-  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they're interested. Marking it keeps your board honest. You can move it back any time." };
-  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven't heard back. A short, specific note is fine.` };
+  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they’re interested. Marking it keeps your board honest. You can move it back any time." };
+  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven’t heard back. A short, specific note is fine.` };
   if (a.stage === "applied") {
     const due = (a.followedUpAt || a.appliedAt || t) + st.followUpDays * DAY;
-    return { kind: "wait", icon: "clock", short: a.followedUpAt ? "Waiting after follow-up" : "Wait for a reply", title: "Waiting for a reply", sub: a.followedUpAt ? `You followed up ${fmt.ago(a.followedUpAt)}.` : `Heardback will suggest a follow-up on ${fmt.date(due)} if you haven't heard back.` };
+    return { kind: "wait", icon: "clock", short: a.followedUpAt ? "Waiting after follow-up" : "Wait for a reply", title: "Waiting for a reply", sub: a.followedUpAt ? `You followed up ${fmt.ago(a.followedUpAt)}.` : `Heardback will suggest a follow-up on ${fmt.date(due)} if you haven’t heard back.` };
   }
-  return { kind: "schedule", icon: "cal", short: "Add next round", title: "Add the next round when it's scheduled", sub: "Log the date, type and interviewers so Heardback can remind you to prep and send a thank-you." };
+  return { kind: "schedule", icon: "cal", short: "Add next round", title: "Add the next round when it’s scheduled", sub: "Log the date, type and interviewers so Heardback can remind you to prep and send a thank-you." };
 }
 
 /* Interview time finder: month-name or US numeric dates, skips deadlines, honors a stated time zone */
@@ -4493,7 +4553,7 @@ VIEWS.pipeline = function PipelineView() {
 
   return html`<div class=${cx("page wide pl-page", view === "board" && "pl-page-board", sel.size && "pl-selecting")}>
     <div class="page-head pl-head">
-      <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${plSepText(sub)}</p></div>
+      <div class="pl-head-title"><h1>Pipeline</h1>${plSepText(sub, "num", "p")}</div>
       <span class="spacer"></span>
       <div class="pl-tools">
         <div class="input-icon pl-filter">
@@ -4518,10 +4578,10 @@ VIEWS.pipeline = function PipelineView() {
 /* ---------- Selection + bulk actions ---------- */
 /* Selection lives in the view. Range order is the on-screen order (board: column by column; table: row order). */
 function plOrder() { return [...document.querySelectorAll(".pl-page [data-card], .pl-page tr[data-row]")].map((el) => el.dataset.card || el.dataset.row); }
-/* "a · b · c" as text where each "· item" wraps as one unit, so a separator never ends a line */
-function plSepText(str) {
+/* "a · b · c" as a dotted meta line (today_meta): a wrapped line never starts or ends with "·" */
+function plSepText(str, cls, tag) {
   const parts = String(str ?? "").split(" · ");
-  return parts.flatMap((p, i) => (i === 0 ? [p] : [" ", html`<span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${p}</span>`]));
+  return parts.length < 2 ? parts[0] : today_meta(parts, cls, tag);
 }
 /* Keys typed into a field are text, never shortcuts */
 function plEditable(el) { return !!el && (el.isContentEditable || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el.tagName === "INPUT" && !["checkbox", "radio", "button", "submit", "reset"].includes(el.type))); }
@@ -4617,7 +4677,7 @@ function PlBulkBar({ sel, view }) {
     <span class="pl-bulk-count num" aria-live="polite">${sel.size} selected</span>
     <span class="pl-bulk-sep" aria-hidden="true"></span>
     <${Btn} kind="ghost" size="sm" iconRight="chevD" cls="pl-bulk-move" aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"} onClick=${(e) => { const el = e.currentTarget; setMenu((m) => (m ? null : el)); }}>Move to…</${Btn}>
-    <${Btn} kind="ghost" size="sm" icon="ghost" cls="pl-bulk-ic" disabled=${cur === "ghosted"} aria-label="Mark ghosted" title="Mark ghosted" onClick=${() => move("ghosted")}><span class="pl-bulk-lbl">Mark ghosted</span></${Btn}>
+    <${Btn} kind="ghost" size="sm" icon="ghost" cls="pl-bulk-ic" disabled=${cur === "ghosted"} aria-label="Mark as ghosted" title="Mark as ghosted" onClick=${() => move("ghosted")}><span class="pl-bulk-lbl">Mark as ghosted</span></${Btn}>
     <${Btn} kind="ghost" size="sm" icon="download" cls="pl-bulk-ic" aria-label="Export CSV" title="Export the selection as CSV" onClick=${() => plExportCSV(ids)}><span class="pl-bulk-lbl">Export CSV</span></${Btn}>
     <${Btn} kind="ghost" size="sm" icon="trash" cls="pl-bulk-ic danger" aria-label="Delete" title="Delete selected applications" onClick=${() => plBulkDelete(ids, after)}><span class="pl-bulk-lbl">Delete</span></${Btn}>
     <span class="pl-bulk-sep" aria-hidden="true"></span>
@@ -4639,8 +4699,8 @@ function PlEmpty() {
     </div>
     <div class="pl-empty-links">
       <button type="button" class="pl-linkbtn" onClick=${() => openModal("paste")}>Log an email</button>
-      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button></span>
-      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button></span>
+      <button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button>
+      <button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button>
     </div>
   </div>`;
 }
@@ -4864,8 +4924,8 @@ function PlTable({ apps, settings, sort, sel }) {
             return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
               onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
               <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
-              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.kind === "ghost" ? `No reply in ${silent} days` : `${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}`}</span></div></div></td>
-              <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
+              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${today_meta([STAGE[a.stage]?.label, ...(ns.kind === "closed" ? [] : ns.kind === "ghost" ? [`No reply in ${silent} days`] : [ns.short, silent != null && silent >= settings.followUpDays ? `${silent}d silent` : null])])}</span></div></div></td>
+              <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} title=${`Stage: ${STAGE[a.stage]?.label}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
               <td class="num muted">${a.appliedAt ? fmt.date(a.appliedAt) : html`<span class="faint">—</span>`}</td>
               <td class="num muted">${fmt.ago(a.lastActivityAt)}</td>
               <td><span class=${cx("pl-next", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}</span></td>
@@ -4905,7 +4965,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const [t, setT] = useState(tab || "overview");
   useEffect(() => { if (tab) setT(tab); }, [tab]);
   if (!a) return html`<${Drawer} onClose=${closeDrawer} label="Application" head=${html`<div class="pl-dhead"><h2 class="pl-dtitle">Application not found</h2></div>`}>
-    <${Empty} icon="info" title="This application isn't here anymore">It may have been deleted, or cleared along with the example data.</${Empty}>
+    <${Empty} icon="info" title="This application isn’t here anymore">It may have been deleted, or cleared along with the example data.</${Empty}>
   </${Drawer}>`;
   const hasCo = jobs.status === "ready" && (jobs.byCompany.has(a.company) || jobs.cstats[a.company]);
   const del = () => askConfirm({ title: `Delete ${a.company}?`, body: `This removes ${a.title || "this application"} with its rounds, notes and timeline from this device. You can undo right after.`, confirmLabel: "Delete application", danger: true, onConfirm: () => { closeDrawer(); Apps.remove(a.id); } });
@@ -4968,7 +5028,7 @@ function PlStepper({ a }) {
       <span class="pl-small muted"><span class=${cx("dot", a.stage)}></span>${STAGE[a.stage].label}${since ? ` since ${fmt.date(since)}` : ""}</span>
       <span class="spacer" style="flex:1"></span>
       ${PL_CLOSED.map((id) => html`<button type="button" key=${id} class=${cx("pl-close-btn", id, a.stage === id && "on")} aria-pressed=${a.stage === id ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})`}>
-        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark rejected" : "Mark ghosted"}
+        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted"}
       </button>`)}
     </div>
   </div>`;
@@ -5056,7 +5116,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
       <div class="pl-job">
         <div class="stack-sm" style="flex:1;min-width:0;gap:2px">
           <span class="truncate" style="font-weight:500">${job.t}</span>
-          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="sep-item"><span class="pl-sep" aria-hidden="true">·</span> Posted ${fmt.ago(job.p)}</span></span>
+          ${today_meta([html`<${GhostScore} g=${job.g} />`, `Posted ${fmt.ago(job.p)}`], "pl-small muted pl-job-meta")}
         </div>
         <${Btn} size="sm" iconRight="chevR" onClick=${() => openJob(job.id)}>View listing</${Btn}>
       </div>
@@ -5164,7 +5224,7 @@ function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
   const t = now();
-  const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can't be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
+  const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can’t be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
   return html`<div class="round pl-round pl-round-open" data-round=${r.id}>
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
@@ -5262,7 +5322,7 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
   const ctrl = useRef(null);
   const before = useRef(tpl);
   useEffect(() => () => ctrl.current?.abort(), []);
-  if (!a) return html`<${Modal} title="Draft" onClose=${closeModal}><p class="muted">This application isn't here anymore.</p></${Modal}>`;
+  if (!a) return html`<${Modal} title="Draft" onClose=${closeModal}><p class="muted">This application isn’t here anymore.</p></${Modal}>`;
 
   const improve = async () => {
     setErr(""); setBusy(true); before.current = text;
@@ -6265,7 +6325,7 @@ function prepMockCard(r) {
 function PrepMockTurn({ t, live }) {
   const me = t.role === "user";
   return html`<li class=${cx("prep-mock-turn", me ? "me" : "them")}>
-    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html` <span class="faint sep-item"><span aria-hidden="true">·</span> stopped</span>`}</span>
+    ${today_meta([me ? "You" : "Interviewer", t.stopped && html`<span class="faint">stopped</span>`], "prep-mock-who")}
     <p class="prep-mock-text">${t.text}${live && html`<span class="prep-mock-caret" aria-hidden="true"></span>`}</p>
   </li>`;
 }
@@ -6426,7 +6486,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     <div class="card-body prep-mock-body">
       ${phase === "end"
         ? html`<${PrepMockScore} card=${card} />
-          <details class="prep-mock-details"><summary>Transcript <span class="faint num sep-item"><span aria-hidden="true">·</span> ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
+          <details class="prep-mock-details"><summary>${today_meta(["Transcript", html`<span class="faint num">${pluralize(turns.length, "message")}</span>`])}</summary>${transcript}</details>`
         : transcript}
       ${statusRow}
       ${err && html`<div class="callout wait prep-mock-err" role="alert"><${Icon} name="alert" /><span class="prep-mock-err-text">${err}</span><${Btn} size="sm" icon="refresh" onClick=${retry} id="prep-mock-retry">${phase === "scoring" ? "Try the scorecard again" : "Ask again"}</${Btn}></div>`}
@@ -6509,7 +6569,7 @@ function PrepWorkspace({ a, r }) {
             <${Logo} name=${a.company} size="lg" />
             <div class="prep-head-text">
               <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2></div>
-              <span class="prep-role">${a.title} <span class="prep-role-type sep-item"><span aria-hidden="true">·</span> ${ROUND[r.type]?.label || "Interview"}</span></span>
+              ${today_meta([a.title, ROUND[r.type]?.label || "Interview"], "prep-role")}
             </div>
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
@@ -6518,7 +6578,7 @@ function PrepWorkspace({ a, r }) {
             </div>
           </div>
           <dl class="prep-facts">
-            <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint sep-item", r.at > now() && r.at - now() < DAY && "prep-soon")}><span aria-hidden="true">·</span> ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
+            <div><dt>When</dt><dd class="num">${r.at ? today_meta([fmt.dateTime(r.at), html`<span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>${fmt.until(r.at)}</span>`]) : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
@@ -6558,7 +6618,7 @@ VIEWS.prep = function PrepView() {
   }
   const value = sel?.practice ? "practice" : sel ? `${sel.a.id}|${sel.r.id}` : "";
   return html`<div class="page">
-    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? html`${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? html` <span class="sep-item"><span aria-hidden="true">·</span> next ${fmt.until(up[0].r.at)}</span>` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
+    <div class="page-head"><div><h1>Interview prep</h1>${up.length ? today_meta([pluralize(up.length, "upcoming round"), up[0]?.r.at && `next ${fmt.until(up[0].r.at)}`], null, "p") : html`<p>No upcoming rounds. Practice keeps you sharp.</p>`}</div>
 </div>
     <div class="prep-layout">
       <aside class="prep-side">
@@ -6595,9 +6655,19 @@ function stats_isReplied(a) { return !!a.lastReplyAt || STATS_REPLY_STAGES.inclu
 function stats_reachedInterview(a) { return ["interview", "offer"].includes(a.stage) || (a.rounds || []).length > 0 || (a.events || []).some((e) => e.to === "interview"); }
 function stats_days(d) { return d == null ? "—" : d < 10 && d % 1 ? d.toFixed(1) : String(Math.round(d)); }
 function stats_niceScale(max) {
-  if (max <= 4) return { step: 1, top: 4 };
+  if (max <= 4) return { step: 1, top: Math.max(2, max) };
   for (const step of [1, 2, 5, 10, 20, 25, 50, 100, 200, 500]) if (max / step <= 5) return { step, top: Math.ceil(max / step) * step };
   return { step: max, top: max };
+}
+/* Whole-number percentages that always sum to 100 (largest remainder). */
+function stats_pcts(counts) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (!total) return counts.map(() => null);
+  const raw = counts.map((n) => (n / total) * 100);
+  const out = raw.map(Math.floor);
+  let left = 100 - out.reduce((a, b) => a + b, 0);
+  raw.map((v, i) => [v - out[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { out[i]++; left--; } });
+  return out;
 }
 
 /* Deterministic, plain-language observations. Each one only appears when there is enough data behind it. */
@@ -6690,20 +6760,24 @@ function stats_observations(s, apps, st, jobsById) {
 
 function stats_WeeklyChart({ weeks }) {
   const ref = useRef(null);
-  const [w, setW] = useState(640);
+  const [box, setBox] = useState({ w: 640, h: 0 });
   const [hi, setHi] = useState(null);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
-    setW(Math.max(260, Math.round(el.clientWidth)));
+    const read = (r) => setBox((b) => { const w = Math.max(260, Math.round(r.width)), h = Math.round(r.height); return b.w === w && b.h === h ? b : { w, h }; });
+    read(el.getBoundingClientRect());
     if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver((es) => setW(Math.max(260, Math.round(es[0].contentRect.width))));
+    const ro = new ResizeObserver((es) => read(es[0].contentRect));
     ro.observe(el); return () => ro.disconnect();
   }, []);
-  const H = w < 420 ? 224 : 284;
+  const w = box.w;
   const m = { l: w < 420 ? 52 : 60, r: 8, t: 22, b: 58 };
   const n = weeks.length;
   const max = Math.max(1, ...weeks.map((x) => x.applied));
   const { step, top } = stats_niceScale(max);
+  /* Small counts get a shorter plot; beside the funnel the card stretches to the funnel's height and the plot fills it. */
+  const minH = max <= 4 ? (w < 420 ? 196 : 220) : (w < 420 ? 224 : 284);
+  const H = Math.max(minH, box.h);
   const iw = w - m.l - m.r, ih = H - m.t - m.b;
   const band = iw / n, bw = Math.min(24, band * 0.5);
   const xc = (i) => m.l + band * (i + 0.5);
@@ -6719,7 +6793,7 @@ function stats_WeeklyChart({ weeks }) {
   const lbl = (x, i) => i === last ? (band < 60 ? "Now" : "This week") : fmt.date(x.start);
   const tip = hi != null ? weeks[hi] : null;
   const yx = y(0) + 18, yr = H - 10;
-  return html`<div class="st-chart-inner" ref=${ref} style="position:relative">
+  return html`<div class="st-chart-inner" ref=${ref} style=${`min-height:${minH}px`}>
     <svg class="chart st-chart" width=${w} height=${H} viewBox=${`0 0 ${w} ${H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Applications and replies per week, last 8 weeks">
       ${ticks.map((v) => html`<g key=${"t" + v}>
         <line class=${v === 0 ? "base-line" : "grid-line"} x1=${m.l} x2=${w - m.r} y1=${y(v)} y2=${y(v)} />
@@ -6740,7 +6814,7 @@ function stats_WeeklyChart({ weeks }) {
     </svg>
     ${tip && html`<div class="st-tip" style=${`left:${clamp(xc(hi), 70, w - 70)}px;top:${y(tip.applied) - 12}px`}>
       <span>${hi === last ? "This week" : "Week of " + fmt.date(tip.start)}</span>
-      <span class="st-tip-row"><b>${tip.applied}</b> applied <span aria-hidden="true">·</span> <b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span>
+      <span class="st-tip-row td-meta"><span><b>${tip.applied}</b> applied</span><span><b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span></span>
     </div>`}
     <table class="sr"><caption>Applications and replies per week</caption><thead><tr><th>Week of</th><th>Applied</th><th>Replies</th></tr></thead>
       <tbody>${weeks.map((x) => html`<tr key=${x.start}><td>${fmt.date(x.start)}</td><td>${x.applied}</td><td>${x.replies}</td></tr>`)}</tbody></table>
@@ -6752,8 +6826,8 @@ function stats_Kpis({ st, saved }) {
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent <span class="sep-item"><span aria-hidden="true">·</span> ${saved} saved</span> <span class="sep-item"><span aria-hidden="true">·</span> ${st.thisWeek} this week</span></span></div>
-    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep" aria-hidden="true"> · </span>${smallTag}` : null}</span></div>
+    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span>${today_meta([`${st.applied} sent`, `${saved} saved`, `${st.thisWeek} this week`], "stat-sub num")}</div>
+    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span>${today_meta([`${st.replied} of ${st.applied} replied`, smallTag], "stat-sub num")}</div>
     <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
   </section>`;
@@ -6787,6 +6861,7 @@ const STATS_OUTCOMES = [
 function stats_Outcomes({ applied }) {
   const rows = STATS_OUTCOMES.map((o) => ({ ...o, n: applied.filter(o.test).length }));
   const total = applied.length;
+  const pcts = stats_pcts(rows.map((r) => r.n));
   return html`<section class="card" aria-labelledby="st-out-h">
     <div class="card-head"><h2 id="st-out-h">Outcomes</h2></div>
     <div class="card-body stack" style="gap:12px">
@@ -6795,7 +6870,7 @@ function stats_Outcomes({ applied }) {
       </div>
       <div class="st-out-rows">
         ${rows.map((r) => html`<div class="st-out-row" key=${r.id}>
-          <span class="st-out-sw" style=${`background:${r.color}`}></span><span>${r.label}</span><span class="num">${r.n}</span><span class="faint">${total ? fmt.pct(r.n / total) : "—"}</span>
+          <span class="st-out-sw" style=${`background:${r.color}`}></span><span>${r.label}</span><span class="num">${r.n}</span><span class="faint">${total ? `${pcts[rows.indexOf(r)]}%` : "—"}</span>
         </div>`)}
       </div>
     </div>
@@ -6881,7 +6956,7 @@ function stats_View() {
       : html`
         <${stats_Kpis} st=${st} saved=${apps.filter((a) => a.stage === "saved").length} />
         <div class="st-grid st-grid-top">
-          <section class="card" aria-labelledby="st-week-h">
+          <section class="card st-chart-card" aria-labelledby="st-week-h">
             <div class="card-head"><h2 id="st-week-h">Applications per week</h2></div>
             <div class="st-chart-wrap"><${stats_WeeklyChart} weeks=${st.weeks} /></div>
           </section>
@@ -6915,9 +6990,12 @@ function today_dayLabel(ts) {
   if (diff === 1) return "Tomorrow";
   return fmt.date(ts, { weekday: "short", month: "short", day: "numeric" });
 }
-/* "a · b": each "· item" wraps as one unit, so a separator never ends a line. */
-function today_seps(parts) {
-  return parts.filter(Boolean).map((x, i) => (i ? html` <span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${x}</span>` : html`<span key=${i}>${x}</span>`));
+/* Dotted meta line ("a · b · c"), shared by Today, Insights, Pipeline and Prep.
+   Every item carries its dot in its own left gutter; .td-meta clips the gutter at the start of each
+   visual line, so a wrapped line never begins with "·" and a line never ends with one. */
+function today_meta(parts, cls, tag = "span") {
+  const items = (parts || []).filter((x) => x != null && x !== false && x !== "");
+  return html`<${tag} class=${cx("td-meta", cls)}>${items.map((x, i) => html`<span key=${i}>${x}</span>`)}</${tag}>`;
 }
 function today_setPrepFocus(focus) { store.set((s) => ({ ...s, ui: { ...s.ui, prepFocus: focus } })); }
 function today_undismiss(key, prev) {
@@ -7036,7 +7114,7 @@ function today_TaskRow({ tk, first }) {
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
-      <div class="task-sub">${copy.sub}</div>
+      ${typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`}
     </div>
     <div class="task-actions td-task-actions">
       ${primary}
@@ -7134,7 +7212,7 @@ function today_NewForYou({ jobs, m }) {
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-        <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+        ${today_meta([j.co, `${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
       <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
@@ -7248,7 +7326,7 @@ function today_View() {
     <header class="greeting td-head">
       <div style="min-width:0">
         <h1>${today_greeting()}${name ? `, ${name}` : ""}</h1>
-        <p>${today_seps(parts)}</p>
+        ${today_meta(parts, null, "p")}
       </div>
       <span class="spacer"></span>
       <span class="td-date hide-sm">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>

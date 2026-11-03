@@ -58,7 +58,7 @@
 
 /* new for you */
 .td-job .job-title { font-size: var(--fs-sm); }
-.td-job .job-meta { flex-wrap: nowrap; font-size: var(--fs-xs); }
+.td-job .job-meta { flex-wrap: nowrap; font-size: var(--fs-xs); gap: 0; }
 .td-job .job-side { display: flex; align-items: center; gap: 12px; }
 
 /* this week: one compact widget (the sidebar goal card is hidden on Today) */
@@ -123,6 +123,13 @@
 }
 @media (max-width: 520px) { .td-banner-more { display: none; } }
 
+/* ===== Dotted meta line (today_meta in today.js; used by Today, Insights, Pipeline, Prep) =====
+   Each item owns a 12px left gutter holding its dot. The list is pulled 12px left and clip-path hides
+   that first 9px column, so the dot of whichever item starts a visual line is never shown. */
+.td-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0; min-width: 0; margin-left: -12px; clip-path: inset(-6px -6px -6px 9px); }
+.td-meta > * { position: relative; padding-left: 12px; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-meta > *::before { content: "·"; display: inline-block; width: 12px; margin-left: -12px; text-align: center; color: var(--fg-3); font-weight: 400; }
+
 /* ===== Insights (stats) ===== */
 .st-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start; }
 .st-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -131,16 +138,17 @@
 .st-kpis .stat-sub { margin-top: 2px; }
 .st-unit { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); margin-left: 2px; letter-spacing: 0; }
 .st-small-n { color: var(--wait); white-space: nowrap; }
-@media (max-width: 520px) { .st-sep { display: none; } .st-small-n { display: block; } }
-.st-nw { white-space: nowrap; }
 .st-head-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--fg-2); min-height: 34px; }
-.st-chart-wrap { position: relative; padding: 12px 16px 8px; }
+.st-chart-wrap { position: relative; padding: 12px 16px 8px; flex: 1; display: flex; flex-direction: column; }
+.st-chart-card { display: flex; flex-direction: column; }
+.st-chart-inner { position: relative; flex: 1; }
+.st-chart-inner > .chart { position: absolute; left: 0; top: 0; }
 .st-chart text { fill: var(--fg-3); font-size: 11px; font-family: var(--font); font-variant-numeric: tabular-nums; }
 .st-chart .st-val { fill: var(--fg); font-weight: 600; }
 .st-chart .st-xl.now { fill: var(--fg); font-weight: 600; }
 .st-chart .grid-line { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
 .st-chart .base-line { stroke: var(--line-strong); stroke-width: 1; shape-rendering: crispEdges; }
-.st-chart .st-bar { fill: color-mix(in srgb, var(--accent) 50%, var(--surface)); }
+.st-chart .st-bar { fill: color-mix(in srgb, var(--accent) 70%, var(--surface)); }
 .st-chart .st-bar.now { fill: var(--accent); }
 .st-chart .st-row-label { fill: var(--fg-2); }
 .st-chart .st-reply { fill: var(--fg-3); }
@@ -153,7 +161,7 @@
   padding: 8px 10px; font-size: var(--fs-xs); color: var(--fg-2); white-space: nowrap; display: flex; flex-direction: column; gap: 3px;
 }
 .st-tip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
-.st-tip .st-tip-row { display: flex; align-items: center; gap: 6px; }
+.st-tip .st-tip-row { flex-wrap: nowrap; }
 
 .st-funnel { display: flex; flex-direction: column; gap: 6px; }
 .st-funnel .funnel-row { grid-template-columns: 96px minmax(0, 1fr) 84px; min-height: 32px; }
@@ -171,9 +179,9 @@
 .st-outcome-bar i:last-child { border-radius: 0 99px 99px 0; }
 .st-outcome-bar i:only-child { border-radius: 99px; }
 .st-out-rows { display: flex; flex-direction: column; }
-.st-out-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 48px; gap: 10px; align-items: center; padding: 7px 0; font-size: var(--fs-sm); }
+.st-out-row { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto 48px; gap: 10px; align-items: center; padding: 7px 0; font-size: var(--fs-sm); }
 .st-out-row + .st-out-row { border-top: 1px solid var(--line); }
-.st-out-sw { width: 10px; height: 10px; border-radius: 3px; }
+.st-out-sw { width: 8px; height: 8px; border-radius: 50%; }
 .st-out-row .num { font-weight: 500; text-align: right; }
 .st-out-row .faint { text-align: right; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 
@@ -199,7 +207,7 @@
   .st-funnel .funnel-row { grid-template-columns: 78px minmax(0, 1fr) 76px; gap: 10px; }
   .st-chart-wrap { padding: 12px 8px 8px; }
 }
-.st-grid-top { align-items: start; }
+.st-grid-top { align-items: stretch; }
 .st-funnel-card { display: flex; flex-direction: column; }
 .st-funnel-card .st-funnel { flex: 1; }
 .st-steps { display: flex; flex-direction: column; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }
@@ -220,3 +228,4 @@
 .td-grow { flex: 1 1 240px; min-width: 0; }
 .td-page .card-head h2, .st-page .card-head h2 { white-space: nowrap; }
 @media (max-width: 640px) { .card-head .td-link { min-height: 44px; margin: -8px 0; } }
+@media (max-width: 860px) { .st-page .page-head { align-items: center; } .st-page .page-head p { margin-top: 0; } }
