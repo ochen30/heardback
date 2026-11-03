@@ -89,12 +89,13 @@ const ROUND_TYPES = [
   { id: "behavioral", label: "Behavioral" },
   { id: "case", label: "Case" },
   { id: "onsite", label: "Onsite / Final" },
-  { id: "other", label: "Other" },
+  { id: "other", label: "Interview" },
 ];
 const ROUND = Object.fromEntries(ROUND_TYPES.map((r) => [r.id, r]));
 /* How a round reads inside a sentence: "your technical interview", "the recruiter call", "the online assessment" */
 const ROUND_NOUN = { recruiter: "recruiter call", assessment: "online assessment", technical: "technical interview", behavioral: "behavioral interview", case: "case interview", onsite: "final round", other: "interview" };
 function roundNoun(r) { return ROUND_NOUN[r?.type] || "interview"; }
+function roundPeople(r) { if (!r?.interviewers || r.type === "assessment") return ""; return r.interviewers.replace(/\s*\([^)]*\)/g, "").trim(); }
 function roundTitle(r) { const n = roundNoun(r); return n[0].toUpperCase() + n.slice(1); }
 const CATS = ["Software", "Data & AI", "Product", "Quant", "Hardware"];
 const LEVELS = [{ id: "intern", label: "Internship" }, { id: "newgrad", label: "New grad" }];

@@ -25,6 +25,8 @@
   --ghost: #6d6787;
   --ghost-soft: #eeedf4;
   --info: #2a6f9e;
+  --int: #7a4fc4;
+  --int-soft: #f0eafb;
   --info-soft: #e5f0f8;
   --shadow-float: 0 1px 2px rgba(18, 22, 29, .06), 0 8px 24px rgba(18, 22, 29, .10);
   --shadow-pop: 0 2px 4px rgba(18, 22, 29, .06), 0 16px 48px rgba(18, 22, 29, .16);
@@ -55,7 +57,7 @@
     --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1;
     --accent: #6f8bff; --accent-hover: #8aa0ff; --accent-soft: #1c2440; --accent-fg: #0b1020; --accent-text: #93a8ff;
     --ok: #4cc38a; --ok-soft: #12291e; --wait: #e2a740; --wait-soft: #2b2112; --bad: #f0776c; --bad-soft: #2e1715;
-    --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
+    --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433; --int: #b79cf0; --int-soft: #241c38;
     --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
     --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
     --scrim: rgba(0, 0, 0, .56);
@@ -68,7 +70,7 @@
   --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1;
   --accent: #6f8bff; --accent-hover: #8aa0ff; --accent-soft: #1c2440; --accent-fg: #0b1020; --accent-text: #93a8ff;
   --ok: #4cc38a; --ok-soft: #12291e; --wait: #e2a740; --wait-soft: #2b2112; --bad: #f0776c; --bad-soft: #2e1715;
-  --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
+  --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433; --int: #b79cf0; --int-soft: #241c38;
   --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
   --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
   --scrim: rgba(0, 0, 0, .56);
@@ -248,7 +250,7 @@ p { margin: 0; }
 .dot.saved { background: var(--fg-3); }
 .dot.applied { background: var(--accent); }
 .dot.screen { background: var(--info); }
-.dot.interview { background: var(--wait); }
+.dot.interview { background: var(--int); }
 .dot.offer { background: var(--ok); }
 .dot.rejected { background: var(--bad); }
 .dot.ghosted { background: var(--ghost); }
@@ -616,3 +618,4 @@ p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offs
   .meth-pts { min-width: 0; white-space: normal; color: var(--fg-2); }
   .meth-table tbody tr:last-child { border-bottom: 0; }
 }
+.badge.int { background: var(--int-soft); color: var(--int); }

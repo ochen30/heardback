@@ -29,7 +29,11 @@ async function loadJobs() {
     const byCompany = new Map();
     for (const x of jobs) { if (!byCompany.has(x.co)) byCompany.set(x.co, []); byCompany.get(x.co).push(x); }
     const cstats = {};
-    for (const [k, v] of Object.entries(c.companies || {})) cstats[v.n || companies[+k]] = v;
+    for (const [k, v] of Object.entries(c.companies || {})) {
+      // Too few measurable closed listings make "typical time open" noise; hide it below 10.
+      const thin = (v.closedTimed || 0) < 10;
+      cstats[v.n || companies[+k]] = thin ? { ...v, medOpenDays: null, fastClose: null } : v;
+    }
     Object.assign(jobsStore, { status: "ready", jobs, companies, cstats, meta: { generatedAt: j.generatedAt, source: j.source, stats: j.stats }, byId, byCompany });
   } catch (e) {
     jobsStore.status = "error"; jobsStore.error = String(e?.message || e);

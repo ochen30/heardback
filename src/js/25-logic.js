@@ -17,15 +17,15 @@ function computeTasks(s = store.get()) {
       const fromEmail = (a.events || []).some((e) => e.kind === "email" && t - e.at < 3 * DAY);
       if (until > 0 && fromEmail && !r.confirmed) {
         const key = `confirm:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${roundNoun(r)} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
+        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${roundNoun(r)} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}. Reply so they know you'll be there.`, action: "Review" });
       }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
+        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}`, action: "Prep" });
       }
       if (until <= 0 && -until < 2 * DAY && !r.thanked && r.outcome === "pending") {
         const key = `thanks:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${roundNoun(r)}${r.interviewers ? " with " + r.interviewers : ""}`, action: "Draft note" });
+        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${roundNoun(r)}${roundPeople(r) ? " with " + roundPeople(r) : ""}`, action: "Draft note" });
       }
       if (until <= -DAY && r.outcome === "pending") {
         const key = `outcome:${a.id}:${r.id}`;

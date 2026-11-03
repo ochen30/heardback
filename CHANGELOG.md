@@ -156,3 +156,10 @@ A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, 
 - A second follow-up draft reads differently from the first ("Checking in once more…"); thank-you subject reads "Thank you for the technical interview · Role".
 - Onboarding footer fits narrow phones.
 - QA: end-to-end 2,428 / 2,428.
+
+### 06:55 PT — v15 published (design review 10 + chaos test)
+- Round names read naturally everywhere (the generic type is now "Interview"); assessments never say "with HackerRank"; interviewer names drop "(Recruiter)"-style tags in sentences.
+- Browse-only visitors don't see a weekly goal they never set.
+- Company "typical time open" shows only with 10+ measurable closed listings.
+- Interviews have their own calm violet, so amber means only "needs attention".
+- Chaos test: 1,900 random clicks and keys across desktop and phone, with and without Claude: zero errors, never a blank screen. End-to-end 2,428 / 2,428; axe clean.

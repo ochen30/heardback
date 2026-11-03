@@ -77,7 +77,7 @@ function Btn({ kind, size, icon, iconRight, children, cls, ...rest }) {
 function Kbd({ children }) { return html`<span class="kbd">${children}</span>`; }
 function Badge({ kind, children, title, icon }) { return html`<span class=${cx("badge", kind)} title=${title}>${icon && html`<${Icon} name=${icon} size=${12} />`}${children}</span>`; }
 function StageBadge({ stage }) {
-  const kinds = { saved: "", applied: "accent", screen: "info", interview: "wait", offer: "ok", rejected: "bad", ghosted: "ghost" };
+  const kinds = { saved: "", applied: "accent", screen: "info", interview: "int", offer: "ok", rejected: "bad", ghosted: "ghost" };
   return html`<span class=${cx("badge", kinds[stage])}><span class=${cx("dot", stage)}></span>${STAGE[stage]?.label}</span>`;
 }
 function Logo({ name, size }) {

@@ -100,7 +100,7 @@ function plNextStep(a, st) {
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };
   if (a.stage === "offer") return { kind: "offer", icon: "trophy", tone: "ok", short: "Get the offer in writing", title: "You have an offer", sub: "Ask for the offer in writing and the decision deadline before you reply." };
   if (up && up.type === "assessment") return { kind: "upcoming", icon: "clock", tone: "info", round: up, short: `Assessment due ${fmt.until(up.at)}`, title: `Online assessment due ${fmt.until(up.at)}`, sub: `Due ${fmt.dateTime(up.at)}${up.interviewers ? " · on " + up.interviewers : ""}` };
-  if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${up.interviewers ? " · with " + up.interviewers : ""}` };
+  if (up) return { kind: "upcoming", icon: "cal", tone: "info", round: up, short: `${label(up)} ${fmt.until(up.at)}`, title: `${label(up)} ${fmt.until(up.at)}`, sub: `${fmt.dateTime(up.at)}${roundPeople(up) ? " · with " + roundPeople(up) : ""}` };
   const past = plPastPending(a, t);
   if (past && past.type === "assessment") return { kind: "outcome", icon: "flag", round: past, short: "Log the result", title: "Did you pass the online assessment?", sub: `It was due ${fmt.ago(past.at)}. Log the result when you hear back.` };
   if (past && !past.thanked && t - past.at < 2 * DAY) return { kind: "thanks", icon: "send", tone: "info", round: past, short: "Send a thank-you", title: "Send a thank-you note", sub: `Your ${label(past).toLowerCase()} was ${fmt.ago(past.at)}. A short note within 24 hours helps.` };
@@ -1123,7 +1123,7 @@ function PlDraft({ appId, roundId, kind = "follow" }) {
       `Role: ${a.title || "unknown"} at ${a.company}. Current stage: ${STAGE[a.stage].label}.`,
       a.appliedAt && `Applied on ${fmt.dateY(a.appliedAt)}.`,
       a.contacts?.[0]?.name && `Contact: ${a.contacts[0].name}${a.contacts[0].role ? " (" + a.contacts[0].role + ")" : ""}.`,
-      r && `Interview round: ${ROUND[r.type]?.label || "interview"}${r.at ? " on " + fmt.dateY(r.at) : ""}${r.interviewers ? " with " + r.interviewers : ""}.`,
+      r && `Interview round: ${ROUND[r.type]?.label || "interview"}${r.at ? " on " + fmt.dateY(r.at) : ""}${roundPeople(r) ? " with " + roundPeople(r) : ""}.`,
       r?.reflection && `The candidate's notes on how it went: ${r.reflection}`,
     ].filter(Boolean).join("\n");
     const prompt = `Rewrite this ${confirm ? "short reply confirming a scheduled job interview time" : thanks ? "thank-you email to send after a job interview" : "follow-up email about a job application that hasn't had a reply"}.
