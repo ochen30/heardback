@@ -5,3 +5,8 @@ qa/out/
 __pycache__/
 qa/fonts/
 publish/
+qa/out*/
+qa/e2e/out*/
+qa/published/
+report/out/shots/
+*.bundle
