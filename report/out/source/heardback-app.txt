@@ -1384,6 +1384,19 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-ttitle, .pl-tco { display: block; }
 }
 
+/* round.where: a compact "Join" link (or plain text) in the round row and the Next step card */
+.pl-round-row { display: flex; align-items: center; }
+.pl-round-row > .pl-round-sum { flex: 1; min-width: 0; }
+.pl-where { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 220px; font-size: var(--fs-sm); font-weight: 500; color: var(--accent); text-decoration: none; }
+.pl-where .icon, .pl-where svg { flex: none; }
+a.pl-where:hover { text-decoration: underline; }
+.pl-where-text { color: var(--fg-2); font-weight: 400; }
+.pl-round-row .pl-round-meta { overflow: hidden; }
+.pl-round-where { flex: none; max-width: 28%; min-height: 44px; padding: 0 14px 0 4px; }
+.pl-next-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; min-width: 0; }
+.pl-next-where { max-width: 100%; }
+@media (max-width: 520px) { .pl-round-where { max-width: 34%; padding-right: 12px; align-self: flex-start; min-height: 52px; } }
+
 /* ===== Onboarding, Settings, Interview prep (prep.css) ===== */
 
 /* ---------- Onboarding ---------- */
@@ -1770,6 +1783,19 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 }
 @media (max-width: 400px) { .onb-foot { flex-wrap: wrap; row-gap: 8px; } .onb-foot .btn { padding: 0 14px; } .onb-foot > :not(.btn):not(.spacer) { min-width: 0; font-size: var(--fs-sm); } }
 
+/* ----- Application notes, where, finished practice ----- */
+.prep-appnotes .card-head h3 { font-size: var(--fs-md); }
+.prep-appnotes-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.55; max-height: 9.5em; overflow-y: auto; }
+.prep-where { min-width: 0; overflow-wrap: anywhere; }
+.prep-where a { display: block; max-width: 100%; color: var(--accent-text); }
+.prep-done { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.prep-done-text { flex: 1; min-width: 180px; }
+.prep-mock-safe { align-self: center; }
+@media (max-width: 640px) {
+  .prep-done .btn { width: 100%; justify-content: center; min-height: 44px; }
+  .prep-mock-foot { flex-wrap: wrap; }
+}
+
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
 .share-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
@@ -2081,6 +2107,23 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .td-start-acts .btn { flex: 1; height: 44px; justify-content: center; }
 }
 
+/* ===== Next up: a round within 12 hours, pinned above Needs you ===== */
+.td-next { border-left: 3px solid var(--accent); }
+.td-next-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.td-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.td-next-k { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-text); }
+.td-next-k .faint { font-weight: 400; }
+.td-next-line { font-size: var(--fs-md); color: var(--fg); }
+.td-next-line b { font-weight: 600; }
+.td-next-where { font-size: var(--fs-xs); display: flex; align-items: center; gap: 4px; }
+.td-next-actions { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .td-next-row { flex-wrap: wrap; align-items: flex-start; }
+  .td-next-text { flex-basis: calc(100% - 40px); }
+  .td-next-actions { width: 100%; }
+  .td-next-actions > * { flex: 1; justify-content: center; min-height: 44px; }
+}
+
 </style>
 <div id="app"><div style="display:grid;place-items:center;height:100vh;color:#6b7482;font:14px system-ui">Loading Heardback…</div></div>
 <script src="https://cdn.jsdelivr.net/npm/preact@10.19.3/dist/preact.umd.js"></script>
@@ -2234,7 +2277,7 @@ function cleanApp(a, id) {
     stage: STAGE[a.stage] ? a.stage : "applied", createdAt: created, appliedAt: ts(a.appliedAt), lastActivityAt: ts(a.lastActivityAt) || created, lastReplyAt: ts(a.lastReplyAt), followedUpAt: ts(a.followedUpAt),
     notes: strOr(a.notes), salary: strOr(a.salary), source: strOr(a.source || "manual"), example: !!a.example,
     contacts: (Array.isArray(a.contacts) ? a.contacts : []).filter(isObj).map((c) => ({ name: strOr(c.name), role: strOr(c.role), email: strOr(c.email) })),
-    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), where: strOr(r.where), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
+    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), ...(r.where ? { where: strOr(r.where) } : {}), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
     events: (Array.isArray(a.events) ? a.events : []).filter(isObj).map((e) => ({ ...e, id: strOr(e.id) || uid("e_"), at: ts(e.at) || created, kind: strOr(e.kind || "note"), text: strOr(e.text), from: STAGE[e.from] ? e.from : undefined, to: STAGE[e.to] ? e.to : undefined })),
   };
 }
@@ -4764,6 +4807,22 @@ function plStageAt(a, stage) {
 }
 /* Whole calendar days since ts (an applied date stored as noon yesterday is 1 day ago at 3 AM) */
 function plDaysSince(ts) { return Math.max(0, Math.round((fmt.startOfDay(now()) - fmt.startOfDay(ts)) / DAY)); }
+/* round.where: a meeting link, phone number or address. Meeting URLs show as the service name. */
+const PL_MEET = [[/(^|\.)zoom\.(us|com)$/i, "Zoom"], [/^meet\.google\.com$/i, "Google Meet"], [/(^|\.)teams\.(microsoft|live)\.com$/i, "Teams"], [/(^|\.)webex\.com$/i, "Webex"]];
+const PL_MEET_RE = /https?:\/\/[^\s<>"'()]*(?:zoom\.(?:us|com)|meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|webex\.com)[^\s<>"'()]*/i;
+function plWhereUrl(w) { const x = (w || "").trim(); if (!x || /\s/.test(x)) return ""; if (/^https?:\/\//i.test(x)) return x; return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(x) && !/^\d[\d.\-]*$/.test(x) ? `https://${x}` : ""; }
+function plWhereLabel(w) {
+  const u = plWhereUrl(w);
+  if (!u) return (w || "").trim();
+  try { const h = new URL(u).hostname.replace(/^www\./, ""); const m = PL_MEET.find(([re]) => re.test(h)); return m ? m[1] : h; } catch { return w.trim(); }
+}
+function PlWhere({ w, cls }) {
+  const x = (w || "").trim();
+  if (!x) return null;
+  const u = plWhereUrl(x), label = plWhereLabel(x);
+  return u ? html`<a class=${cx("pl-where", cls)} href=${u} target="_blank" rel="noopener" title=${x} aria-label=${`Join on ${label} (opens in a new tab)`}><${Icon} name="ext" size=${12} /><span class="truncate">${label}</span></a>`
+    : html`<span class=${cx("pl-where pl-where-text", cls)} title=${x}><span class="truncate">${label}</span></span>`;
+}
 function plHref(u) { const x = (u || "").trim(); if (!x) return ""; return /^https?:\/\//i.test(x) ? x : `https://${x}`; }
 function plFromDate(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).getTime() : null; }
 function plFurthest(a) {
@@ -4927,6 +4986,7 @@ const PL_SAMPLES = {
 };
 
 /* Debounced text input that saves as you type and flushes on blur / unmount */
+function plMeetLink(raw) { const m = PL_MEET_RE.exec(raw || ""); return m ? m[0].replace(/[.,;:!?>\]]+$/, "") : ""; }
 function PlText({ id, value, onSave, multiline, onStatus, delay = 450, cls, ...rest }) {
   const [v, setV] = useState(value || "");
   const timer = useRef(null), pending = useRef(null);
@@ -5418,12 +5478,22 @@ function PlTable({ apps, settings, sort, sel }) {
 const PL_TABS = [{ id: "overview", label: "Overview" }, { id: "rounds", label: "Rounds" }, { id: "timeline", label: "Timeline" }, { id: "notes", label: "Notes" }];
 
 /* The one action that matches the current next step (shown as the drawer's primary button) */
+/* B8: switch to Rounds and put focus on that round's outcome select */
+function plGoOutcome(r, setTab) {
+  setTab("rounds");
+  if (!r) return;
+  setTimeout(() => {
+    let el = document.getElementById(`pl-r-${r.id}-out`);
+    if (!el) { document.getElementById(`pl-r-${r.id}-sum`)?.click(); }
+    setTimeout(() => { el = document.getElementById(`pl-r-${r.id}-out`); if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); } }, 0);
+  }, 0);
+}
 function plNextAction(a, ns, setTab) {
   const draft = (mode, extra) => () => openModal("draft", { appId: a.id, mode, ...extra });
   return {
     upcoming: { label: ns.round?.type === "assessment" ? "Prep for the assessment" : "Prep for this round", icon: "prep", run: () => plPrep(a, ns.round) },
     thanks: { label: "Draft thank-you", icon: "send", run: draft("thanks", { roundId: ns.round?.id }) },
-    outcome: { label: "Log outcome", icon: "flag", run: () => setTab("rounds") },
+    outcome: { label: "Log outcome", icon: "flag", run: () => plGoOutcome(ns.round, setTab) },
     saved: { label: "Mark as applied", icon: "check", run: () => Apps.move(a.id, "applied") },
     ghost: { label: "Mark as ghosted", icon: "ghost", run: () => Apps.move(a.id, "ghosted") },
     follow: { label: "Draft follow-up", icon: "reply", run: draft("follow") },
@@ -5460,7 +5530,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const foot = html`
     ${act && !takedown && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
     ${ns.kind === "wait" && !takedown && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
-    ${a.url && !removed && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}
+    ${a.url && !removed && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener" aria-label="Open posting in a new tab" title="Open posting"><${Icon} name="ext" /><span class="hide-sm">Open posting</span></a>`}
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del} aria-label="Delete application" title="Delete application"><span class="hide-sm">Delete</span></${Btn}>`;
   const counts = { rounds: (a.rounds || []).length, timeline: (a.events || []).length };
@@ -5585,8 +5655,8 @@ function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo })
   const replyTxt = lastContact ? `${plDaysSince(lastContact) < 1 ? "Today" : plDaysSince(lastContact) === 1 ? "Yesterday" : `${pluralize(plDaysSince(lastContact), "day")} ago`} · ${fmt.date(lastContact)}` : a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
     : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
-    upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
-    thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
+    upcoming: html`${ns.round?.where && html`<${PlWhere} w=${ns.round.where} cls="pl-next-where" />`}<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
+    thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => plGoOutcome(ns.round, setTab)}>Log the outcome instead</button>`,
     ghost: html`<button type="button" class="pl-linkbtn" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</button>`,
   }[ns.kind];
   return html`<div class="pl-ov">
@@ -5656,6 +5726,7 @@ function PlContacts({ a }) {
   };
   const rm = (i) => { const c = a.contacts[i]; Apps.update(a.id, (x) => ({ contacts: x.contacts.filter((_, j) => j !== i) })); toast(`Removed ${c.name}`, { undo: () => Apps.update(a.id, (x) => { const n = [...x.contacts]; n.splice(i, 0, c); return { contacts: n }; }) }); };
   const contacts = a.contacts || [];
+  const fromRounds = [...new Set((a.rounds || []).map((r) => roundPeople(r)).filter(Boolean))].join(", ");
   return html`<section class="dsec">
     <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}<span class="spacer"></span>
       ${!open && html`<${Btn} kind="ghost" size="sm" icon="plus" id="pl-c-add" onClick=${show}>Add contact</${Btn}>`}</h3>
@@ -5665,7 +5736,7 @@ function PlContacts({ a }) {
       ${c.email && html`<${Btn} kind="ghost" size="sm" icon="copy" aria-label=${`Copy ${c.name}'s email`} title="Copy email" onClick=${() => copyText(c.email, "Email copied")} />`}
       <${Btn} kind="ghost" size="sm" icon="x" aria-label=${`Remove ${c.name}`} title="Remove" onClick=${() => rm(i)} />
     </div>`)}</div>`}
-    ${!contacts.length && !open && html`<p class="pl-none">No contacts yet. Add the recruiter or interviewers so follow-ups have a name.</p>`}
+    ${!contacts.length && !open && html`<p class="pl-none">${fromRounds ? `No contacts saved yet. Your rounds list ${fromRounds}. Add them here to keep their emails.` : "No contacts yet. Add the recruiter or interviewers so follow-ups have a name."}</p>`}
     ${open && html`<form class="pl-contact-form" onSubmit=${add}>
       <input id="pl-c-name" class="input" placeholder="Name" aria-label="Contact name" value=${f.name} onInput=${(e) => { setF({ ...f, name: e.currentTarget.value }); setErr(""); }} aria-invalid=${err ? "true" : undefined} />
       <input id="pl-c-role" class="input" placeholder="Role, e.g. Recruiter" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
@@ -5729,9 +5800,20 @@ function PlRoundRow({ r, onEdit }) {
       </span>
       <span class="pl-round-edit"><${Icon} name="edit" size=${13} />Edit</span>
     </button>
+    ${r.where && html`<${PlWhere} w=${r.where} cls="pl-round-where" />`}
   </div>`;
 }
 
+/* B9: the drawer's outcome select confirms the change with Undo, like Today's inline buttons */
+function plSetOutcome(a, r, outcome) {
+  const prev = r.outcome || "pending";
+  if (outcome === prev) return;
+  Apps.updateRound(a.id, r.id, { outcome });
+  const undo = () => Apps.updateRound(a.id, r.id, { outcome: prev });
+  const label = PL_OUTCOMES.find((o) => o.id === outcome)?.label || outcome;
+  if (outcome === "passed") toast("Logged as passed", { undo, action: { label: "Add next round", run: () => { const n = Apps.addRound(a.id, { type: "technical" }); setTimeout(() => document.getElementById(`pl-r-${n.id}-sum`)?.click(), 0); } } });
+  else toast(`Outcome set to ${label.toLowerCase()}`, { undo });
+}
 function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
@@ -5746,8 +5828,9 @@ function PlRound({ a, r, onDone }) {
     </div>
     <div class="pl-round-grid">
       <${Field} label=${oa ? "Due" : "Date and time"} id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
-      <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => upd({ outcome: e.currentTarget.value })}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
+      <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => plSetOutcome(a, r, e.currentTarget.value)}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
       <div class="pl-span2"><${Field} label=${oa ? "Platform" : "Interviewers"} id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder=${oa ? "e.g. HackerRank, CodeSignal" : "e.g. Priya S. (Eng manager)"} onSave=${(v) => upd({ interviewers: v })} /></${Field}></div>
+      <div class="pl-span2"><${Field} label="Where" id=${pid + "-where"}><${PlText} id=${pid + "-where"} value=${r.where || ""} placeholder=${oa ? "Assessment link" : "Zoom link, phone number or address"} onSave=${(v) => upd({ where: v.trim() })} /></${Field}></div>
       <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics, stories, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
       <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
     </div>
@@ -5755,7 +5838,7 @@ function PlRound({ a, r, onDone }) {
       ${!oa && html`<label class="check" for=${pid + "-thx"}><input id=${pid + "-thx"} type="checkbox" checked=${!!r.thanked} onChange=${(e) => upd({ thanked: e.currentTarget.checked })} />Thank-you sent</label>`}
       <span class="spacer" style="flex:1"></span>
       <${Btn} kind="ghost" size="sm" icon="trash" aria-label="Delete round" title="Delete round" onClick=${del} />
-      <${CalendarButton} appId=${a.id} round=${r} />
+      ${r.at && r.at > t && html`<${CalendarButton} appId=${a.id} round=${r} />`}
       ${r.at && r.at > t ? html`<${Btn} size="sm" icon="prep" onClick=${() => plPrep(a, r)}>Prep</${Btn}>`
         : oa ? null : html`<${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>`}
     </div>
@@ -5774,7 +5857,7 @@ function PlTimeline({ a }) {
   const add = (e) => {
     e.preventDefault();
     const v = txt.trim(); if (!v) return;
-    Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "note", text: v }] }));
+    Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "note", text: v }], lastActivityAt: now() }));
     setTxt("");
   };
   return html`<div class="stack">
@@ -5970,7 +6053,7 @@ MODALS.paste = function PlPaste() {
 
   const fill = (p, from) => {
     const m = matchApp(p.company, p.title);
-    setF({ kind: p.kind, company: p.company || "", title: p.title || "", at: p.at || now(), interviewAt: p.interviewAt || null, roundType: p.roundType || (p.kind === "screen" ? "recruiter" : "other"), interviewers: p.interviewers || "", next: p.next || "", tz: p.tz || "" });
+    setF({ kind: p.kind, company: p.company || "", title: p.title || "", at: p.at || now(), interviewAt: p.interviewAt || null, roundType: p.roundType || (p.kind === "screen" ? "recruiter" : "other"), interviewers: p.interviewers || "", next: p.next || "", tz: p.tz || "", where: p.where || plMeetLink(raw) });
     setTarget(m && visibleIds.has(m.id) ? m.id : "new"); setTouched(false); setSrc(from); setErr(""); setShowRaw(false);
   };
   const readRules = () => { if (!raw.trim()) { setErr("Paste an email first, or try one of the samples."); return; } fill(plParse(raw), "rules"); };
@@ -6003,7 +6086,7 @@ ${raw.slice(0, 12000)}
       if (!ac.signal.aborted) setErr(`${aiErr(e)} You can still use “Read email”, which works without Claude.`);
     } finally { setBusy(false); ctrl.current = null; }
   };
-  const sample = (k) => { setRaw(PL_SAMPLES[k].text); setF(null); setErr(""); fill(plParse(PL_SAMPLES[k].text), "rules"); };
+  const sample = (k) => { const tx = PL_SAMPLES[k].text; setRaw(tx); setF(null); setErr(""); fill({ ...plParse(tx), where: plMeetLink(tx) }, "rules"); };
   const upd = (k) => (e) => { const v = e.currentTarget.value; setF((x) => { const n = { ...x, [k]: v }; if ((k === "company" || k === "title") && !touched) { const m = matchApp(k === "company" ? v : x.company, k === "title" ? v : x.title); setTarget(m && visibleIds.has(m.id) ? m.id : "new"); } return n; }); };
 
   const tApp = f && target !== "new" ? apps[target] : null;
@@ -6036,7 +6119,7 @@ ${raw.slice(0, 12000)}
     }
     if (f.kind !== "confirmation" && f.kind !== "other") Apps.update(id, (x) => ({ lastReplyAt: Math.max(x.lastReplyAt || 0, at) }));
     if (dupRound) done.push("round already logged");
-    if (willRound) { Apps.addRound(id, { type: f.roundType || "other", at: f.interviewAt, interviewers: f.interviewers || "" }); done.push(`${ROUND[f.roundType]?.label || "Interview"} round added`); }
+    if (willRound) { Apps.addRound(id, { type: f.roundType || "other", at: f.interviewAt, interviewers: f.interviewers || "", where: (f.where || "").trim() }); done.push(`${ROUND[f.roundType]?.label || "Interview"} round added`); }
     Apps.addEvent(id, { kind: "email", text: `Logged email: ${k.label}` });
     const app = Apps.get(id);
     closeModal();
@@ -6081,7 +6164,8 @@ ${raw.slice(0, 12000)}
         ${roundOn && html`
           <div class="field"><label for="pl-p-when">Interview time</label><input id="pl-p-when" class="input" type="datetime-local" value=${fmt.toInput(f.interviewAt)} onChange=${(e) => setF({ ...f, interviewAt: fmt.fromInput(e.currentTarget.value), tz: "" })} />${!f.interviewAt ? html`<span class="hint">No time found. Add one to create a round.</span>` : f.tz ? html`<span class="hint">Converted from ${f.tz} to your time.</span>` : null}</div>
           <div class="field"><label for="pl-p-rt">Round type</label><select id="pl-p-rt" class="select" value=${f.roundType} onChange=${upd("roundType")}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select></div>
-          <div class="field pl-span2"><label for="pl-p-who">Interviewers</label><input id="pl-p-who" class="input" value=${f.interviewers} onInput=${upd("interviewers")} placeholder="Optional" /></div>`}
+          <div class="field pl-span2"><label for="pl-p-who">Interviewers</label><input id="pl-p-who" class="input" value=${f.interviewers} onInput=${upd("interviewers")} placeholder="Optional" /></div>
+          <div class="field pl-span2"><label for="pl-p-where">Where</label><input id="pl-p-where" class="input" value=${f.where || ""} onInput=${upd("where")} placeholder="Zoom link, phone number or address" /></div>`}
         <div class="field pl-span2"><label for="pl-p-target">Apply to</label>
           <select id="pl-p-target" class="select" value=${target} onChange=${(e) => { setTarget(e.currentTarget.value); setTouched(true); }}>
             <option value="new">New application</option>
@@ -6621,6 +6705,29 @@ function prepRounds(s) {
   past.sort((x, y) => (y.r.at || 0) - (x.r.at || 0));
   return { up, past };
 }
+/* Append a block to a round's prep notes (after writing any unsaved typing). Returns false if the round is gone. */
+function prep_appendNotes(appId, roundId, add) {
+  flushAll();
+  const cur = Apps.get(appId)?.rounds?.find((x) => x.id === roundId);
+  if (!cur) return false;
+  Apps.updateRound(appId, roundId, { prep: (cur.prep || "").trim() ? `${cur.prep.trimEnd()}\n\n${add}` : add });
+  return true;
+}
+/* First link in a round's "where" (video link or address). */
+function prep_whereUrl(w) {
+  const m = String(w || "").match(/\bhttps?:\/\/[^\s<>"]+|\bwww\.[^\s<>"]+/i);
+  return m ? (/^www\./i.test(m[0]) ? "https://" + m[0] : m[0]).replace(/[).,;]+$/, "") : "";
+}
+/* Mock interview answers as Q/A pairs: the question is the last paragraph of the interviewer turn before each answer. */
+function prep_mockAnswers(turns) {
+  const L = [`Mock interview answers, ${fmt.date(now())}`];
+  let q = "";
+  for (const t of turns) {
+    if (t.role === "assistant") { const ps = t.text.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean); q = ps[ps.length - 1] || t.text; }
+    else L.push(`Q: ${q.slice(0, 400)}\nA: ${t.text.trim()}`);
+  }
+  return L.join("\n\n");
+}
 function prepSetFocus(f) { store.set((s) => ({ ...s, ui: { ...s.ui, prepFocus: f } })); }
 
 /* ---------- Small pieces ---------- */
@@ -6717,7 +6824,7 @@ function PrepPractice({ questions, ctx, onExit }) {
     <div class="prep-practice-foot">
       <${Btn} icon="chevL" onClick=${() => goTo(i - 1)} disabled=${i === 0}>Previous</${Btn}>
       <span class="spacer"></span>
-      ${i < questions.length - 1 ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => goTo(i + 1)} id="prep-next">Next question</${Btn}>` : html`<${Btn} kind="primary" icon="check" onClick=${onExit}>Finish practice</${Btn}>`}
+      ${i < questions.length - 1 ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => goTo(i + 1)} id="prep-next">Next question</${Btn}>` : html`<${Btn} kind="primary" icon="check" onClick=${() => onExit(true)} id="prep-finish">Finish practice</${Btn}>`}
     </div>
   </div>`;
 }
@@ -6972,7 +7079,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
 
   const start = () => {
     const mm = { company: a?.company || "", title: a?.title || "", cat: ctx.cat, type: ctx.type, roundLabel };
-    setM(mm); setTurns([]); setCard(null); setSaved(false); setDraft(""); setPhase("live");
+    setM(mm); setTurns([]); setCard(null); setSaved(false); setAnsSaved(false); setDraft(""); setPhase("live");
     ask([], mm, n);
   };
 
@@ -7002,7 +7109,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     score(list, m);
   };
 
-  const reset = () => { ctl.current?.abort(); setStream(null); setErr(""); setTurns([]); setCard(null); setSaved(false); setDraft(""); setPhase("start"); };
+  const reset = () => { ctl.current?.abort(); setStream(null); setErr(""); setTurns([]); setCard(null); setSaved(false); setAnsSaved(false); setDraft(""); setPhase("start"); };
 
   const save = () => {
     if (!a || !r) return;
@@ -7014,6 +7121,14 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     setSaved(true); onSaved && onSaved();
     toast("Added the scorecard to this round’s prep notes");
   };
+
+  const [ansSaved, setAnsSaved] = useState(false);
+  const saveAnswers = () => {
+    if (!a || !r || !prep_appendNotes(a.id, r.id, prep_mockAnswers(turnsRef.current))) return;
+    setAnsSaved(true); onSaved && onSaved();
+    toast("Added your answers to this round’s prep notes");
+  };
+  const ansBtn = (primary) => a && answered > 0 && html`<${Btn} kind=${primary ? "primary" : "ghost"} icon=${ansSaved ? "check" : "doc"} onClick=${saveAnswers} disabled=${ansSaved} id="prep-mock-save-answers">${ansSaved ? "Answers saved" : "Save answers to notes"}</${Btn}>`;
 
   const onKey = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } };
 
@@ -7075,10 +7190,13 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     ${phase === "end" && html`<div class="prep-practice-foot prep-mock-foot">
       <${Btn} kind="ghost" icon="copy" onClick=${() => copyText(prepMockSummary(m, card, answered), "Scorecard")} id="prep-mock-copy">Copy</${Btn}>
       <span class="spacer"></span>
-      <${Btn} kind=${a ? undefined : "primary"} icon="refresh" onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>
+      <${Btn} kind=${a ? "ghost" : "primary"} icon="refresh" onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>
+      ${ansBtn(false)}
       ${a && html`<${Btn} kind="primary" icon=${saved ? "check" : "doc"} onClick=${save} disabled=${saved} id="prep-mock-save">${saved ? "Saved to notes" : "Save to round notes"}</${Btn}>`}
     </div>`}
-    ${phase === "scoring" && !busy && err && html`<div class="prep-practice-foot prep-mock-foot"><span class="spacer"></span><${Btn} onClick=${reset} id="prep-mock-again">New mock interview</${Btn}></div>`}
+    ${phase === "scoring" && !busy && err && html`<div class="prep-practice-foot prep-mock-foot">
+      ${a && answered > 0 ? html`<span class="hint prep-mock-safe">Your answers are safe.</span>` : null}
+      <span class="spacer"></span><${Btn} kind=${a && answered > 0 ? "ghost" : undefined} onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>${ansBtn(true)}</div>`}
   </div>`;
 }
 
@@ -7116,12 +7234,34 @@ function PrepWorkspace({ a, r }) {
   const [notesRev, setNotesRev] = useState(0);
   const [pType, setPType] = useState("behavioral");
   const [pCat, setPCat] = useState(() => store.get().profile.roles?.[0] || "Software");
+  const [done, setDone] = useState(null); // outlines from a finished practice run, offered for this round's notes
+  const outlines = useStore((s) => s.ui.prepPractice) || {};
   const isPractice = !a;
   const type = isPractice ? pType : r.type;
   const cat = isPractice ? pCat : prepCatOf(a);
   const questions = useMemo(() => prepQuestions(type, cat), [type, cat]);
   const ctx = { round: (ROUND[type]?.label || "interview").toLowerCase(), title: a?.title || "", cat };
   const askType = type === "case" ? "case" : type;
+  const endPractice = () => {
+    setPractice(false);
+    const list = questions.filter((q) => (outlines[q.q] || "").trim()).map((q) => ({ q: q.q, o: outlines[q.q].trim() }));
+    setDone(a && list.length ? { list, saved: false } : null);
+    if (a && list.length) setTimeout(() => { const el = document.getElementById("prep-done"); el?.scrollIntoView({ block: "center" }); el?.querySelector("button")?.focus({ preventScroll: true }); }, 60);
+  };
+  const addOutlines = () => {
+    if (!done || !prep_appendNotes(a.id, r.id, [`Practice outlines, ${fmt.date(now())}`, ...done.list.map((x) => `Q: ${x.q}\n${x.o}`)].join("\n\n"))) return;
+    setDone({ ...done, saved: true }); setNotesRev((x) => x + 1);
+    toast(`Added ${pluralize(done.list.length, "outline")} to your ${a.company} prep notes`);
+  };
+  const whereUrl = r && prep_whereUrl(r.where);
+  /* Today's "Open notes" lands here with focus.notes: bring the notes into view. */
+  useEffect(() => {
+    const f = store.get().ui.prepFocus;
+    if (!r || !f?.notes || f.roundId !== r.id) return;
+    prepSetFocus({ appId: f.appId, roundId: f.roundId });
+    const t = setTimeout(() => { const el = document.getElementById("prep-notes-" + r.id); if (el) { el.scrollIntoView({ block: "center" }); el.focus({ preventScroll: true }); } }, 80);
+    return () => clearTimeout(t);
+  }, [r?.id]);
   return html`<div class="stack prep-work">
     ${isPractice
       ? html`<div class="card prep-head">
@@ -7151,13 +7291,25 @@ function PrepWorkspace({ a, r }) {
           <dl class="prep-facts">
             <div><dt>When</dt><dd class="num">${r.at ? today_meta([fmt.dateTime(r.at), html`<span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>${fmt.until(r.at)}</span>`]) : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
+            ${r.where ? html`<div><dt>Where</dt><dd class="prep-where">${whereUrl ? html`<a href=${whereUrl} target="_blank" rel="noopener" class="truncate" id="prep-where-link" title=${r.where}>${typeof plWhereLabel === "function" ? plWhereLabel(r.where) : "Join link"}</a>` : r.where}</dd></div>` : null}
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
         </div>`}
+    ${a && (a.notes || "").trim() ? html`<div class="card prep-appnotes" aria-labelledby="prep-appnotes-h">
+        <div class="card-head"><h3 id="prep-appnotes-h">From your notes on ${a.company}</h3><span class="spacer"></span>
+          <${Btn} size="sm" kind="ghost" icon="edit" onClick=${() => openApp(a.id, "notes")} id="prep-appnotes-edit">Edit</${Btn}></div>
+        <div class="card-body"><p class="prep-appnotes-text">${a.notes.trim()}</p></div>
+      </div>` : null}
+    ${done && !practice ? html`<div class="callout prep-done" role="status" id="prep-done">
+        <${Icon} name="check" />
+        <span class="prep-done-text">${done.saved ? `Your outlines are in your ${a.company} prep notes.` : `Practice done. You wrote ${pluralize(done.list.length, "outline")}.`}</span>
+        ${done.saved ? html`<${Btn} size="sm" kind="ghost" onClick=${() => setDone(null)} id="prep-done-close">Done</${Btn}>`
+          : html`<${Btn} size="sm" kind="primary" icon="doc" onClick=${addOutlines} id="prep-add-outlines">Add your outlines to ${a.company} prep notes</${Btn}>`}
+      </div>` : null}
     ${pc.sample && !practice && html`<${PrepMock} key=${r?.id || "p"} ctx=${{ type, cat }} a=${a} r=${r} resume=${resume} onPhase=${setMockPhase} onSaved=${() => setNotesRev((x) => x + 1)} />`}
     ${practice
-      ? html`<${PrepPractice} key=${type + cat} questions=${questions} ctx=${ctx} onExit=${() => setPractice(false)} />`
-      : !(pc.sample && mockPhase !== "start") && html`<${PrepQuestionsCard} key=${type + cat} questions=${questions} onPractice=${() => { setMockPhase("start"); setPractice(true); }} />`}
+      ? html`<${PrepPractice} key=${type + cat} questions=${questions} ctx=${ctx} onExit=${endPractice} />`
+      : !(pc.sample && mockPhase !== "start") && html`<${PrepQuestionsCard} key=${type + cat} questions=${questions} onPractice=${() => { setMockPhase("start"); setDone(null); setPractice(true); }} />`}
     <${PrepTailored} key=${(r?.id || "p") + type + cat} ctx=${ctx} skills=${skills || []} />
     <${PrepTalking} resume=${resume} />
     ${isPractice ? html`<${PrepAskCard} type=${askType} />` : html`<div class="grid cols-2 prep-two">
@@ -7819,7 +7971,8 @@ function today_sortGroup(id, all) {
   const ord = (x, y) => at.get(x.key) - at.get(y.key);
   const silent = (t) => (t.kind === "follow" || t.kind === "ghost" ? Apps.daysSilent(t.app) || 0 : 0);
   const time = (t) => (t.round && t.round.at) || Infinity;
-  if (id === "today") return all.slice().sort((x, y) => (x.kind === "thanks" ? 0 : 1) - (y.kind === "thanks" ? 0 : 1) || (time(x) - time(y) || 0) || ord(x, y));
+  const first = (t) => (t.pri < 0 ? -1 : t.kind === "thanks" ? 0 : 1); // a round within 12h beats a thank-you
+  if (id === "today") return all.slice().sort((x, y) => first(x) - first(y) || (time(x) - time(y) || 0) || ord(x, y));
   if (id === "quick") return all.slice().sort((x, y) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || silent(y) - silent(x) || ord(x, y));
   return all;
 }
@@ -7850,7 +8003,7 @@ function today_ghostAll(list) {
   });
 }
 
-function today_NeedsYou({ tasks, fresh, next }) {
+function today_NeedsYou({ tasks, fresh, next, noPrimary }) {
   const [open, setOpen] = useState({});
   const [review, setReview] = useState({});
   const [kbd, setKbd] = useState(false);
@@ -7860,7 +8013,7 @@ function today_NeedsYou({ tasks, fresh, next }) {
   // Keyboard order: shown items, with a batch's rows right after it while Review is open.
   const flat = groups.flatMap((g) => g.shown.flatMap((it) => (it.kind === "ghostBatch" && review[g.id] ? [it, ...it.tasks] : [it])));
   const kref = useRef({}); kref.current = { flat, groups, review };
-  const primaryKey = flat.find((tk) => tk.kind !== "outcome")?.key;
+  const primaryKey = noPrimary ? null : flat.find((tk) => tk.kind !== "outcome")?.key;
 
   // Focus now when the row exists (so fast J J K stays in order), else after the render that adds it.
   const focusRow = (key) => {
@@ -8189,6 +8342,36 @@ function today_Response({ st }) {
 
 // Icons stay neutral; amber only when a task is genuinely late or closing: an intern season that is closing,
 // or a thank-you note past the 24-hour window.
+/* First link in a round's "where" (a video link or an address). */
+function today_whereUrl(w) {
+  const m = String(w || "").match(/\bhttps?:\/\/[^\s<>"]+|\bwww\.[^\s<>"]+/i);
+  return m ? (/^www\./i.test(m[0]) ? "https://" + m[0] : m[0]).replace(/[).,;]+$/, "") : "";
+}
+/* A round starting within 12 hours: pinned above Needs you, so the interview is the first thing you see. */
+function today_nextUp(up) {
+  const x = up.items[0];
+  return x && x.r.at && x.r.at - now() <= 12 * 3600000 ? x : null;
+}
+function today_NextUp({ x }) {
+  const { a, r } = x;
+  const url = today_whereUrl(r.where);
+  const started = r.at <= now();
+  return html`<section class="card td-next" aria-labelledby="td-next-h">
+    <div class="td-next-row">
+      <${Logo} name=${a.company} size="sm" />
+      <div class="td-next-text">
+        <span class="td-next-k" id="td-next-h">Next up<span class="faint"> · ${started ? "started " + fmt.ago(r.at) : fmt.until(r.at)}</span></span>
+        ${today_meta([html`<b>${a.company}</b>`, html`<span class="num">${fmt.time(r.at)}</span>`, roundTitle(r), roundPeople(r)].filter(Boolean), "td-next-line", "div")}
+        ${r.where && !url ? html`<div class="td-next-where truncate muted"><${Icon} name="pin" size=${12} />${r.where}</div>` : null}
+      </div>
+      <div class="td-next-actions">
+        ${url ? html`<a class="btn sm" href=${url} target="_blank" rel="noopener" id="td-next-join" aria-label=${`Join the ${a.company} call (opens in a new tab)`}>Join<${Icon} name="ext" /></a>` : null}
+        <button type="button" class="btn sm primary" id="td-next-notes" onClick=${() => { today_setPrepFocus({ appId: a.id, roundId: r.id, notes: true }); go("prep"); }}>Open notes</button>
+      </div>
+    </div>
+  </section>`;
+}
+
 function today_tone(tk) {
   if (tk.kind === "apply" && tk.tone === "wait") return "wait";
   if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return "wait";
@@ -8211,6 +8394,8 @@ function today_View() {
   const tasks = useMemo(() => computeTasks(s), [s, jobs.status]);
   const st = useMemo(() => computeStats(s, apps), [s]);
   const up = useMemo(() => today_upcoming(apps), [s]);
+  const nextUp = today_nextUp(up);
+  const tasksShown = nextUp ? tasks.filter((tk) => !(tk.kind === "prep" && tk.round && tk.round.id === nextUp.r.id)) : tasks;
   const m = useMemo(() => today_matches(jobs, s.profile, s.apps), [jobs.status, s.profile, s.apps]);
   const fr = useMemo(() => (!apps.length || m?.noProfile ? today_fresh(jobs, s.profile, s.apps) : null), [jobs.status, s.profile, s.apps, apps.length, m]);
   const name = today_firstName(s.profile.name);
@@ -8244,7 +8429,8 @@ function today_View() {
     <div class="split">
       <div class="stack td-col">
         ${!apps.length ? html`<${today_Start} jobs=${jobs} fr=${fr} />` : null}
-        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
+        ${nextUp ? html`<${today_NextUp} x=${nextUp} />` : null}
+        <${today_NeedsYou} tasks=${tasksShown} fresh=${!apps.length} next=${up.items[0]} noPrimary=${!!nextUp} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
         ${apps.length || (m && !m.noProfile) ? html`<${today_NewForYou} jobs=${jobs} m=${m} fr=${fr} />` : null}
       </div>
@@ -8324,14 +8510,14 @@ async function addToCalendar(appId, roundId) {
     return;
   }
   const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
-  if (ok) { Apps.updateRound(appId, roundId, { calendar: "ics" }); toast("Calendar file saved. Open it to add the event."); }
+  if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
 }
 function CalendarButton({ appId, round, size = "sm" }) {
   useCaps();
   if (!round?.at || round.at < now() - DAY) return null;
   const done = round.calendar;
   const doneLabel = done === "google" ? "In calendar" : "Calendar file saved";
-  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"}</${Btn}>`;
+  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} aria-label=${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"}</${Btn}>`;
 }
 
 /* --- js/views/zz-method.js --- */

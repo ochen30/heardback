@@ -23,7 +23,7 @@
 - A cold-visitor test modeled your LinkedIn launch moment.
 - End-to-end suite: 2,428 checks passing at phone and desktop widths, with and without Claude.
 - axe-core: zero WCAG 2 A/AA violations on every screen and overlay, light and dark.
-- Chaos test: 1,900 random clicks and keys with zero errors.
+- Chaos test: 2,500 random clicks and keys with zero errors.
 - Every published version had zero console errors and no horizontal overflow at 375 / 768 / 1440, light and dark.
 
 ## Timeline
