@@ -52,6 +52,7 @@ function plStatus(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
   if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: fmt.dateTime(up.at) };
+  if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
   if (a.stage === "rejected") return { icon: "x", text: `Rejected ${fmt.ago(plStageAt(a, "rejected") || a.lastActivityAt)}` };
@@ -76,6 +77,7 @@ function plNextStep(a, st) {
   const past = (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0];
   if (past && !past.thanked && t - past.at < 2 * DAY) return { kind: "thanks", icon: "send", tone: "info", round: past, short: "Send a thank-you", title: "Send a thank-you note", sub: `Your ${label(past).toLowerCase()} was ${fmt.ago(past.at)}. A short note within 24 hours helps.` };
   if (past) return { kind: "outcome", icon: "flag", round: past, short: "Log the outcome", title: `How did the ${label(past).toLowerCase()} go?`, sub: `It was ${fmt.ago(past.at)}. Log the outcome and a few notes while you remember.` };
+  if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It's no longer in the live listings. Check the company's careers page, or remove it from your board." };
   if (a.stage === "saved") return { kind: "saved", icon: "bolt", short: "Apply", title: "Apply, then mark it applied", sub: `You saved this ${fmt.ago(a.createdAt)}. Early applicants tend to hear back more often.` };
   if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they're interested. Marking it keeps your board honest. You can move it back any time." };
   if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven't heard back. A short, specific note is fine.` };

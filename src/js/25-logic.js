@@ -1,3 +1,8 @@
+/* ===== Listing status: is the posting still live? ===== */
+function listingRemoved(a) {
+  return !!(a && a.jobId && !a.example && jobsStore.status === "ready" && !jobsStore.byId.has(a.jobId));
+}
+
 /* ===== Nudges: what to do today ===== */
 function computeTasks(s = store.get()) {
   const t = now();
@@ -32,6 +37,14 @@ function computeTasks(s = store.get()) {
         const key = `follow:${a.id}`;
         if (!skip(key)) out.push({ key, kind: "follow", pri: 2, app: a, icon: "reply", tone: "wait", title: `Follow up with ${a.company}`, sub: `You applied ${silent} days ago and haven't heard back.`, action: "Draft follow-up" });
       }
+    }
+    if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) {
+      const key = `removed:${a.id}`;
+      if (!skip(key)) out.push({ key, kind: "removed", pri: a.stage === "saved" ? 1 : 3, app: a, icon: "flag", tone: "wait",
+        title: `${a.company} took down the ${a.title || "role"} posting`,
+        sub: a.stage === "saved" ? "It's no longer in the live listings, so it's probably filled or paused." : "The listing closed. If you haven't heard back, a short follow-up is your last good shot.",
+        action: "Review" });
+      if (a.stage === "saved") continue;
     }
     if (a.stage === "saved") {
       const age = Math.floor((t - a.createdAt) / DAY);
