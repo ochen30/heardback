@@ -414,7 +414,7 @@ function today_Upcoming({ up }) {
             <span class="td-up-time num">${fmt.time(r.at)}</span>
             <${Logo} name=${a.company} size="sm" />
             <span class="td-up-main">
-              <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
+              <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${roundTitle(r)}</span>
               <span class="td-up-sub truncate">${roundPeople(r) ? `With ${roundPeople(r)}` : a.title}</span>
             </span>
             ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}

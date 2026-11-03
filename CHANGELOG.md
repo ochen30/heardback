@@ -180,3 +180,6 @@ A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, 
 ### 07:53 PT — v18
 - Spec gap closed: company reply data now shows where people most often stop hearing back (drop-off by stage), once enough people share.
 - QA: end-to-end 2,428 / 2,428; zero console errors at every width and theme.
+
+### 08:03 PT — v19
+- Upcoming uses the same natural round names as the task list ("Technical interview").

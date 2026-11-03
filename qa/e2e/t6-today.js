@@ -156,7 +156,7 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     await page.waitForTimeout(300);
     const upExp = await page.evaluate(() => {
       const t = Date.now(); const it = [];
-      for (const a of Apps.list()) for (const r of a.rounds || []) if (r.at && r.at >= t - 36e5 && r.outcome !== 'cancelled' && !['rejected', 'ghosted'].includes(a.stage)) it.push({ co: a.company, type: ROUND[r.type]?.label || 'Interview', at: r.at });
+      for (const a of Apps.list()) for (const r of a.rounds || []) if (r.at && r.at >= t - 36e5 && r.outcome !== 'cancelled' && !['rejected', 'ghosted'].includes(a.stage)) it.push({ co: a.company, type: roundTitle(r), at: r.at });
       it.sort((x, y) => x.at - y.at);
       return { total: it.length, rows: it.slice(0, 5).map((x) => `${x.co} · ${x.type}`), beyond7: it.slice(0, 5).filter((x) => x.at > t + 7 * 864e5).length };
     });
