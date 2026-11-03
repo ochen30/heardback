@@ -4,7 +4,7 @@
 **This report as a page:** https://claude.ai/artifact/UbZ4zpWbMQZYFJsDEsA8uT
 
 ## What Heardback does
-1. **Real roles:** 7,600 open internship and new-grad roles (8,245 postings, identical repeats shown once) from 1,966 companies, each linking to the employer's own application page.
+1. **Real roles:** 7,617 open internship and new-grad roles (8,263 postings, identical repeats shown once) from 1,966 companies, each linking to the employer's own application page.
 2. **A ghost-job check on every listing,** with the reasons: age, close-and-repost cycles, location blasts and the company's usual time to close. Strong-signal listings are hidden by default, with an honest count.
 3. **A pipeline for every application and interview round.** Paste a recruiter email and it logs itself.
 4. **A Today view** that says what to do: confirm and prep interviews, send thank-yous, follow up, notice taken-down postings, call it ghosted.
@@ -27,6 +27,7 @@
 - Every published version had zero console errors and no horizontal overflow at 375 / 768 / 1440, light and dark.
 
 ## Timeline
+- Final build: v20 at 8:18 AM PT, job data refreshed 8:08 AM.
 - **12:30 AM, Setup and platform limits:** Verified what an Artifact page can and can't do, found that this environment blocks the job-board APIs, and found a reachable real data source. Renamed the app from Ghosted to Heardback.
 - **12:45 AM, Foundations:** Design system (Geist, cool neutrals, one cobalt accent, full dark mode), app shell, command palette, local-first store, nudges engine, data pipeline with ghost signals, competitor scan.
 - **1:05 AM, v1: every screen:** Four agents built Find, Pipeline, Today/Insights and Prep/Onboarding/Settings in parallel. First publish.
