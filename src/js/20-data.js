@@ -57,10 +57,16 @@ const LOC_OPTIONS = [
   { id: "boston", label: "Boston" }, { id: "los angeles", label: "Los Angeles" }, { id: "chicago", label: "Chicago" }, { id: "austin", label: "Austin" },
   { id: "washington dc", label: "Washington, DC" }, { id: "denver", label: "Denver" }, { id: "atlanta", label: "Atlanta" }, { id: "dallas", label: "Dallas" }, { id: "canada", label: "Canada" },
 ];
+/* "Remote" means remote in the US (the data lists "Remote in USA", "Remote in Canada", "Remote in UK"…). */
+function jobRemoteUS(job) {
+  if (!job.r) return false;
+  if (job._rus !== undefined) return job._rus;
+  return (job._rus = (job.l || []).some((l) => /^remote$/i.test(l.trim()) || (/remote/i.test(l) && /\b(usa|us|u\.s\.|united states)\b/i.test(l))));
+}
 function jobInLoc(job, locId) {
   const al = LOC_ALIASES[locId] || [locId];
   const ls = (job.l || []).map((x) => x.toLowerCase());
-  if (locId === "remote") return !!job.r;
+  if (locId === "remote") return jobRemoteUS(job);
   return ls.some((l) => al.some((a) => l.includes(a)));
 }
 
@@ -124,7 +130,7 @@ function fitScore(job, profile) {
   const locs = profile.locations || [];
   if (!locs.length) { score += 14; parts.push({ k: "Location", ok: null, text: "Open to any location" }); }
   else {
-    const hit = locs.find((l) => jobInLoc(job, l)) || (profile.remote && job.r ? "remote" : null);
+    const hit = locs.find((l) => jobInLoc(job, l)) || (profile.remote && jobRemoteUS(job) ? "remote" : null);
     if (hit) { score += 20; parts.push({ k: "Location", ok: true, text: hit === "remote" ? "Remote option" : `In ${LOC_OPTIONS.find((o) => o.id === hit)?.label || hit}` }); }
     else parts.push({ k: "Location", ok: false, text: `${(job.l || [])[0] || "Location"} isn't on your list` });
   }

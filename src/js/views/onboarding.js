@@ -121,7 +121,7 @@ function onbMatches(jobs, p) {
   for (const j of jobs) {
     if (!lv.includes(j.lvl)) continue;
     if (p.roles.length && !p.roles.includes(j.cat)) continue;
-    if (locs.length && !(locs.some((l) => jobInLoc(j, l)) || (p.remote && j.r))) continue;
+    if (locs.length && !(locs.some((l) => jobInLoc(j, l)) || (p.remote && jobRemoteUS(j)))) continue;
     if (!locs.length && !p.remote && j.r && j.nl <= 1 && (j.l || []).every((x) => /remote/i.test(x))) continue;
     if (p.needsSponsor && (j.sp === "no" || j.sp === "citizen")) continue;
     out.push(j);
