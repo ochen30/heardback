@@ -74,3 +74,6 @@ Design review 3 scored v5 at 8.1/10 (from 7.4). Applied:
 - Command palette shows real key chips and names the open application in its group header.
 - Company roles sorted by fit (with a Newest toggle); duplicate "Posted" row removed; Claude actions side by side.
 - Settings/onboarding location counts match Find and say what they count.
+
+### 03:05 PT — v6.1
+- **Share your progress:** a clean 1200×630 card (week, month or all time; light or dark) with applications, replies, interviews, offers, response rate and an 8-week sparkline, plus a modest suggested caption. Counts only real applications, never examples; company names off by default. From Insights or the command palette.
