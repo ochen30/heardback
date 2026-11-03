@@ -83,7 +83,7 @@ function pfParseCSV(text) {
     example: col("example"),
   };
   if (ix.applied < 0) ix.applied = colLike(/appl.*date|date.*appl/);
-  if (ix.company < 0 && ix.title < 0) return { error: "Couldn't find a company or title column. Name the first row's columns company, title, stage, applied date, url, location." };
+  if (ix.company < 0 && ix.title < 0) return { error: "Couldn’t find a company or title column. Name the first row’s columns company, title, stage, applied date, url, location." };
   const get = (r, k) => (ix[k] >= 0 ? (r[ix[k]] || "").trim() : "");
   const apps = []; let skipped = 0;
   for (const r of rows.slice(1)) {
@@ -98,13 +98,13 @@ function pfImportFile(file) {
   if (!file) return;
   if (file.size > 8 * 1024 * 1024) { toast("That file is over 8 MB. Import a smaller backup or CSV."); return; }
   const r = new FileReader();
-  r.onerror = () => toast(`Couldn't read ${file.name}. Try again.`);
+  r.onerror = () => toast(`Couldn’t read ${file.name}. Try again.`);
   r.onload = () => {
     const text = String(r.result || "");
     if (/\.json$/i.test(file.name) || /^\s*[{[]/.test(text)) {
-      let data; try { data = JSON.parse(text); } catch { toast("That JSON file couldn't be read. Use a backup exported from Heardback.", { ms: 6000 }); return; }
+      let data; try { data = JSON.parse(text); } catch { toast("That JSON file couldn’t be read. Use a backup exported from Heardback.", { ms: 6000 }); return; }
       const isBackup = data && typeof data === "object" && !Array.isArray(data) && (data.app === "Heardback" || data.apps && typeof data.apps === "object");
-      if (!isBackup && !Array.isArray(data)) { toast("That file isn't a Heardback backup. Export one from Settings and import that.", { ms: 6000 }); return; }
+      if (!isBackup && !Array.isArray(data)) { toast("That file isn’t a Heardback backup. Export one from Settings and import that.", { ms: 6000 }); return; }
       const rawApps = Array.isArray(data) ? data : Array.isArray(data.apps) ? data.apps : data.apps && typeof data.apps === "object" ? Object.values(data.apps) : [];
       const apps = Object.values(cleanApps(rawApps));
       const bad = rawApps.length - apps.length;
@@ -115,7 +115,7 @@ function pfImportFile(file) {
       const replace = apps.filter((a) => cur[a.id]).length;
       askConfirm({
         title: `Import ${pluralize(apps.length, "application")}?`,
-        body: `They'll be merged with what's here${replace ? `; ${pluralize(replace, "application")} with the same ID will be replaced by the backup's version` : ""}.${hasProfile ? " Your profile and settings will be updated from the backup." : ""}${bad ? ` ${pluralize(bad, "entry", "entries")} couldn't be read and will be skipped.` : ""}`,
+        body: `They’ll be merged with what’s here${replace ? `; ${pluralize(replace, "application")} with the same ID will be replaced by the backup’s version` : ""}.${hasProfile ? " Your profile and settings will be updated from the backup." : ""}${bad ? ` ${pluralize(bad, "entry", "entries")} couldn’t be read and will be skipped.` : ""}`,
         confirmLabel: "Import and merge",
         onConfirm: () => {
           store.set((s) => ({
@@ -146,7 +146,7 @@ function pfDeleteAll() {
   const shared = !!store.get().settings.shareAnon && typeof poolUnshare === "function";
   askConfirm({
     title: "Delete all your data?",
-    body: `This removes every application, round, note, your resume and your settings from this browser.${shared ? " Your shared anonymous reply data is removed too." : ""} It can't be undone. Export a backup first if you might want it later.`,
+    body: `This removes every application, round, note, your resume and your settings from this browser.${shared ? " Your shared anonymous reply data is removed too." : ""} It can’t be undone. Export a backup first if you might want it later.`,
     confirmLabel: "Delete everything",
     danger: true,
     onConfirm: async () => {
@@ -163,7 +163,7 @@ function pfDeleteAll() {
 function PfProfile() {
   const p = useStore((s) => s.profile);
   const locs = p.locations || [];
-  return html`<${PfCard} title="Profile" sub="Your targets shape fit scores, the jobs you see first, and Today's suggestions.">
+  return html`<${PfCard} title="Profile" sub="Your targets shape fit scores, the jobs you see first, and Today’s suggestions.">
     <${PfRow} label="Name" hint="Only used to greet you." id="pf-name">
       <input id="pf-name" class="input pf-input" autocomplete="name" maxlength="40" placeholder="Your name" value=${p.name || ""} onInput=${(e) => pfSetProfile({ name: e.currentTarget.value })} />
     </${PfRow}>
@@ -182,8 +182,8 @@ function PfProfile() {
     <${PfRow} label="Remote">
       <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
     </${PfRow}>
-    <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don't sponsor.">
-      <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I'll need sponsorship" />
+    <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don’t sponsor.">
+      <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I’ll need sponsorship" />
     </${PfRow}>
   </${PfCard}>`;
 }
@@ -246,7 +246,7 @@ function PfData() {
         <label class="btn pf-file"><${Icon} name="upload" />Choose file to import<input id="pf-import" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; pfImportFile(f); }} /></label>
       </div>
     </${PfRow}>
-    <${PfRow} label="Delete all data" hint="Removes everything from this browser. Can't be undone.">
+    <${PfRow} label="Delete all data" hint="Removes everything from this browser. Can’t be undone.">
       <${Btn} cls="danger" icon="trash" onClick=${pfDeleteAll} id="pf-delete">Delete all data</${Btn}>
     </${PfRow}>
   </${PfCard}>`;
@@ -255,7 +255,8 @@ function PfPrivacy() {
   return html`<section class="card pf-card" aria-label="Privacy">
     <div class="card-head"><h2>Privacy</h2></div>
     <div class="card-body stack">
-      <p class="pf-statement">Your applications, notes and resume are stored only in this browser on this device. Nothing is shared unless you turn on anonymous reply data below. Claude features run on your own Claude account and only when you click them.</p>
+      <p class="pf-statement"><b>Stored only in this browser.</b> Your applications, notes and resume stay on this device. Nothing is shared unless you turn on anonymous reply data below.</p>
+      <p class="pf-statement"><b>Claude runs on your own account,</b> and only when you click a Claude feature.</p>
       <ul class="pf-facts">
         <li>No account and no ads.</li>
         <li>Clearing browser data deletes Heardback data. Export a backup occasionally.</li>
@@ -270,9 +271,9 @@ function PfSource() {
   return html`<section class="card pf-card" aria-label="Data source">
     <div class="card-head"><h2>Where listings come from</h2></div>
     <div class="card-body stack">
-      <p class="muted pf-text">Listings come from the <a href="https://github.com/SimplifyJobs" target="_blank" rel="noopener">SimplifyJobs community lists on GitHub</a>. Every listing links to the employer's own application page. Ghost-job signals are estimates from posting history, not facts about any company.</p>
+      <p class="muted pf-text">Listings come from the <a href="https://github.com/SimplifyJobs" target="_blank" rel="noopener">SimplifyJobs community lists on GitHub</a>. Every listing links to the employer’s own application page. Ghost-job signals are estimates from posting history, not facts about any company.</p>
       <div class="row wrap pf-meta">
-        <span class="hint num">${J.status === "ready" ? `${fmt.num(st?.active ?? J.jobs.length)} open listings${st?.companies ? ` from ${fmt.num(st.companies)} companies` : ""}` : J.status === "error" ? "Listings couldn't load" : "Loading listings…"}</span>
+        <span class="hint num">${J.status === "ready" ? `${fmt.num(st?.active ?? J.jobs.length)} open listings${st?.companies ? ` from ${fmt.num(st.companies)} companies` : ""}` : J.status === "error" ? "Listings couldn’t load" : "Loading listings…"}</span>
         ${ts && html`<span class="hint num">Last refreshed ${fmt.dateY(ts)}, ${fmt.time(ts)}</span>`}
       </div>
     </div>
@@ -282,7 +283,7 @@ function PfSource() {
 VIEWS.prefs = function PrefsView() {
   return html`<div class="page pf-page">
     <div class="page-head"><div><h1>Settings</h1><p>Your profile, reminders, and data. Changes save automatically.</p></div></div>
-    ${storage.corrupt && html`<div class="callout wait pf-corrupt" role="alert"><${Icon} name="alert" /><span>Your saved data couldn't be read. A copy was kept in this browser. Import a backup to restore.</span></div>`}
+    ${storage.corrupt && html`<div class="callout wait pf-corrupt" role="alert"><${Icon} name="alert" /><span class="pf-corrupt-text">Your saved data couldn’t be read. A copy was kept in this browser. Import a backup file to restore it.</span><${Btn} size="sm" icon="upload" onClick=${() => document.getElementById("pf-import")?.click()} id="pf-restore">Restore from backup</${Btn}></div>`}
     <div class="pf-layout">
       <div class="stack pf-col">
         <${PfProfile} />

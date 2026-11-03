@@ -80,10 +80,10 @@ async function grabExport(page, btn) {
     // bad files
     await r3.page.setInputFiles('#pf-import', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{not json') });
     await r3.page.waitForTimeout(300);
-    T.check('bad JSON -> toast', /couldn't be read/.test(await r3.page.locator('.toast').last().innerText().catch(() => '')));
+    T.check('bad JSON -> toast', /couldn.t be read/.test(await r3.page.locator('.toast').last().innerText().catch(() => '')));
     await r3.page.setInputFiles('#pf-import', { name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('foo,bar\n1,2') });
     await r3.page.waitForTimeout(300);
-    T.check('CSV without company/title -> toast', /Couldn't find a company/.test(await r3.page.locator('.toast').last().innerText().catch(() => '')));
+    T.check('CSV without company/title -> toast', /Couldn.t find a company/.test(await r3.page.locator('.toast').last().innerText().catch(() => '')));
     T.check('import contexts: console errors', r2.errors.length + r3.errors.length === 0, [...r2.errors, ...r3.errors].join('|'));
     await r2.close(); await r3.close();
     // ---- theme switch ----

@@ -571,6 +571,43 @@ const actions = {
     const bw = await page.locator('.pl-card.sel').first().evaluate((el) => getComputedStyle(el).borderTopWidth);
     log('focused selected card shadow:', sh, 'border', bw);
   },
+  /* BUGS2 P3-2: a key pressed in the same frame as the click goes to the field, never to the drawer */
+  async inlineRace(page) {
+    await actions.drawer(page);
+    const before = await stageOf(page, 'Northwind Labs');
+    await page.click('#pl-loc-v');
+    await page.keyboard.press('5');
+    await wait(page, 100);
+    assert((await stageOf(page, 'Northwind Labs')) === before, `digit typed right after the click stays text (stage ${before})`);
+    const lv = await page.inputValue('#pl-loc').catch(() => '(no input)');
+    assert(lv === '5', `digit lands in the location input (got "${lv}")`);
+    await page.keyboard.press('Escape');
+    await page.click('#pl-salary-v');
+    await page.keyboard.press('Escape');
+    await wait(page, 100);
+    assert(await page.locator('.drawer').count() === 1, 'Escape right after the click cancels the edit, drawer stays open');
+    assert(await page.evaluate(() => document.activeElement.id) === 'pl-salary-v', 'focus returns to the value');
+    await page.click('#pl-salary-v');
+    await page.keyboard.press('Tab');
+    await wait(page, 100);
+    const f = await page.evaluate(() => document.activeElement.id || document.activeElement.className);
+    assert(f !== 'pl-salary-v', `Tab out of an edit moves on (focus: ${f})`);
+  },
+  /* REVIEW4 #3: no caret over the centred dot at 375 on hover or focus */
+  async tableStageFocus(page) {
+    await actions.table(page);
+    const id = await page.evaluate(() => Object.values(store.get().apps).find((a) => a.company === 'Verity Labs').id);
+    await page.hover(`tr[data-row="${id}"]`);
+    await page.focus(`#pl-st-${id}`);
+    const bs = await page.locator(`#pl-st-${id}`).evaluate((el) => getComputedStyle(el).backgroundSize);
+    log('stage select background-size on hover+focus:', bs);
+    if (page.viewportSize().width <= 520) assert(/^0px/.test(bs), 'caret hidden at mobile width');
+  },
+  async parseAssessment(page) {
+    const p = await page.evaluate(() => plParse('From: Coinbase <no-reply@coinbase.example>\nSubject: Coding assessment\n\nHi Alex,\n\nYou have been invited by Coinbase to take the Software Engineer Intern coding assessment. Please complete it within 7 days.'));
+    log('parsed:', JSON.stringify({ kind: p.kind, company: p.company, title: p.title }));
+    assert(p.title === 'Software Engineer Intern', 'assessment invite has a title');
+  },
   async drawerHead(page) {
     await actions.drawer(page);
     const sub = await page.locator('.drawer .pl-dsub').innerText();

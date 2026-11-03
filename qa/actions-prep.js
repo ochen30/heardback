@@ -15,7 +15,17 @@ SKILLS
 Python, Java, SQL, React, TypeScript, PyTorch, Docker, AWS, Git`;
 
 const wait = (p, ms = 300) => p.waitForTimeout(ms);
+/* Every onb* action starts from a clean step 1, so actions can be chained in one run
+   (e.g. today:onbStep1 today:onbStep2 today:onbStep3). Unmount onboarding, clear the targets, remount it. */
+async function onbReset(page) {
+  await page.evaluate(() => store.set((s) => ({ ...s, profile: { ...s.profile, onboarded: true } })));
+  await wait(page, 120);
+  await page.evaluate(() => store.set((s) => ({ ...s, profile: { ...s.profile, onboarded: false, roles: [], levels: [], locations: [], remote: true, needsSponsor: false, name: '', resume: '', skills: [] } })));
+  await page.waitForSelector('#onb-title', { timeout: 4000 });
+  await page.evaluate(() => { const w = document.querySelector('.onboard-wrap'); w && w.scrollTo(0, 0); });
+}
 async function step1(page) {
+  await onbReset(page);
   await page.getByRole('button', { name: 'Software', exact: true }).click();
   await page.getByRole('button', { name: 'Data & AI', exact: true }).click();
   await page.check('#onb-loc-sf-bay-area');
@@ -59,7 +69,13 @@ module.exports = {
     const n = await page.locator('.onb-sugg-btn').count();
     console.log('suggestions for "ja":', n, await page.locator('.onb-sugg-btn').allTextContents());
   },
-  async onbStep2Empty(page) { await page.click('#onb-next'); await wait(page); },
+  async onbStep2Empty(page) { await onbReset(page); await page.click('#onb-next'); await wait(page); },
+  async onbCorrupt(page) {
+    await page.evaluate(() => { storage.corrupt = true; });
+    await onbReset(page);
+    console.log('[prep]', (await page.locator('.onb-corrupt #onb-restore').count()) ? 'ok' : 'FAIL', 'onboarding offers Restore from backup when saved data was unreadable');
+    await page.evaluate(() => { storage.corrupt = false; });
+  },
   async onbStep3(page) {
     await step1(page); await page.click('#onb-next'); await wait(page);
     await page.fill('#onb-res-text', RESUME); await page.click('#onb-next'); await wait(page, 1200);

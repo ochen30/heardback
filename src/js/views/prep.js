@@ -7,26 +7,26 @@
 const PREP_BANK = {
   recruiter: [
     { q: "Walk me through your background.", t: "Two minutes, in order: school, one or two relevant experiences, why this role now." },
-    { q: "Why are you interested in this role?", t: "Connect something specific about the role to something you've done or want to learn." },
+    { q: "Why are you interested in this role?", t: "Connect something specific about the role to something you’ve done or want to learn." },
     { q: "What do you know about what we do?", t: "One accurate sentence about the product and who uses it. Check their site before the call." },
     { q: "What are you looking for in your next role?", t: "Name two or three things: the kind of work, the team, how you want to grow." },
-    { q: "What's your timeline, and are you interviewing elsewhere?", t: "Be honest and brief. Mention deadlines from other offers if you have them." },
+    { q: "What’s your timeline, and are you interviewing elsewhere?", t: "Be honest and brief. Mention deadlines from other offers if you have them." },
     { q: "When could you start, and where would you be based?", t: "Know your graduation date or term dates and your location preferences." },
-    { q: "Will you need visa sponsorship now or in the future?", t: "Answer plainly. Recruiters ask this early so nobody's time is wasted." },
-    { q: "Tell me about a project you're proud of.", t: "Short version: the problem, what you built, one result. Save the detail for later rounds." },
-    { q: "What are your compensation expectations?", t: "It's fine to ask for their range first, or give a researched range rather than one number." },
+    { q: "Will you need visa sponsorship now or in the future?", t: "Answer plainly. Recruiters ask this early so nobody’s time is wasted." },
+    { q: "Tell me about a project you’re proud of.", t: "Short version: the problem, what you built, one result. Save the detail for later rounds." },
+    { q: "What are your compensation expectations?", t: "It’s fine to ask for their range first, or give a researched range rather than one number." },
     { q: "Do you have any questions for me?", t: "Ask about the interview process and what the team is working on." },
   ],
   behavioral: [
     { q: "Tell me about a time you worked through a disagreement on a team.", t: "Show you listened, found the real issue, and kept the relationship intact." },
-    { q: "Describe a project that didn't go as planned. What did you do?", t: "Own your part, explain how you adjusted, and what you'd do differently." },
+    { q: "Describe a project that didn’t go as planned. What did you do?", t: "Own your part, explain how you adjusted, and what you’d do differently." },
     { q: "Tell me about a time you had to learn something quickly.", t: "How you learned, not just that you did. End with what you shipped with it." },
     { q: "Give an example of when you took initiative without being asked.", t: "Why you noticed the problem, what you did, and the effect on others." },
     { q: "Tell me about a mistake you made and how you handled it.", t: "A real mistake, caught and fixed, plus the habit you changed afterwards." },
     { q: "Describe a time you had several deadlines at once.", t: "How you prioritized and communicated. Be concrete about the trade-off." },
     { q: "Tell me about a time you received critical feedback.", t: "Show you took it seriously and changed something visible." },
     { q: "Describe a time you led a group or a piece of work.", t: "Leadership without a title counts: organizing, unblocking, deciding." },
-    { q: "Tell me about the hardest problem you've solved.", t: "Make the difficulty clear first, then your approach, then the outcome." },
+    { q: "Tell me about the hardest problem you’ve solved.", t: "Make the difficulty clear first, then your approach, then the outcome." },
     { q: "Why do you want to work here, and why this team?", t: "Specific reasons tied to the work, not the brand or perks." },
     { q: "Where do you want to be in a few years?", t: "Show direction and ambition that fits what this role can offer." },
   ],
@@ -39,55 +39,55 @@ const PREP_BANK = {
     { q: "Return the k most frequent elements in a list.", t: "Count with a map, then a heap or bucket sort. Compare the trade-offs." },
     { q: "Check whether a binary tree is a valid binary search tree.", t: "Pass min/max bounds down, or use an in-order traversal." },
     { q: "Design a URL shortener.", t: "Clarify scale, then IDs, storage, redirects, and caching. Keep it simple first." },
-    { q: "What happens when you type a URL into a browser and press Enter?", t: "DNS, TCP/TLS, HTTP request, server, response, rendering. Go deep where you're strongest." },
+    { q: "What happens when you type a URL into a browser and press Enter?", t: "DNS, TCP/TLS, HTTP request, server, response, rendering. Go deep where you’re strongest." },
     { q: "Walk me through a bug that took you a long time to find.", t: "How you narrowed it down matters more than the bug itself." },
     { q: "How would you test a function you just wrote?", t: "Normal cases, edge cases, invalid input. Mention automating them." },
   ],
   data: [
-    { q: "Explain the bias-variance trade-off.", t: "Use one concrete model example and how you'd detect each problem." },
+    { q: "Explain the bias-variance trade-off.", t: "Use one concrete model example and how you’d detect each problem." },
     { q: "How would you handle a dataset with heavy class imbalance?", t: "Better metrics first (precision/recall, PR-AUC), then resampling or class weights." },
     { q: "Write a SQL query for the top three products by revenue in each category.", t: "Window function with ROW_NUMBER or RANK, partitioned by category. Ask how ties work." },
     { q: "How would you design an A/B test for a new feature?", t: "Hypothesis, one primary metric, sample size, duration, and guardrail metrics." },
-    { q: "What's the difference between L1 and L2 regularization?", t: "L1 pushes weights to zero (sparsity), L2 shrinks them smoothly." },
-    { q: "How do you deal with missing data?", t: "First ask why it's missing. Then drop, impute, or model it, and say what each costs." },
+    { q: "What’s the difference between L1 and L2 regularization?", t: "L1 pushes weights to zero (sparsity), L2 shrinks them smoothly." },
+    { q: "How do you deal with missing data?", t: "First ask why it’s missing. Then drop, impute, or model it, and say what each costs." },
     { q: "How would you evaluate a classification model?", t: "Pick metrics that match the cost of each error. Mention validation and leakage." },
     { q: "Explain how gradient descent works.", t: "Loss, gradient, learning rate. Mention batch vs. stochastic and why it matters." },
     { q: "Walk me through a model or analysis you built end to end.", t: "Problem, data, baseline, what you tried, how you measured, what changed." },
-    { q: "How would you explain a p-value to someone non-technical?", t: "How surprising the data would be if there were no real effect. Avoid 'probability it's true'." },
+    { q: "How would you explain a p-value to someone non-technical?", t: "How surprising the data would be if there were no real effect. Avoid “probability it’s true”." },
     { q: "A key metric dropped 10% overnight. How would you investigate?", t: "Check data issues first, then segment by time, platform, region, and recent changes." },
   ],
   product: [
-    { q: "What's a product you use often, and how would you improve it?", t: "Pick a user, a real problem, one change, and how you'd measure it." },
-    { q: "How would you decide what to build next with limited engineering time?", t: "Tie options to goals, estimate impact and effort, and say what you'd cut." },
+    { q: "What’s a product you use often, and how would you improve it?", t: "Pick a user, a real problem, one change, and how you’d measure it." },
+    { q: "How would you decide what to build next with limited engineering time?", t: "Tie options to goals, estimate impact and effort, and say what you’d cut." },
     { q: "Design a product for first-year college students to find study groups.", t: "Clarify users and goals, list pain points, pick one, sketch a simple solution." },
     { q: "Daily active users dropped 15% last week. What do you do?", t: "Rule out tracking issues, then segment. Ask about launches and seasonality." },
     { q: "How would you measure the success of a new feature?", t: "One north-star metric, a few supporting metrics, and a guardrail." },
-    { q: "Tell me about a time you used data to change someone's mind.", t: "What they believed, what you showed, and what happened next." },
+    { q: "Tell me about a time you used data to change someone’s mind.", t: "What they believed, what you showed, and what happened next." },
     { q: "How do you work with engineers and designers when you disagree?", t: "Show you start from the user problem and use evidence, not authority." },
     { q: "Estimate how many rideshare trips happen in a large city on a weekday.", t: "State assumptions, structure the math, sanity-check the result." },
     { q: "What makes a product good, in your view?", t: "A clear point of view with one example you can defend." },
     { q: "Walk me through a launch you were part of.", t: "Your role, the goal, a hard decision, and what the numbers showed." },
   ],
   quant: [
-    { q: "You flip a fair coin until you get two heads in a row. What's the expected number of flips?", t: "Set up states and solve the equations. The answer is 6." },
-    { q: "What's the expected value of the maximum of two fair dice rolls?", t: "Count outcomes by maximum value. Show the method, then the number (161/36)." },
+    { q: "You flip a fair coin until you get two heads in a row. What’s the expected number of flips?", t: "Set up states and solve the equations. The answer is 6." },
+    { q: "What’s the expected value of the maximum of two fair dice rolls?", t: "Count outcomes by maximum value. Show the method, then the number (161/36)." },
     { q: "Explain what a p-value and a confidence interval tell you.", t: "Precise definitions plus one sentence on how people misread them." },
     { q: "How would you test whether a trading signal has real predictive power?", t: "Out-of-sample testing, transaction costs, multiple-testing risk, look-ahead bias." },
-    { q: "What's the difference between correlation and covariance?", t: "Covariance has units, correlation is scaled to [-1, 1]. Note what neither captures." },
+    { q: "What’s the difference between correlation and covariance?", t: "Covariance has units, correlation is scaled to [-1, 1]. Note what neither captures." },
     { q: "Explain linear regression assumptions and what happens when they break.", t: "Linearity, independence, constant variance, normal errors. Give one fix for each." },
     { q: "Implement a function to compute a moving average over a stream of prices.", t: "Running sum with a queue for O(1) per update. Discuss memory." },
     { q: "Estimate how many piano tuners work in a major city.", t: "Structure, round sensibly, and check the order of magnitude." },
-    { q: "What's an option, and what affects its price?", t: "Underlying price, strike, time, volatility, rates. Intuition beats formulas here." },
-    { q: "Walk me through a statistics or modeling project you've done.", t: "Question, data, method, how you validated it, and the result." },
+    { q: "What’s an option, and what affects its price?", t: "Underlying price, strike, time, volatility, rates. Intuition beats formulas here." },
+    { q: "Walk me through a statistics or modeling project you’ve done.", t: "Question, data, method, how you validated it, and the result." },
     { q: "Mental math: what is 17 × 24, and 7/8 as a percentage?", t: "Speed and accuracy. Say your steps out loud so they can follow." },
   ],
   hardware: [
-    { q: "Explain the difference between a microcontroller and a microprocessor.", t: "Integrated memory and peripherals versus external. Say where you'd use each." },
+    { q: "Explain the difference between a microcontroller and a microprocessor.", t: "Integrated memory and peripherals versus external. Say where you’d use each." },
     { q: "What is a race condition, and how do you prevent one in embedded code?", t: "Shared state with interrupts or threads. Mention volatile, critical sections, atomics." },
     { q: "How does an interrupt work, and what belongs in an interrupt handler?", t: "Keep handlers short: set a flag or buffer data, do the work elsewhere." },
     { q: "Explain setup and hold time.", t: "Why they exist, what happens on a violation, and how timing is closed." },
-    { q: "Walk me through how you'd debug a board that doesn't power on.", t: "Visual check, rails with a multimeter, current draw, then one block at a time." },
-    { q: "What's the difference between I2C, SPI, and UART?", t: "Wires, speed, addressing, and when you'd pick each one." },
+    { q: "Walk me through how you’d debug a board that doesn’t power on.", t: "Visual check, rails with a multimeter, current draw, then one block at a time." },
+    { q: "What’s the difference between I2C, SPI, and UART?", t: "Wires, speed, addressing, and when you’d pick each one." },
     { q: "Design a finite state machine for a traffic light.", t: "States, transitions, timing, and a pedestrian button input." },
     { q: "What does a decoupling capacitor do, and where do you place it?", t: "Supplies local current and filters noise. As close to the power pin as you can." },
     { q: "Write a function to set, clear, and toggle a bit in a register.", t: "Bitwise OR, AND with NOT, and XOR with a mask." },
@@ -95,12 +95,12 @@ const PREP_BANK = {
   ],
 };
 const PREP_ASK = {
-  recruiter: ["What does the rest of the interview process look like, and how long does it usually take?", "What does a typical first few months look like for someone in this role?", "What team would I be on, and what is it working on now?", "What do people who do well in this role have in common?", "Is there anything in my background you'd like me to clarify?"],
-  behavioral: ["What does success look like in this role after six months?", "How does the team give feedback, and how often?", "What's something the team changed recently because of feedback?", "How are projects chosen and prioritized?", "What do you enjoy most about working here?"],
-  technical: ["What does the team's tech stack look like, and why was it chosen?", "How does code review work on your team?", "What's a recent technical problem the team solved that you're proud of?", "How do new hires get up to speed on the codebase?", "How do you balance shipping quickly with paying down technical debt?"],
-  case: ["How do product decisions usually get made on your team?", "Which metrics does the team watch most closely?", "Can you tell me about a recent decision that changed because of user research or data?", "How do PMs, engineers, and designers split responsibilities here?", "What's the biggest open question for the product right now?"],
-  onsite: ["What would my first project likely be?", "How is mentorship set up for new hires or interns?", "What's the biggest challenge the team faces this year?", "How does the team celebrate wins or learn from misses?", "What's one thing you'd change about working here if you could?"],
-  other: ["What would you want me to accomplish in the first month?", "How does the team measure good work?", "What's the best part of working on this team?", "What are the next steps after this conversation?"],
+  recruiter: ["What does the rest of the interview process look like, and how long does it usually take?", "What does a typical first few months look like for someone in this role?", "What team would I be on, and what is it working on now?", "What do people who do well in this role have in common?", "Is there anything in my background you’d like me to clarify?"],
+  behavioral: ["What does success look like in this role after six months?", "How does the team give feedback, and how often?", "What’s something the team changed recently because of feedback?", "How are projects chosen and prioritized?", "What do you enjoy most about working here?"],
+  technical: ["What does the team’s tech stack look like, and why was it chosen?", "How does code review work on your team?", "What’s a recent technical problem the team solved that you’re proud of?", "How do new hires get up to speed on the codebase?", "How do you balance shipping quickly with paying down technical debt?"],
+  case: ["How do product decisions usually get made on your team?", "Which metrics does the team watch most closely?", "Can you tell me about a recent decision that changed because of user research or data?", "How do PMs, engineers, and designers split responsibilities here?", "What’s the biggest open question for the product right now?"],
+  onsite: ["What would my first project likely be?", "How is mentorship set up for new hires or interns?", "What’s the biggest challenge the team faces this year?", "How does the team celebrate wins or learn from misses?", "What’s one thing you’d change about working here if you could?"],
+  other: ["What would you want me to accomplish in the first month?", "How does the team measure good work?", "What’s the best part of working on this team?", "What are the next steps after this conversation?"],
 };
 const PREP_CAT_KEY = { Software: "software", "Data & AI": "data", Product: "product", Quant: "quant", Hardware: "hardware" };
 const PREP_PRACTICE_TYPES = [{ id: "recruiter", label: "Recruiter" }, { id: "behavioral", label: "Behavioral" }, { id: "technical", label: "Technical" }, { id: "case", label: "Case" }];
@@ -131,10 +131,10 @@ function prepQuestions(type, cat) {
 const PREP_VERBS = /^(built|led|designed|developed|created|launched|shipped|implemented|reduced|increased|improved|optimized|automated|scaled|migrated|analyzed|won|grew|cut|saved|mentored|managed|founded|organized|delivered|architected|engineered|deployed|trained|researched|wrote|published|redesigned|streamlined|owned|drove|co-?founded|prototyped|integrated|refactored|accelerated|coordinated|taught|presented)\b/i;
 const PREP_USE = [
   [/^(led|managed|mentored|organized|coordinated|founded|co-?founded|owned|drove|taught)/i, "leadership or ownership questions"],
-  [/^(reduced|cut|optimized|improved|streamlined|accelerated|refactored|saved|automated)/i, "\"Tell me about improving something\""],
-  [/^(built|shipped|launched|designed|developed|created|implemented|architected|engineered|deployed|prototyped|integrated)/i, "\"A project you're proud of\""],
-  [/^(analyzed|researched|trained|published|wrote|presented)/i, "technical deep dives and \"walk me through your work\""],
-  [/^(won|grew|increased|scaled|delivered)/i, "\"Your biggest impact\""],
+  [/^(reduced|cut|optimized|improved|streamlined|accelerated|refactored|saved|automated)/i, "“Tell me about improving something”"],
+  [/^(built|shipped|launched|designed|developed|created|implemented|architected|engineered|deployed|prototyped|integrated)/i, "“A project you’re proud of”"],
+  [/^(analyzed|researched|trained|published|wrote|presented)/i, "technical deep dives and “walk me through your work”"],
+  [/^(won|grew|increased|scaled|delivered)/i, "“Your biggest impact”"],
 ];
 function prepTalkingPoints(resume) {
   if (!resume) return [];
@@ -149,7 +149,7 @@ function prepTalkingPoints(resume) {
     const strong = x.l.match(/\$\d[\d,.]*\s?[kKmMbB]?\b|\d[\d,.]*\s?%|\b\d[\d,.]*x\b/g) || [];
     const plain = x.l.match(/\b\d[\d,.]*\b/);
     const metric = strong.length >= 2 ? `${strong[0]} to ${strong[1]}` : strong[0] || null;
-    const use = (PREP_USE.find(([re]) => re.test(x.l)) || [null, "behavioral questions and \"tell me about yourself\""])[1];
+    const use = (PREP_USE.find(([re]) => re.test(x.l)) || [null, "behavioral questions and “tell me about yourself”"])[1];
     return { text: x.l, metric, plain: !metric && plain ? plain[0] : null, use };
   });
 }
@@ -228,7 +228,7 @@ function PrepPractice({ questions, ctx, onExit }) {
     ctl.current?.abort();
     const ac = new AbortController(); ctl.current = ac;
     setBusy(true); setErr("");
-    const prompt = `You are a calm, experienced interview coach. A candidate is practicing for a ${ctx.round} interview for a ${ctx.title || ctx.cat + " role"}.\n\nQuestion: ${q.q}\n\nTheir answer outline:\n"""\n${outline.slice(0, 4000)}\n"""\n\nGive concise, specific, kind feedback as exactly three short bullets, each starting with its label:\n- What worked: ...\n- What to tighten: ...\n- A stronger opening line: "..."\nNo preamble, no headings, under 110 words total. Don't invent facts about the candidate.`;
+    const prompt = `You are a calm, experienced interview coach. A candidate is practicing for a ${ctx.round} interview for a ${ctx.title || ctx.cat + " role"}.\n\nQuestion: ${q.q}\n\nTheir answer outline:\n"""\n${outline.slice(0, 4000)}\n"""\n\nGive concise, specific, kind feedback as exactly three short bullets, each starting with its label:\n- What worked: ...\n- What to tighten: ...\n- A stronger opening line: "..."\nNo preamble, no headings, under 110 words total. Don’t invent facts about the candidate.`;
     try {
       const r = await askClaude(prompt, { signal: ac.signal, onText: (x) => setFb((f) => ({ ...f, [i]: x.text })) });
       setFb((f) => ({ ...f, [i]: r.text }));
@@ -326,8 +326,8 @@ function PrepTalking({ resume }) {
   return html`<div class="card">
     <div class="card-head"><h3>Your talking points</h3><span class="spacer"></span>${resume && html`<${Btn} size="sm" kind="ghost" icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}>`}</div>
     <div class="card-body">
-      ${!resume ? html`<div class="prep-cta"><p class="muted">Add your resume and we'll pull out the lines with real results, ready to turn into stories.</p><${Btn} icon="doc" onClick=${() => openModal("resume")} id="prep-add-resume">Add your resume</${Btn}></div>`
-        : !pts.length ? html`<div class="prep-cta"><p class="muted">We couldn't find lines with numbers or action verbs. Lines like "Built X that cut Y by 30%" make the best stories.</p><${Btn} icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}></div>`
+      ${!resume ? html`<div class="prep-cta"><p class="muted">Add your resume and we’ll pull out the lines with real results, ready to turn into stories.</p><${Btn} icon="doc" onClick=${() => openModal("resume")} id="prep-add-resume">Add your resume</${Btn}></div>`
+        : !pts.length ? html`<div class="prep-cta"><p class="muted">We couldn’t find lines with numbers or action verbs. Lines like "Built X that cut Y by 30%" make the best stories.</p><${Btn} icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}></div>`
         : html`<div class="prep-star-guide">
             <span class="faint">Turn each line into a two-minute story:</span>
             <span><b>S</b>ituation, what was at stake</span><span><b>T</b>ask, what you owned</span><span><b>A</b>ction, the steps that were yours</span><span><b>R</b>esult, the number</span>
@@ -369,7 +369,7 @@ function PrepAskCard({ type }) {
 
 /* ---------- Mock interview with Claude ----------
    The page keeps the turns. Standing instructions travel in the leading user turn; each later user turn is
-   the candidate's answer plus a short pacing note the candidate never sees. Scorecard is a separate JSON call. */
+   the candidate’s answer plus a short pacing note the candidate never sees. Scorecard is a separate JSON call. */
 const PREP_MOCK_LENGTHS = [{ id: 3, label: "3 questions" }, { id: 5, label: "5 questions" }];
 const prepIsMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
 
@@ -403,14 +403,14 @@ Context
 - Company: ${m.company ? `${m.company}. Do not state or invent anything about this company: its products, teams, culture, values, or interview process. Keep questions general to the role.` : "none. This is general practice, so do not name a company."}
 - Role: ${m.title || m.cat + " role"} (${m.cat}, early career: internship or new grad)
 - Round: ${m.roundLabel}. ${prepMockStyle(m.type, m.cat)}
-- Candidate's resume${res ? `:\n"""\n${res}\n"""` : ": not provided. Ask about their experience instead of assuming any."}
+- Candidate’s resume${res ? `:\n"""\n${res}\n"""` : ": not provided. Ask about their experience instead of assuming any."}
 
 How to run the interview
 - There are ${n} questions in total. Ask exactly one question per message. A follow-up that probes the previous answer counts as the next question.
 - Be kind but rigorous, like a good real interviewer: warm, specific, professional, no flattery.
 - After each answer, give 1 to 2 sentences of honest feedback on it (what landed, what was missing), then ask the next question.
 - Use the resume to ask about real projects when it suits the round. Never invent experience, numbers or details the candidate has not given.
-- If the candidate says they don't know or asks for a hint, give one small nudge, then move on.
+- If the candidate says they don’t know or asks for a hint, give one small nudge, then move on.
 - Plain text only. No markdown, headings, bullet points, or speaker labels. Keep each message under 90 words.
 
 Begin now with one short sentence of greeting, then question 1.`;
@@ -443,7 +443,7 @@ function prepMockCard(r) {
 function PrepMockTurn({ t, live }) {
   const me = t.role === "user";
   return html`<li class=${cx("prep-mock-turn", me ? "me" : "them")}>
-    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html`<span class="faint"> · stopped</span>`}</span>
+    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html` <span class="faint sep-item"><span aria-hidden="true">·</span> stopped</span>`}</span>
     <p class="prep-mock-text">${t.text}${live && html`<span class="prep-mock-caret" aria-hidden="true"></span>`}</p>
   </li>`;
 }
@@ -513,7 +513,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
       const next = [...turnsRef.current, { role: "assistant", text: partial, stopped: true }];
       setTurns(next);
       if (next.filter((t) => t.role === "user").length >= n) return score(next, m);
-    } else setErr("Stopped. Ask Claude again when you're ready.");
+    } else setErr("Stopped. Ask Claude again when you’re ready.");
     requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
   };
 
@@ -559,7 +559,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     const add = prepMockSummary(m, card, answered);
     Apps.updateRound(a.id, r.id, { prep: (cur.prep || "").trim() ? `${cur.prep.trimEnd()}\n\n${add}` : add });
     setSaved(true); onSaved && onSaved();
-    toast("Added the scorecard to this round's prep notes");
+    toast("Added the scorecard to this round’s prep notes");
   };
 
   const onKey = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } };
@@ -595,14 +595,16 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     <div class="card-head prep-mock-head">
       <h3 ref=${headRef} tabindex="-1">${phase === "end" ? "Mock interview scorecard" : "Mock interview"}</h3>
       <span class="spacer"></span>
-      ${phase !== "end" && html`<span class="prep-count num" aria-live="polite">${phase === "scoring" ? "Scoring" : `Question ${shownQ} of ${n}`}</span>`}
+      ${phase !== "end" && html`<span class="prep-mock-prog">
+        <span class="prep-count num" aria-live="polite">${phase === "scoring" ? "Scoring" : `Question ${shownQ} of ${n}`}</span>
+        <span class="prep-score-dots prep-mock-ticks" aria-hidden="true">${Array.from({ length: n }, (_, i) => html`<i key=${i} class=${i < (phase === "scoring" ? n : answered) ? "on" : i === shownQ - 1 ? "cur" : undefined}></i>`)}</span>
+      </span>`}
       ${live && html`<${Btn} size="sm" kind="ghost" icon="flag" onClick=${finishEarly} id="prep-mock-end"><span class="hide-sm">${answered ? "End and score" : "End"}</span><span class="show-sm">End</span></${Btn}>`}
     </div>
-    ${phase !== "end" && html`<div class="prep-mock-progress" aria-hidden="true"><i style=${`width:${Math.round(((phase === "scoring" ? n : answered) / n) * 100)}%`}></i></div>`}
     <div class="card-body prep-mock-body">
       ${phase === "end"
         ? html`<${PrepMockScore} card=${card} />
-          <details class="prep-mock-details"><summary>Transcript<span class="faint num"> · ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
+          <details class="prep-mock-details"><summary>Transcript <span class="faint num sep-item"><span aria-hidden="true">·</span> ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
         : transcript}
       ${statusRow}
       ${err && html`<div class="callout wait prep-mock-err" role="alert"><${Icon} name="alert" /><span class="prep-mock-err-text">${err}</span><${Btn} size="sm" icon="refresh" onClick=${retry} id="prep-mock-retry">${phase === "scoring" ? "Try the scorecard again" : "Ask again"}</${Btn}></div>`}
@@ -685,7 +687,7 @@ function PrepWorkspace({ a, r }) {
             <${Logo} name=${a.company} size="lg" />
             <div class="prep-head-text">
               <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2></div>
-              <span class="prep-role">${a.title}<span class="prep-role-type"> · ${ROUND[r.type]?.label || "Interview"}</span></span>
+              <span class="prep-role">${a.title} <span class="prep-role-type sep-item"><span aria-hidden="true">·</span> ${ROUND[r.type]?.label || "Interview"}</span></span>
             </div>
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
@@ -694,7 +696,7 @@ function PrepWorkspace({ a, r }) {
             </div>
           </div>
           <dl class="prep-facts">
-            <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>· ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
+            <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint sep-item", r.at > now() && r.at - now() < DAY && "prep-soon")}><span aria-hidden="true">·</span> ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
@@ -734,7 +736,7 @@ VIEWS.prep = function PrepView() {
   }
   const value = sel?.practice ? "practice" : sel ? `${sel.a.id}|${sel.r.id}` : "";
   return html`<div class="page">
-    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? `${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? ` · next ${fmt.until(up[0].r.at)}` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
+    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? html`${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? html` <span class="sep-item"><span aria-hidden="true">·</span> next ${fmt.until(up[0].r.at)}</span>` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
 </div>
     <div class="prep-layout">
       <aside class="prep-side">

@@ -6,7 +6,7 @@ const SHARE_THEMES = [{ id: "light", label: "Light", icon: "sun" }, { id: "dark"
 const SHARE_TOKENS = ["--bg", "--surface", "--surface-2", "--line", "--line-strong", "--fg", "--fg-2", "--fg-3", "--accent", "--accent-fg", "--accent-soft", "--ok"];
 
 /* Read the light and dark token sets straight from styles.css, so the card always matches the app.
-   Falls back to the currently computed tokens if the rules can't be read. */
+   Falls back to the currently computed tokens if the rules can’t be read. */
 let share_tokenCache = null;
 function share_tokens(theme) {
   if (!share_tokenCache) {
@@ -254,14 +254,14 @@ MODALS.share = function ShareModal() {
 
   const saveImage = async () => {
     if (!img) return;
-    if (!caps.downloads) { toast("Downloads aren't available here. Right-click or long-press the preview to save the image."); return; }
+    if (!caps.downloads) { toast("Downloads aren’t available here. Right-click or long-press the preview to save the image."); return; }
     await saveFile("heardback-progress.png", img.blob, "image/png");
   };
 
   if (!d.hasReal) {
     return html`<${Modal} title="Share your progress" onClose=${closeModal} size="lg share-modal">
       <${Empty} icon="send" title="Add a real application to make your card" action=${html`<${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}>`}>
-        Your card only counts applications you've added yourself. Example data is never included.
+        Your card only counts applications you’ve added yourself. Example data is never included.
       </${Empty}>
     </${Modal}>`;
   }

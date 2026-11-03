@@ -64,7 +64,7 @@ function stats_observations(s, apps, st, jobsById) {
   if (weak) out.push({ key: "rounds", icon: "prep", tone: "accent", text: `${ROUND[weak.type]?.label || "These"} rounds are your toughest so far: you passed ${weak.p} of ${weak.d}.` });
   else if (decided >= 3) {
     const passed = typed.reduce((x, y) => x + y.p, 0);
-    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You've passed ${passed} of ${decided} interview rounds with a logged outcome.` });
+    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You’ve passed ${passed} of ${decided} interview rounds with a logged outcome.` });
   }
 
   // 5. Reply timing vs. who is still waiting
@@ -136,7 +136,7 @@ function stats_WeeklyChart({ weeks }) {
         <text x=${m.l - 8} y=${y(v) + 4} text-anchor="end">${v}</text>
       </g>`)}
       ${hi != null && html`<rect class="st-band" x=${xc(hi) - band / 2 + 2} y=${m.t - 6} width=${band - 4} height=${H - m.t + 4} rx="4" />`}
-      ${weeks.map((x, i) => html`<path key=${"b" + i} class="st-bar" d=${bar(i, x.applied)} />`)}
+      ${weeks.map((x, i) => html`<path key=${"b" + i} class=${cx("st-bar", i === last && "now")} d=${bar(i, x.applied)} />`)}
       ${weeks.map((x, i) => (i % every === (last % every) ? html`<text key=${"x" + i} class=${cx("st-xl", i === last && "now")} x=${xc(i)} y=${yx} text-anchor="middle">${lbl(x, i)}</text>` : null))}
       ${weeks[last].applied > 0 && html`<text class="st-val" x=${xc(last)} y=${y(weeks[last].applied) - 8} text-anchor="middle">${weeks[last].applied}</text>`}
       <line class="grid-line" x1=${0} x2=${w - m.r} y1=${yr - 18} y2=${yr - 18} />
@@ -150,7 +150,7 @@ function stats_WeeklyChart({ weeks }) {
     </svg>
     ${tip && html`<div class="st-tip" style=${`left:${clamp(xc(hi), 70, w - 70)}px;top:${y(tip.applied) - 12}px`}>
       <span>${hi === last ? "This week" : "Week of " + fmt.date(tip.start)}</span>
-      <span class="st-tip-row"><b>${tip.applied}</b> applied · <b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span>
+      <span class="st-tip-row"><b>${tip.applied}</b> applied <span aria-hidden="true">·</span> <b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span>
     </div>`}
     <table class="sr"><caption>Applications and replies per week</caption><thead><tr><th>Week of</th><th>Applied</th><th>Replies</th></tr></thead>
       <tbody>${weeks.map((x) => html`<tr key=${x.start}><td>${fmt.date(x.start)}</td><td>${x.applied}</td><td>${x.replies}</td></tr>`)}</tbody></table>
@@ -162,8 +162,8 @@ function stats_Kpis({ st, saved }) {
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent · ${saved} saved · ${st.thisWeek} this week</span></div>
-    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep"> · </span>${smallTag}` : null}</span></div>
+    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent <span class="sep-item"><span aria-hidden="true">·</span> ${saved} saved</span> <span class="sep-item"><span aria-hidden="true">·</span> ${st.thisWeek} this week</span></span></div>
+    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep" aria-hidden="true"> · </span>${smallTag}` : null}</span></div>
     <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
   </section>`;
@@ -219,7 +219,7 @@ function stats_Stall({ obs, applied }) {
     ${applied < need
       ? html`<div class="st-unlock">
           <strong>Insights unlock after ${need} applications</strong>
-          <span class="muted td-small">You've sent ${applied}. ${need - applied} more and Heardback can start pointing out where applications stall.</span>
+          <span class="muted td-small">You’ve sent ${applied}. ${need - applied} more and Heardback can start pointing out where applications stall.</span>
           <${Meter} value=${applied} max=${need} />
           <div><${Btn} size="sm" icon="find" onClick=${() => go("find")}>Find roles to apply to</${Btn}></div>
         </div>`
@@ -228,7 +228,7 @@ function stats_Stall({ obs, applied }) {
             <span class="task-ico"><${Icon} name=${o.icon} /></span>
             <p>${o.text}</p>
           </div>`)}</div>`
-        : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there's enough behind them.</span></div>`}
+        : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there’s enough behind them.</span></div>`}
   </section>`;
 }
 
@@ -238,13 +238,13 @@ function stats_Radar({ apps, jobs }) {
   const flagged = ready ? linked.map((a) => ({ a, j: jobs.byId.get(a.jobId) })).filter((x) => x.j && x.j.g >= 50).sort((x, y) => y.j.g - x.j.g) : [];
   let body;
   if (!linked.length) body = html`<div class="td-mini-empty"><${Icon} name="ghost" cls="faint" /><span class="muted td-small td-grow">No applications are linked to a listing yet. Roles you track from Find are checked for ghost-job signals.</span><${Btn} size="sm" onClick=${() => go("find")}>Find jobs</${Btn}></div>`;
-  else if (jobs.status === "error") body = html`<div class="td-mini-empty"><span class="muted td-small td-grow">Listings didn't load, so ghost signals can't be checked right now.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (jobs.status === "error") body = html`<div class="td-mini-empty"><span class="muted td-small td-grow">Listings didn’t load, so ghost signals can’t be checked right now.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
   else if (!ready) body = html`<${Skeleton} rows=${2} />`;
   else if (!flagged.length) body = html`<div class="td-mini-empty"><span class="task-ico ok"><${Icon} name="shield" /></span><span class="muted td-small td-grow">All ${pluralize(linked.length, "linked listing")} look active.</span></div>`;
   else body = html`<div class="st-radar-big"><span class="td-big">${flagged.length}</span><span class="muted td-small">of ${pluralize(linked.length, "linked application")} show strong ghost-job signals</span></div>
     <div class="list">${flagged.map(({ a, j }) => html`<button type="button" class="st-radar-row" key=${a.id} onClick=${() => openApp(a.id)}>
       <${Logo} name=${a.company} />
-      <span class="stack-sm" style="gap:1px;min-width:0"><span class="st-radar-title truncate">${a.company} · ${a.title}</span><span class="st-radar-sub truncate">${(j.gr || [])[0] || ghostLabel(j.g)}</span></span>
+      <span class="stack-sm" style="gap:1px;min-width:0"><span class="st-radar-title truncate">${a.company}<span class="faint" aria-hidden="true"> · </span>${a.title}</span><span class="st-radar-sub truncate">${(j.gr || [])[0] || ghostLabel(j.g)}</span></span>
       <${GhostScore} g=${j.g} compact=${true} />
     </button>`)}</div>`;
   return html`<section class="card" aria-labelledby="st-radar-h">
@@ -258,11 +258,11 @@ function stats_Method({ ghostDays, ex }) {
     <summary><${Icon} name="chevR" size=${14} />How we calculate this</summary>
     <ul>
       <li><b>Replied</b> counts any response, including rejections. <b>Interviewed</b> counts any logged round, including recruiter calls.</li>
-      <li>Rates are shares of applications sent. Under 10 applications, they're flagged as a small sample because one reply moves them a lot.</li>
+      <li>Rates are shares of applications sent. Under 10 applications, they’re flagged as a small sample because one reply moves them a lot.</li>
       <li>Time to first reply is the median across applications that got a reply.</li>
       <li>Replies are counted in the week the first reply arrived, over the last 8 weeks.</li>
       <li>Patterns need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
-      <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It's a signal from listing data, not proof.</li>
+      <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It’s a signal from listing data, not proof.</li>
       ${ex ? html`<li>Example applications are included. Turn off “Include examples” to see only your own.</li>` : null}
     </ul>
   </details>`;

@@ -55,7 +55,7 @@ async function visitAll(page, label, errors) {
     const r = await open({ W, mock: MOCK, dist: tmp, route: 'find' });
     try {
       await r.page.waitForTimeout(500);
-      T.check('missing jobs.json: Find shows error state', await r.page.locator('text=Couldn\'t load job listings').isVisible());
+      T.check('missing jobs.json: Find shows error state', await r.page.locator('text=Couldn’t load job listings').isVisible());
       T.check('missing jobs.json: Try again button', await r.page.locator('.find-page button:has-text("Try again")').isVisible());
       // add saved app with jobId and open job drawer
       await r.page.evaluate(() => { const a = Apps.create({ company: 'X', title: 'Y', jobId: 'nope-1', stage: 'saved' }); openJob('nope-1'); });
@@ -80,7 +80,7 @@ async function visitAll(page, label, errors) {
     const r = await open({ W, mock: MOCK, dist: tmp, setup: 'fresh' });
     try {
       await r.page.click('#onb-next'); await r.page.click('#onb-next'); await r.page.waitForTimeout(400);
-      T.check('onboarding step 3 without jobs shows error + can finish', await r.page.locator('text=Couldn\'t load job listings').isVisible() && await r.page.locator('#onb-finish').isEnabled());
+      T.check('onboarding step 3 without jobs shows error + can finish', await r.page.locator('text=Couldn’t load job listings').isVisible() && await r.page.locator('#onb-finish').isEnabled());
     } catch (e) { T.check('onb nojobs exception', false, e.message.split('\n')[0]); }
     await r.close(); fs.rmSync(tmp, { recursive: true, force: true });
   }

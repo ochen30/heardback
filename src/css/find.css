@@ -40,7 +40,7 @@
 .find-count strong { color: var(--fg); font-weight: 600; }
 .find-prefs { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-3); }
 .find-prefs .sep { color: var(--line-strong); }
-.find-raw { white-space: nowrap; }
+.find-raw, .find-n { white-space: nowrap; }
 .find-dsub .sep { color: var(--fg-3); }
 .find-link { border: 0; background: none; padding: 0; color: var(--accent-text); font-size: inherit; font-weight: 500; cursor: pointer; }
 .find-link:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -55,15 +55,18 @@
   font-weight: 500; font-size: var(--fs-md); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
 .find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
-/* Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
-.find-side { display: grid; grid-template-columns: auto 60px 84px 36px; align-items: center; gap: 8px; justify-items: end; }
-.find-has-stage .find-side { grid-template-columns: auto 60px 84px 92px; }
-.find-c-ghost { grid-column: 1; } .find-c-fit { grid-column: 2; } .find-c-fresh { grid-column: 3; } .find-c-act { grid-column: 4; }
+/* One order everywhere (matches Today): signals · age · Fit · action.
+   Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
+.find-side { display: grid; grid-template-columns: auto 84px 60px 36px; align-items: center; gap: 8px; justify-items: end; }
+.find-has-stage .find-side { grid-template-columns: auto 84px 60px 92px; }
+.find-c-ghost { grid-column: 1; } .find-c-fresh { grid-column: 2; } .find-c-fit { grid-column: 3; } .find-c-act { grid-column: 4; }
 .find-c-ghost:empty { display: none; }
 .find-c-fit, .find-c-ghost, .find-c-fresh, .find-c-act { display: inline-flex; align-items: center; justify-content: flex-end; }
 .find-c-fit .fit { min-width: 56px; white-space: nowrap; }
 .find-c-fresh .fresh { text-align: right; }
 .find-save.on { color: var(--accent-text); }
+/* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
+.find-row[aria-selected="true"] .find-row-title:focus-visible { box-shadow: none; }
 .find-stage { border: 0; background: none; padding: 0; cursor: pointer; border-radius: 99px; }
 .find-more { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 4px 0; font-size: var(--fs-sm); flex-wrap: wrap; }
 .find-keys { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-xs); color: var(--fg-3); }
@@ -71,7 +74,7 @@
 .find-keys .kbd { margin-left: 6px; }
 .find-foot { padding-top: 0; }
 .find-row-co { grid-template-columns: minmax(0, 1fr) auto; }
-.find-results-tight .find-side { grid-template-columns: auto 60px 64px 36px; }
+.find-results-tight .find-side { grid-template-columns: auto 64px 60px 36px; }
 .find-results-tight .find-c-act .badge { display: none; }
 
 /* drawer */
@@ -103,14 +106,16 @@ button.find-h-meta { font-size: var(--fs-sm); }
 .find-rubric b { color: var(--fg); font-weight: 500; }
 /* fit */
 .find-fit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-sm); }
-.find-fit-list li { display: grid; grid-template-columns: 20px 72px minmax(0, 1fr); gap: 8px; align-items: start; }
+/* value column lines up with .find-kv above: 20 + 8 + 100 + 8 = 136 = 120 + 16 */
+.find-fit-list li { display: grid; grid-template-columns: 20px 100px minmax(0, 1fr); gap: 8px; align-items: start; }
 .find-fit-k { color: var(--fg); font-weight: 500; }
 .find-fit-ico { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; }
 .find-fit-ico.ok { background: var(--ok-soft); color: var(--ok); }
 .find-fit-ico.bad { background: var(--bad-soft); color: var(--bad); }
 .find-fit-ico.none { background: var(--surface-2); color: var(--fg-3); font-size: var(--fs-xs); }
 .find-fit-list + .stack-sm { margin-top: 4px; }
-.find-season-line { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; line-height: 1.5; }
+.find-season-kv { margin-top: 2px; }
+.find-season-kv dd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 a.find-link { cursor: pointer; }
 .find-dsub-co { column-gap: 14px; }
 
@@ -144,8 +149,6 @@ a.find-link { cursor: pointer; }
 .find-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .find-stat .stat-label { font-size: var(--fs-xs); color: var(--fg-3); }
 .find-stat-v { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
-.find-nd { font-size: var(--fs-sm); font-weight: 500; }
-.find-stat-v:has(.find-nd) { display: flex; align-items: center; min-height: calc(var(--fs-lg) * 1.3); }
 .find-stat .stat-sub { line-height: 1.4; }
 .find-season-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--fs-sm); justify-content: space-between; }
 .find-dlist { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -20px; }
@@ -178,6 +181,7 @@ a.find-link { cursor: pointer; }
 }
 @media (max-width: 860px) {
   .find-kv { grid-template-columns: 110px minmax(0, 1fr); }
+  .find-fit-list li { grid-template-columns: 20px 90px minmax(0, 1fr); }
   .find-yn { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
@@ -210,5 +214,6 @@ a.find-link { cursor: pointer; }
   .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }
-/* company drawer rows are narrow: bars only, the label lives in the tooltip */
-.find-results-tight .find-g-l { display: none; }
+/* company drawer rows: the signal label shows from 768px; on phones, bars only (the label lives in the tooltip) */
+.find-results-tight .find-g-l { white-space: nowrap; }
+@media (max-width: 767px) { .find-results-tight .find-g-l { display: none; } }

@@ -58,7 +58,9 @@ module.exports = {
   async searchNone(p) { await ready(p); await p.fill('#find-q', 'zzqx nothing'); await wait(p, 500); },
   async filterRemote(p) { await ready(p); await p.click('text=Show all'); await wait(p, 200); if (!(await p.$('.find-aside .find-opt:has-text("Remote")'))) await p.click('.find-aside .find-more-link'); await p.locator('.find-aside .find-opt', { hasText: 'Remote' }).first().click(); await wait(p, 300); },
   async sortFit(p) { await ready(p); await p.click('.find-sort button:has-text("Best fit")'); await wait(p); },
-  async mobileFilters(p) { await ready(p); await p.click('.find-fbtn'); await wait(p); },
+  // The Filters button only shows when the sidebar is hidden (≤1100px); at wider viewports open the same modal directly.
+  async mobileFilters(p) { await ready(p); if (await p.isVisible('.find-fbtn')) await p.click('.find-fbtn'); else await p.evaluate(() => openModal('findFilters')); await wait(p); },
+  async keyboardOpenClose(p) { await ready(p); await p.evaluate(() => document.activeElement?.blur()); await p.keyboard.press('j'); await p.keyboard.press('j'); await p.keyboard.press('Enter'); await wait(p); await p.keyboard.press('Escape'); await wait(p); const r = await p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, cls: a.className, i: a.closest('.find-row')?.dataset.findI }; }); console.log('focus after close', JSON.stringify(r)); },
   async scrollMore(p) { await ready(p); await p.evaluate(() => { const w = document.querySelector('.workspace'); w.style.scrollBehavior = 'auto'; w.scrollTop = w.scrollHeight; }); await wait(p, 600); await p.evaluate(() => { const w = document.querySelector('.workspace'); w.scrollTop = w.scrollHeight; }); await wait(p, 600); },
   async coSearch(p) { await ready(p); await p.fill('#co-q', 'capital'); await wait(p, 400); },
   async coSortFast(p) { await ready(p); await p.click('.find-toolbar .seg button:has-text("Fastest")'); await wait(p); },

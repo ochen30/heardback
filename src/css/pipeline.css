@@ -10,6 +10,7 @@
 .pl-linkbtn:hover { text-decoration: underline; text-underline-offset: 2px; }
 .pl-small { font-size: var(--fs-xs); }
 .pl-sep { color: var(--line-strong); }
+.pl-sep-pair { display: inline-flex; align-items: center; gap: 8px; }
 .pl-warn { color: var(--wait); font-weight: 600; }
 .pl-err { font-size: var(--fs-xs); color: var(--bad); }
 .input[aria-invalid="true"] { border-color: var(--bad); }
@@ -65,7 +66,7 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-card-co { flex: 1; font-size: var(--fs-xs); color: var(--fg-2); font-weight: 500; }
 .pl-card-title {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  color: var(--fg); overflow-wrap: anywhere;
+  color: var(--fg); overflow-wrap: break-word; text-wrap: pretty;
 }
 .pl-card-loc { font-size: var(--fs-xs); color: var(--fg-3); }
 .pl-card-foot { flex-wrap: nowrap; min-height: 22px; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 6px; min-width: 0; }
@@ -371,7 +372,8 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .pl-board.selecting .pl-chk, .pl-card.sel .pl-chk { opacity: 1; }
 /* Selection is a tint, like table rows: no frame; focus adds the one standard ring */
 .pl-card.sel { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); box-shadow: none; }
-.pl-card.sel:focus-visible { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: var(--focus); }
+/* Focused + selected: fill and ring only, no tinted border on top */
+.pl-card.sel:focus-visible { border-color: var(--line); box-shadow: var(--focus); }
 .pl-card.sel .pl-card-foot { border-top-color: color-mix(in srgb, var(--accent) 20%, var(--line)); }
 .pl-card.sel.closed { opacity: 1; }
 
@@ -427,6 +429,9 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-stage-sel .select { width: 40px; min-height: 40px; height: 40px; padding: 0; color: transparent; background-size: 0 0; border-color: transparent; }
   .pl-stage-sel .select option { color: var(--fg); }
   .pl-stage-sel .dot { left: 50%; transform: translateX(-50%); }
+  /* The caret never paints over the centred dot, on hover or focus either */
+  tr:hover .pl-stage-sel .select, .pl-stage-sel .select:hover, .pl-stage-sel .select:focus { background-size: 0 0; border-color: transparent; }
+  .pl-stage-sel .select:focus-visible { box-shadow: var(--focus); }
 }
 /* Example banner, same as Today's */
 .pl-banner { flex-wrap: nowrap; max-width: none; }

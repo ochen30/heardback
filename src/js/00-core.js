@@ -130,7 +130,7 @@ function cleanApp(a, id) {
   const company = strOr(a.company).trim(); const title = strOr(a.title).trim();
   if (!company && !title) return null;
   const t = now();
-  const ts = (v) => { const n = numOr(v, null); return n && n > 0 ? n : null; };
+  const ts = (v) => { const n = numOr(v, null); return n && n > 946684800000 && n < t + 5 * 365 * DAY ? n : null; };
   const created = ts(a.createdAt) || t;
   return {
     id: strOr(a.id || id) || uid("a_"), company: company || "Unknown company", title, location: strOr(a.location), url: strOr(a.url), jobId: a.jobId ? strOr(a.jobId) : null,

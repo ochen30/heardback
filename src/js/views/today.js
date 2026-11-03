@@ -13,6 +13,10 @@ function today_dayLabel(ts) {
   if (diff === 1) return "Tomorrow";
   return fmt.date(ts, { weekday: "short", month: "short", day: "numeric" });
 }
+/* "a · b": each "· item" wraps as one unit, so a separator never ends a line. */
+function today_seps(parts) {
+  return parts.filter(Boolean).map((x, i) => (i ? html` <span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${x}</span>` : html`<span key=${i}>${x}</span>`));
+}
 function today_setPrepFocus(focus) { store.set((s) => ({ ...s, ui: { ...s.ui, prepFocus: focus } })); }
 function today_undismiss(key, prev) {
   store.set((s) => { const d = { ...s.dismissed }; if (prev) d[key] = prev; else delete d[key]; return { ...s, dismissed: d }; });
@@ -98,10 +102,12 @@ const TODAY_SNOOZE = [{ d: 1, label: "Snooze 1 day" }, { d: 3, label: "Snooze 3 
 function today_taskCopy(tk) {
   const a = tk.app;
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark ghosted" };
-  if (tk.kind === "apply") return { sub: tk.sub, action: "Apply" };
-  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it's fresh.`, action: "Log outcome" };
-  return { sub: tk.sub, action: tk.action };
+  if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
+  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
+  return { sub: today_typo(tk.sub), action: tk.action };
 }
+/* Core builds task text with straight apostrophes; display them typographically. */
+function today_typo(t) { return typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t; }
 
 function today_TaskRow({ tk, first }) {
   const [menu, setMenu] = useState(null);
@@ -127,7 +133,7 @@ function today_TaskRow({ tk, first }) {
   return html`<div class="task td-task" data-key=${tk.key}>
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
-      <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${tk.title}</button>
+      <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
       <div class="task-sub">${copy.sub}</div>
     </div>
     <div class="task-actions td-task-actions">
@@ -155,7 +161,7 @@ function today_NeedsYou({ tasks, fresh }) {
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
-            <strong>${fresh ? "Nothing to do yet" : "You're all caught up"}</strong>
+            <strong>${fresh ? "Nothing to do yet" : "You’re all caught up"}</strong>
             <span class="muted td-small">${fresh
               ? "Follow-ups, interview prep and thank-you notes show up here once you track applications."
               : "Nothing needs a reply, prep or follow-up right now."}</span>
@@ -177,7 +183,7 @@ function today_Upcoming({ up }) {
             <span class="td-up-time num">${fmt.time(r.at)}</span>
             <${Logo} name=${a.company} size="sm" />
             <span class="td-up-main">
-              <span class="td-up-title truncate"><b>${a.company}</b><span class="faint"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
+              <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
               <span class="td-up-sub truncate">${r.interviewers ? `With ${r.interviewers}` : a.title}</span>
             </span>
             ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}
@@ -218,19 +224,19 @@ function today_NewForYou({ jobs, m }) {
   const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
     <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
   let body;
-  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn't load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
   else if (!m) body = html`<${Skeleton} rows=${4} />`;
   else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
   else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
   else body = html`<div class="list">${m.list.map(({ j, f }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
-        <span class="job-title truncate">${j.t}</span>
-        <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+        <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
+        <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
       </div>
       <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
-    <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer's own page.</div>`;
+    <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer’s own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
 }
 
@@ -244,26 +250,24 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
   });
   const max = Math.max(1, ...days.map((x) => x.n));
   const left = Math.max(0, goal - thisWeek);
+  // Same treatment as the rail's goal card on every other page: count, meter, what's left.
   return html`<section class="card td-week" aria-labelledby="td-week-h">
     <div class="td-week-top">
       <h2 id="td-week-h">This week</h2>
-      ${thisWeek > 0 ? html`<span class="td-count num">${thisWeek} of ${goal}</span>` : null}
       <span class="spacer"></span>
       <button type="button" class="btn ghost sm td-goal-edit" onClick=${() => go("prefs")}>Edit goal</button>
     </div>
-    ${thisWeek === 0
-      ? html`<p class="td-week-zero">No applications yet. Your goal is ${goal}.</p>`
-      : html`<div>
-          <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
-          <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
-        </div>
-        <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
+    <div class="td-week-goal">
+      <div class="goal-top"><span class="num td-week-n">${thisWeek} / ${goal} applied</span><span class="hint">${thisWeek >= goal ? "Goal reached." : `${left} more to hit your goal`}</span></div>
+      <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
+    </div>
+    ${thisWeek > 0 ? html`<div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
           ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
             <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
             <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
             <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
           </div>`)}
-        </div>`}
+        </div>` : null}
   </section>`;
 }
 
@@ -342,7 +346,7 @@ function today_View() {
     <header class="greeting td-head">
       <div style="min-width:0">
         <h1>${today_greeting()}${name ? `, ${name}` : ""}</h1>
-        <p>${parts.join(" · ")}</p>
+        <p>${today_seps(parts)}</p>
       </div>
       <span class="spacer"></span>
       <span class="td-date hide-sm">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>

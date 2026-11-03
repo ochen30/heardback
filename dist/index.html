@@ -654,7 +654,7 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .find-count strong { color: var(--fg); font-weight: 600; }
 .find-prefs { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-3); }
 .find-prefs .sep { color: var(--line-strong); }
-.find-raw { white-space: nowrap; }
+.find-raw, .find-n { white-space: nowrap; }
 .find-dsub .sep { color: var(--fg-3); }
 .find-link { border: 0; background: none; padding: 0; color: var(--accent-text); font-size: inherit; font-weight: 500; cursor: pointer; }
 .find-link:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -669,15 +669,18 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
   font-weight: 500; font-size: var(--fs-md); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
 .find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
-/* Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
-.find-side { display: grid; grid-template-columns: auto 60px 84px 36px; align-items: center; gap: 8px; justify-items: end; }
-.find-has-stage .find-side { grid-template-columns: auto 60px 84px 92px; }
-.find-c-ghost { grid-column: 1; } .find-c-fit { grid-column: 2; } .find-c-fresh { grid-column: 3; } .find-c-act { grid-column: 4; }
+/* One order everywhere (matches Today): signals · age · Fit · action.
+   Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
+.find-side { display: grid; grid-template-columns: auto 84px 60px 36px; align-items: center; gap: 8px; justify-items: end; }
+.find-has-stage .find-side { grid-template-columns: auto 84px 60px 92px; }
+.find-c-ghost { grid-column: 1; } .find-c-fresh { grid-column: 2; } .find-c-fit { grid-column: 3; } .find-c-act { grid-column: 4; }
 .find-c-ghost:empty { display: none; }
 .find-c-fit, .find-c-ghost, .find-c-fresh, .find-c-act { display: inline-flex; align-items: center; justify-content: flex-end; }
 .find-c-fit .fit { min-width: 56px; white-space: nowrap; }
 .find-c-fresh .fresh { text-align: right; }
 .find-save.on { color: var(--accent-text); }
+/* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
+.find-row[aria-selected="true"] .find-row-title:focus-visible { box-shadow: none; }
 .find-stage { border: 0; background: none; padding: 0; cursor: pointer; border-radius: 99px; }
 .find-more { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 4px 0; font-size: var(--fs-sm); flex-wrap: wrap; }
 .find-keys { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-xs); color: var(--fg-3); }
@@ -685,7 +688,7 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .find-keys .kbd { margin-left: 6px; }
 .find-foot { padding-top: 0; }
 .find-row-co { grid-template-columns: minmax(0, 1fr) auto; }
-.find-results-tight .find-side { grid-template-columns: auto 60px 64px 36px; }
+.find-results-tight .find-side { grid-template-columns: auto 64px 60px 36px; }
 .find-results-tight .find-c-act .badge { display: none; }
 
 /* drawer */
@@ -717,14 +720,16 @@ button.find-h-meta { font-size: var(--fs-sm); }
 .find-rubric b { color: var(--fg); font-weight: 500; }
 /* fit */
 .find-fit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-sm); }
-.find-fit-list li { display: grid; grid-template-columns: 20px 72px minmax(0, 1fr); gap: 8px; align-items: start; }
+/* value column lines up with .find-kv above: 20 + 8 + 100 + 8 = 136 = 120 + 16 */
+.find-fit-list li { display: grid; grid-template-columns: 20px 100px minmax(0, 1fr); gap: 8px; align-items: start; }
 .find-fit-k { color: var(--fg); font-weight: 500; }
 .find-fit-ico { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; }
 .find-fit-ico.ok { background: var(--ok-soft); color: var(--ok); }
 .find-fit-ico.bad { background: var(--bad-soft); color: var(--bad); }
 .find-fit-ico.none { background: var(--surface-2); color: var(--fg-3); font-size: var(--fs-xs); }
 .find-fit-list + .stack-sm { margin-top: 4px; }
-.find-season-line { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; line-height: 1.5; }
+.find-season-kv { margin-top: 2px; }
+.find-season-kv dd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 a.find-link { cursor: pointer; }
 .find-dsub-co { column-gap: 14px; }
 
@@ -758,8 +763,6 @@ a.find-link { cursor: pointer; }
 .find-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .find-stat .stat-label { font-size: var(--fs-xs); color: var(--fg-3); }
 .find-stat-v { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
-.find-nd { font-size: var(--fs-sm); font-weight: 500; }
-.find-stat-v:has(.find-nd) { display: flex; align-items: center; min-height: calc(var(--fs-lg) * 1.3); }
 .find-stat .stat-sub { line-height: 1.4; }
 .find-season-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--fs-sm); justify-content: space-between; }
 .find-dlist { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -20px; }
@@ -792,6 +795,7 @@ a.find-link { cursor: pointer; }
 }
 @media (max-width: 860px) {
   .find-kv { grid-template-columns: 110px minmax(0, 1fr); }
+  .find-fit-list li { grid-template-columns: 20px 90px minmax(0, 1fr); }
   .find-yn { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
@@ -824,8 +828,9 @@ a.find-link { cursor: pointer; }
   .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }
-/* company drawer rows are narrow: bars only, the label lives in the tooltip */
-.find-results-tight .find-g-l { display: none; }
+/* company drawer rows: the signal label shows from 768px; on phones, bars only (the label lives in the tooltip) */
+.find-results-tight .find-g-l { white-space: nowrap; }
+@media (max-width: 767px) { .find-results-tight .find-g-l { display: none; } }
 
 /* ===== Pipeline ===== */
 .pl-page.wide { max-width: 1680px; }
@@ -839,6 +844,7 @@ a.find-link { cursor: pointer; }
 .pl-linkbtn:hover { text-decoration: underline; text-underline-offset: 2px; }
 .pl-small { font-size: var(--fs-xs); }
 .pl-sep { color: var(--line-strong); }
+.pl-sep-pair { display: inline-flex; align-items: center; gap: 8px; }
 .pl-warn { color: var(--wait); font-weight: 600; }
 .pl-err { font-size: var(--fs-xs); color: var(--bad); }
 .input[aria-invalid="true"] { border-color: var(--bad); }
@@ -894,7 +900,7 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-card-co { flex: 1; font-size: var(--fs-xs); color: var(--fg-2); font-weight: 500; }
 .pl-card-title {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  color: var(--fg); overflow-wrap: anywhere;
+  color: var(--fg); overflow-wrap: break-word; text-wrap: pretty;
 }
 .pl-card-loc { font-size: var(--fs-xs); color: var(--fg-3); }
 .pl-card-foot { flex-wrap: nowrap; min-height: 22px; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 6px; min-width: 0; }
@@ -1200,7 +1206,8 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .pl-board.selecting .pl-chk, .pl-card.sel .pl-chk { opacity: 1; }
 /* Selection is a tint, like table rows: no frame; focus adds the one standard ring */
 .pl-card.sel { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); box-shadow: none; }
-.pl-card.sel:focus-visible { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: var(--focus); }
+/* Focused + selected: fill and ring only, no tinted border on top */
+.pl-card.sel:focus-visible { border-color: var(--line); box-shadow: var(--focus); }
 .pl-card.sel .pl-card-foot { border-top-color: color-mix(in srgb, var(--accent) 20%, var(--line)); }
 .pl-card.sel.closed { opacity: 1; }
 
@@ -1256,6 +1263,9 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-stage-sel .select { width: 40px; min-height: 40px; height: 40px; padding: 0; color: transparent; background-size: 0 0; border-color: transparent; }
   .pl-stage-sel .select option { color: var(--fg); }
   .pl-stage-sel .dot { left: 50%; transform: translateX(-50%); }
+  /* The caret never paints over the centred dot, on hover or focus either */
+  tr:hover .pl-stage-sel .select, .pl-stage-sel .select:hover, .pl-stage-sel .select:focus { background-size: 0 0; border-color: transparent; }
+  .pl-stage-sel .select:focus-visible { box-shadow: var(--focus); }
 }
 /* Example banner, same as Today's */
 .pl-banner { flex-wrap: nowrap; max-width: none; }
@@ -1295,7 +1305,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   background: var(--bg); border-top: 1px solid var(--line);
 }
 .onb-foot::before {
-  content: ""; position: absolute; left: 0; right: 0; bottom: calc(100% + 1px); height: 32px; pointer-events: none;
+  content: ""; position: absolute; left: 0; right: 0; bottom: calc(100% + 1px); height: 16px; pointer-events: none;
   background: linear-gradient(to bottom, transparent, var(--bg));
 }
 .onb-foot .spacer { flex: 1; }
@@ -1360,7 +1370,12 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .pf-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.5; }
 .pf-meta { gap: 4px 16px; }
 .pf-version { font-size: var(--fs-xs); color: var(--fg-3); text-align: center; padding: 4px 0; }
-.pf-corrupt { margin-bottom: 16px; max-width: 80ch; }
+.pf-corrupt { margin-bottom: 16px; max-width: 80ch; align-items: center; flex-wrap: wrap; }
+.pf-statement b { font-weight: 600; color: var(--fg); }
+.pf-corrupt-text, .onb-corrupt-text { flex: 1 1 260px; min-width: 0; }
+.onb-corrupt { align-items: center; flex-wrap: wrap; }
+.onb-restore { cursor: pointer; flex: none; }
+.onb-restore:focus-within { box-shadow: var(--focus); }
 
 
 /* ---------- Interview prep ---------- */
@@ -1512,8 +1527,9 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 @keyframes onb-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .onb-spin { animation: none; } }
 /* location checklist (onboarding + settings), mirrors Find's compact list */
-.onb-locs { display: flex; flex-direction: column; gap: 4px; max-width: 360px; }
-.onb-opts { margin: 0 -8px; }
+.onb-locs { display: flex; flex-direction: column; gap: 4px; }
+/* Two columns where there is room, so counts sit next to their label instead of mid-card. */
+.onb-opts { margin: 0 -8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); column-gap: 24px; }
 .onb-more { align-self: flex-start; border: 0; background: none; padding: 4px 0; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
 .onb-loc-basis { font-size: var(--fs-xs); color: var(--fg-3); line-height: 1.5; }
 .onb-more:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -1526,8 +1542,10 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .prep-mock-note { font-size: var(--fs-xs); color: var(--fg-3); line-height: 1.5; }
 .prep-mock-head { align-items: center; }
 .prep-mock-head h3:focus { outline: none; box-shadow: none; }
-.prep-mock-progress { height: 2px; background: var(--surface-2); }
-.prep-mock-progress > i { display: block; height: 100%; background: var(--accent); transition: width var(--t-med) var(--ease); }
+/* Progress: one tick per question, same style as the scorecard meter. */
+.prep-mock-prog { display: inline-flex; align-items: center; gap: 10px; }
+.prep-mock-ticks i { width: 14px; transition: background var(--t-med) var(--ease); }
+.prep-mock-ticks i.cur { background: var(--line-strong); }
 .prep-mock-body { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
 .prep-mock-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; max-width: 72ch; }
 .prep-mock-log:empty { display: none; }
@@ -1546,6 +1564,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .prep-mock-details { border-top: 1px solid var(--line); padding-top: 12px; }
 .prep-mock-details summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 500; color: var(--fg-2); min-height: 32px; display: flex; align-items: center; list-style: none; }
 .prep-mock-details summary::-webkit-details-marker { display: none; }
+.prep-mock-details summary .sep-item { margin-left: 5px; }
 .prep-mock-details summary::before { content: ""; width: 6px; height: 6px; margin: 0 10px 0 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform var(--t-fast) var(--ease); }
 .prep-mock-details[open] summary::before { transform: rotate(45deg); }
 .prep-mock-details[open] .prep-mock-log { margin-top: 12px; }
@@ -1585,14 +1604,14 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .prep-mock-head { flex-wrap: wrap; row-gap: 4px; padding: 12px 16px 8px; }
   .prep-mock-head h3 { flex: 1 1 100%; }
   .prep-mock-head .spacer { display: none; }
-  .prep-mock-head .prep-count { flex: 1; }
+  .prep-mock-head .prep-mock-prog { flex: 1; }
   .prep-mock-head .btn { margin-right: -8px; }
   .prep-mock-foot .spacer { display: none; }
   .prep-mock-foot .btn { flex: 1; justify-content: center; }
   .prep-mock-foot .btn.primary { order: -1; flex-basis: 100%; }
   .prep-mock-details summary { min-height: 44px; }
 }
-@media (prefers-reduced-motion: reduce) { .prep-mock-caret { animation: none; } .prep-mock-progress > i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .prep-mock-caret { animation: none; } .prep-mock-ticks i { transition: none; } }
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -1680,7 +1699,9 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .td-week-top h2 { font-size: var(--fs-md); font-weight: 600; }
 .td-week-top .spacer { flex: 1; }
 .td-goal-edit { margin-right: -8px; color: var(--fg-2); }
-.td-week-zero { font-size: var(--fs-sm); color: var(--fg-2); margin-top: -4px; }
+.td-week-goal { display: flex; flex-direction: column; gap: 8px; margin-top: -2px; }
+.td-week-goal .goal-top { gap: 12px; flex-wrap: wrap; }
+.td-week-n { font-weight: 500; color: var(--fg); }
 .td-week-num { display: flex; align-items: baseline; gap: 2px; font-size: var(--fs-sm); }
 .td-big { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--fg); }
 .td-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; }
@@ -1744,14 +1765,15 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .st-small-n { color: var(--wait); white-space: nowrap; }
 @media (max-width: 520px) { .st-sep { display: none; } .st-small-n { display: block; } }
 .st-nw { white-space: nowrap; }
-.st-head-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--fg-2); }
+.st-head-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--fg-2); min-height: 34px; }
 .st-chart-wrap { position: relative; padding: 12px 16px 8px; }
 .st-chart text { fill: var(--fg-3); font-size: 11px; font-family: var(--font); font-variant-numeric: tabular-nums; }
 .st-chart .st-val { fill: var(--fg); font-weight: 600; }
 .st-chart .st-xl.now { fill: var(--fg); font-weight: 600; }
 .st-chart .grid-line { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
 .st-chart .base-line { stroke: var(--line-strong); stroke-width: 1; shape-rendering: crispEdges; }
-.st-chart .st-bar { fill: var(--accent); }
+.st-chart .st-bar { fill: color-mix(in srgb, var(--accent) 50%, var(--surface)); }
+.st-chart .st-bar.now { fill: var(--accent); }
 .st-chart .st-row-label { fill: var(--fg-2); }
 .st-chart .st-reply { fill: var(--fg-3); }
 .st-chart .st-reply.on { fill: var(--fg); font-weight: 600; }
@@ -1765,16 +1787,17 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .st-tip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .st-tip .st-tip-row { display: flex; align-items: center; gap: 6px; }
 
-.st-funnel { display: flex; flex-direction: column; gap: 10px; }
-.st-funnel .funnel-row { grid-template-columns: 96px minmax(0, 1fr) 84px; }
-.st-funnel .funnel-bar { height: 24px; background: var(--surface-2); }
-.st-funnel .funnel-bar > i { border-radius: 0 4px 4px 0; }
+.st-funnel { display: flex; flex-direction: column; gap: 6px; }
+.st-funnel .funnel-row { grid-template-columns: 96px minmax(0, 1fr) 84px; min-height: 32px; }
+.st-funnel .funnel-bar { height: 8px; border-radius: 4px; background: var(--surface-3); }
+.st-funnel .funnel-bar > i { border-radius: 4px; background: color-mix(in srgb, var(--accent) 70%, var(--surface)); }
+.st-funnel .funnel-row:first-child .funnel-bar > i { background: var(--accent); }
 .st-funnel .st-fl { color: var(--fg-2); }
 .st-funnel .st-fv { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .st-funnel .st-fv b { font-weight: 600; color: var(--fg); }
 .st-funnel .st-fv span { color: var(--fg-3); margin-left: 6px; font-size: var(--fs-xs); }
 
-.st-outcome-bar { display: flex; gap: 2px; height: 12px; }
+.st-outcome-bar { display: flex; gap: 2px; height: 8px; }
 .st-outcome-bar i { display: block; height: 100%; min-width: 4px; }
 .st-outcome-bar i:first-child { border-radius: 99px 0 0 99px; }
 .st-outcome-bar i:last-child { border-radius: 0 99px 99px 0; }
@@ -1969,7 +1992,7 @@ function cleanApp(a, id) {
   const company = strOr(a.company).trim(); const title = strOr(a.title).trim();
   if (!company && !title) return null;
   const t = now();
-  const ts = (v) => { const n = numOr(v, null); return n && n > 0 ? n : null; };
+  const ts = (v) => { const n = numOr(v, null); return n && n > 946684800000 && n < t + 5 * 365 * DAY ? n : null; };
   const created = ts(a.createdAt) || t;
   return {
     id: strOr(a.id || id) || uid("a_"), company: company || "Unknown company", title, location: strOr(a.location), url: strOr(a.url), jobId: a.jobId ? strOr(a.jobId) : null,
@@ -3050,7 +3073,7 @@ const FIND_POSTED = [
 const FIND_VISA = [{ id: "any", label: "Any" }, { id: "yes", label: "Offers sponsorship" }, { id: "nocit", label: "Hide citizenship-required" }];
 const FIND_SORTS = [{ id: "new", label: "Newest" }, { id: "fit", label: "Best fit" }, { id: "ghost", label: "Most likely real" }];
 const FIND_ATS = { greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", workday: "Workday" };
-const FIND_DEG = { BS: "Bachelor's", MS: "Master's", PhD: "PhD", AS: "Associate's", MBA: "MBA", Cert: "Certificate" };
+const FIND_DEG = { BS: "Bachelor’s", MS: "Master’s", PhD: "PhD", AS: "Associate’s", MBA: "MBA", Cert: "Certificate" };
 const FIND_LV = { intern: "Internship", newgrad: "New grad" };
 
 /* ---------- filter state ---------- */
@@ -3171,8 +3194,14 @@ function find_locText(job) {
   const more = (job.nl || (job.l || []).length) - 1;
   return more > 0 ? `${first} +${more} more` : first;
 }
-function find_metaText(job) {
-  return [job.co, find_locText(job), FIND_LV[job.lvl] || "", job.term].filter(Boolean).join(" · ");
+function find_metaParts(job) { return [job.co, find_locText(job), FIND_LV[job.lvl] || "", job.term].filter(Boolean); }
+function find_metaText(job) { return find_metaParts(job).join(" · "); }
+/* Display title: raw " - " separators read as en dashes, like the rest of the UI. */
+const find_title = (t) => String(t || "").replace(/\s+-\s+/g, " – ");
+/* "a · b · c" where each "· item" wraps as one unit, so a separator never ends a line. */
+function find_Seps({ parts }) {
+  const xs = (parts || []).filter((x) => x != null && x !== false && x !== "");
+  return xs.map((x, i) => (i ? html` <span class="sep-item" key=${i}>· ${x}</span>` : html`<span key=${i}>${x}</span>`));
 }
 function find_atsName(job) {
   if (FIND_ATS[job.ats]) return FIND_ATS[job.ats];
@@ -3188,7 +3217,7 @@ function find_season(cs) {
   const since = se.lastNew ? (now() - se.lastNew * 1000) / DAY : null;
   let read = "", tone = "";
   if (since != null && since <= 7) { read = "Still adding roles"; tone = "ok"; }
-  else if (share < 0.15 && since != null && since > 21) { read = "Most of this season's roles have closed"; tone = "wait"; }
+  else if (share < 0.15 && since != null && since > 21) { read = "Most of this season’s roles have closed"; tone = "wait"; }
   const line = `${pluralize(se.posted, "internship posting")} this season · ${fmt.num(se.open)} still open${se.lastNew ? ` · last new posting ${fmt.ago(se.lastNew * 1000)}` : ""}`;
   return { ...se, share, since, read, tone, line };
 }
@@ -3221,17 +3250,19 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany }) {
   const fit = profile ? find_fit(job, profile) : null;
   const open = () => { onSelect && onSelect(i); openJob(job.id); };
   const saved = app && app.stage === "saved";
-  const metaT = inCompany ? [find_locText(job), FIND_LV[job.lvl], job.term].filter(Boolean).join(" · ") : find_metaText(job);
+  const metaP = inCompany ? [find_locText(job), FIND_LV[job.lvl], job.term].filter(Boolean) : find_metaParts(job);
+  const metaT = metaP.join(" · ");
+  const title = find_title(job.t);
   return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-selected=${sel ? "true" : "false"} onClick=${open}>
     ${!inCompany && html`<${Logo} name=${job.co} />`}
     <div class="find-row-main">
-      <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${job.t}>${job.t}</button>
-      <div class="find-row-meta" title=${metaT}>${metaT}</div>
+      <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${title}>${title}</button>
+      <div class="find-row-meta" title=${metaT}><${find_Seps} parts=${metaP} /></div>
     </div>
     <div class="find-side">
       <span class="find-c-ghost"><${find_GhostHint} g=${job.g} /></span>
-      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} /></span>
       <span class="find-c-fresh"><${Fresh} ts=${job.p} /></span>
+      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} /></span>
       <span class="find-c-act" onClick=${(e) => e.stopPropagation()}>
         ${app && !saved
           ? html`<button type="button" class="find-stage" onClick=${() => openApp(app.id)} title="Open in pipeline"><${StageBadge} stage=${app.stage} /></button>`
@@ -3369,8 +3400,14 @@ VIEWS.find = function FindView() {
         const next = clamp(sel + (k === "j" ? 1 : -1), 0, list.length - 1);
         if (next >= shown) setShown(Math.min(list.length, next + FIND_PAGE));
         setSel(next);
-        setTimeout(() => document.querySelector(`.find-results [data-find-i="${next}"]`)?.scrollIntoView({ block: "nearest" }), 0);
-      } else if (e.key === "Enter" && sel >= 0) { e.preventDefault(); openJob(list[sel].id); }
+        // Focus the row's title button, so closing the drawer returns focus here (the drawer restores the prior focus).
+        setTimeout(() => { const r = document.querySelector(`.find-results [data-find-i="${next}"]`); if (!r) return; r.scrollIntoView({ block: "nearest" }); r.querySelector(".find-row-title")?.focus({ preventScroll: true }); }, 0);
+      } else if (e.key === "Enter" && sel >= 0) {
+        if (e.target && e.target.closest && e.target.closest(".find-row button, .find-row a")) return; // native activation opens the focused row
+        e.preventDefault();
+        document.querySelector(`.find-results [data-find-i="${sel}"] .find-row-title`)?.focus({ preventScroll: true }); // restore target for the drawer
+        openJob(list[sel].id);
+      }
       else if (k === "s" && sel >= 0) { e.preventDefault(); const j = list[sel]; find_toggleSave(j, byJob.get(j.id)); }
     };
     window.addEventListener("keydown", onKey);
@@ -3387,7 +3424,7 @@ VIEWS.find = function FindView() {
     <div>
       <h1>Find jobs</h1>
       <p>${ready
-        ? html`<span class="num">${fmt.num(jobs.jobs.length)}</span> open internship and new-grad roles${st.active > jobs.jobs.length ? html` <span class="faint find-raw" title="Identical repeats of the same listing are shown once">(<span class="num">${fmt.num(st.active)}</span> postings)</span>` : null} from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? ` · updated ${fmt.ago(genAt)}` : ""} · <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button>`
+        ? html`<span class="num">${fmt.num(jobs.jobs.length)}</span> open internship and new-grad roles${st.active > jobs.jobs.length ? html` <span class="faint find-raw" title="Identical repeats of the same listing are shown once">(<span class="num">${fmt.num(st.active)}</span> postings)</span>` : null} from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? html` <span class="sep-item">· updated ${fmt.ago(genAt)}</span>` : ""} <span class="sep-item">· <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></span>`
         : "Open internship and new-grad roles, checked for ghost-job signals."}</p>
     </div>
   </div>`;
@@ -3398,7 +3435,7 @@ VIEWS.find = function FindView() {
         <aside class="filters find-aside" aria-label="Filters">${[0, 1, 2].map((i) => html`<div class="filter-group" key=${i}><div class="skel" style="height:10px;width:60px"></div><div class="skel" style="height:30px;width:100%"></div></div>`)}</aside>
         <div class="stack">
           ${jobs.status === "error"
-            ? html`<div class="card"><${Empty} icon="alert" title="Couldn't load job listings" action=${html`<${Btn} kind="primary" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}>`}>The listings file didn't load (${jobs.error || "unknown error"}). Check your connection and try again.</${Empty}></div>`
+            ? html`<div class="card"><${Empty} icon="alert" title="Couldn’t load job listings" action=${html`<${Btn} kind="primary" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}>`}>The listings file didn’t load (${jobs.error || "unknown error"}). Check your connection and try again.</${Empty}></div>`
             : html`<div class="card find-results"><${Skeleton} rows=${9} /></div>`}
         </div>
       </div>
@@ -3436,11 +3473,11 @@ VIEWS.find = function FindView() {
         </div>
         <div class="find-bar">
           <div class="find-count">
-            <strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}
-            ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
+            <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
+            ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html` <span class="find-prefs sep-item"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
             ${find_hasPrefs(profile) && (usingPrefs
-              ? html`<span class="find-prefs"><span class="sep">·</span>Using your preferences<span class="sep">·</span><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`
-              : html`<span class="find-prefs"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
+              ? html` <span class="find-prefs sep-item"><span class="sep">·</span>Using your preferences</span> <span class="find-prefs sep-item"><span class="sep">·</span><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`
+              : html` <span class="find-prefs sep-item"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
           </div>
           <span class="spacer"></span>
           <div class="find-sort hide-sm"><${Seg} label="Sort by" value=${sort} options=${FIND_SORTS} onChange=${(v) => store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } }))} /></div>
@@ -3458,7 +3495,7 @@ VIEWS.find = function FindView() {
               action=${html`<div class="row wrap" style="justify-content:center">${suggestion && html`<${Btn} kind="primary" onClick=${suggestion.run}>${suggestion.label} (${fmt.num(suggestion.n)})</${Btn}>`}${(nActive > 0 || q) && html`<${Btn} onClick=${() => { find_clearAll(); setQIn(""); setQ(""); find_state.q = ""; }}>Clear search and filters</${Btn}>`}</div>`}>
               ${suggestion ? `${suggestion.desc} brings back ${pluralize(suggestion.n, "job")}.` : "Try a shorter search or fewer filters."}
             </${Empty}></div>`}
-        <p class="footer-note find-foot">Listings from ${meta.source?.url ? html`<a href=${meta.source.url} target="_blank" rel="noopener">SimplifyJobs community listings</a>` : "SimplifyJobs community listings"}${genAt ? `, refreshed ${fmt.ago(genAt)}` : ""}. Listings link to each employer's own application page.</p>
+        <p class="footer-note find-foot">Listings from ${meta.source?.url ? html`<a href=${meta.source.url} target="_blank" rel="noopener">SimplifyJobs community listings</a>` : "SimplifyJobs community listings"}${genAt ? `, refreshed ${fmt.ago(genAt)}` : ""}. Listings link to each employer’s own application page.</p>
       </div>
     </div>
   </div>`;
@@ -3564,7 +3601,7 @@ function find_AskClaude({ job, profile }) {
           </div>`)}
         </div>`}
         ${anyOut && html`<span class="ai-label"><${Icon} name="spark" />${FIND_AI_NOTE}</span>`}`
-      : html`<p class="muted find-small">Add your resume and Claude can weigh your fit or suggest stronger bullets from what's already there. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button></p>`}
+      : html`<p class="muted find-small">Add your resume and Claude can weigh your fit or suggest stronger bullets from what’s already there. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button></p>`}
   </section>`;
 }
 
@@ -3596,7 +3633,7 @@ DRAWERS.job = ({ id }) => {
   if (!job) {
     const loading = jobs.status !== "ready" && jobs.status !== "error";
     return html`<${Drawer} onClose=${closeDrawer} label="Job" head=${html`<div style="flex:1"><h2 class="find-dtitle">${loading ? "Loading listing…" : "Listing not found"}</h2></div>`}>
-      ${loading ? html`<${Skeleton} rows=${4} />` : html`<${Empty} icon="search" title="This listing isn't in the current data" action=${html`<${Btn} onClick=${() => { closeDrawer(); go("find"); }}>Browse open jobs</${Btn}>`}>It may have closed since you saved it. Your application record is unaffected.</${Empty}>`}
+      ${loading ? html`<${Skeleton} rows=${4} />` : html`<${Empty} icon="search" title="This listing isn’t in the current data" action=${html`<${Btn} onClick=${() => { closeDrawer(); go("find"); }}>Browse open jobs</${Btn}>`}>It may have closed since you saved it. Your application record is unaffected.</${Empty}>`}
     </${Drawer}>`;
   }
   const app = byJob.get(job.id);
@@ -3613,19 +3650,19 @@ DRAWERS.job = ({ id }) => {
   const head = html`<div class="find-dhead">
     <${Logo} name=${job.co} size="lg" />
     <div class="stack-sm" style="gap:4px; min-width:0">
-      <h2 class="find-dtitle">${job.t}</h2>
-      <div class="row wrap find-dsub"><button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button><span class="sep">·</span><span class="muted" title=${fmt.dateY(job.p)}>Posted ${find_postedText(job.p).toLowerCase()}</span>${app && html`<${StageBadge} stage=${app.stage} />`}</div>
+      <h2 class="find-dtitle">${find_title(job.t)}</h2>
+      <div class="row wrap find-dsub"><button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button><span class="sep-item"><span class="sep">·</span> <span class="muted" title=${fmt.dateY(job.p)}>Posted ${find_postedText(job.p).toLowerCase()}</span></span>${app && html`<${StageBadge} stage=${app.stage} />`}</div>
     </div>
   </div>`;
 
   const saved = app && app.stage === "saved";
   const foot = html`
-    <a class="btn primary find-apply" href=${job.url} target="_blank" rel="noopener" aria-label=${`Apply on ${job.co}'s site (opens in a new tab)`} onClick=${() => setClicked(true)}><span>Apply<span class="hide-sm"> on company site</span></span><${Icon} name="ext" /></a>
+    <a class="btn primary find-apply" href=${job.url} target="_blank" rel="noopener" aria-label=${`Apply on ${job.co}’s site (opens in a new tab)`} onClick=${() => setClicked(true)}><span>Apply<span class="hide-sm"> on company site</span></span><${Icon} name="ext" /></a>
     ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} cls=${cx(saved && "find-save on")} aria-pressed=${saved ? "true" : "false"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
     ${(!app || saved) && html`<${Btn} kind="ghost" icon="check" onClick=${() => find_markApplied(job, app)}>Mark as applied</${Btn}>`}
     ${app && !saved && html`<${Btn} iconRight="arrowR" onClick=${() => openApp(app.id)}>Open in pipeline</${Btn}>`}`;
 
-  return html`<${Drawer} onClose=${closeDrawer} label=${`${job.t} at ${job.co}`} head=${head} foot=${foot}>
+  return html`<${Drawer} onClose=${closeDrawer} label=${`${find_title(job.t)} at ${job.co}`} head=${head} foot=${foot}>
     ${clicked && (!app || saved) && html`<div class="callout info find-applied-q"><${Icon} name="info" /><div class="row wrap" style="flex:1"><span style="flex:1; min-width:160px">Did you apply? Log it and Heardback will remind you to follow up.</span><${Btn} size="sm" onClick=${() => { find_markApplied(job, app); setClicked(false); }}>Mark as applied</${Btn}></div></div>`}
 
     <section class="dsec" aria-label="Key facts">
@@ -3635,7 +3672,7 @@ DRAWERS.job = ({ id }) => {
         ${locs.length > 0 && html`<dt>${locs.length > 1 ? "Locations" : "Location"}</dt>
           <dd><div class="find-locs">${showLocs.map((l) => html`<span key=${l}>${l}</span>`)}</div>
           ${locs.length > 5 && html`<button type="button" class="find-link find-small" onClick=${() => setAllLocs(!allLocs)}>${allLocs ? "Show fewer" : `Show all ${job.nl || locs.length}`}</button>`}
-          ${hiddenMore > 0 && (allLocs || locs.length <= 5) && html`<div class="hint">Plus ${hiddenMore} more on the employer's page.</div>`}</dd>`}
+          ${hiddenMore > 0 && (allLocs || locs.length <= 5) && html`<div class="hint">Plus ${hiddenMore} more on the employer’s page.</div>`}</dd>`}
         ${job.r ? html`<dt>Remote</dt><dd>Remote option listed</dd>` : null}
         ${job.sp && html`<dt>Visa</dt><dd>${find_visaText(job.sp)}</dd>`}
         ${deg && html`<dt>Degrees</dt><dd>${deg}</dd>`}
@@ -3648,7 +3685,7 @@ DRAWERS.job = ({ id }) => {
       <div class=${cx("find-gline", lv)} title=${`${job.g}/100`}><span class=${cx("gscore", lv)} aria-hidden="true"><span class="gbars"><i></i><i></i><i></i></span></span><span>${find_ghostLine(job)}</span></div>
       ${(job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${r}</li>`)}</ul>`}
       ${job.dup ? html`<p class="muted find-small">Also posted ${job.dup === 1 ? "once more" : job.dup === 2 ? "twice more" : `${fmt.num(job.dup)} more times`} with the same title. Shown once.</p>` : null}
-      <p class="hint">Scored ${job.g}/100 from public listing data such as age, reposts and location count. More signals means worth a check, not that the job isn't real. <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></p>
+      <p class="hint">Scored ${job.g}/100 from public listing data such as age, reposts and location count. More signals means worth a check, not that the job isn’t real. <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></p>
     </section>
 
     <section class="dsec" aria-labelledby="find-fit-h">
@@ -3659,7 +3696,7 @@ DRAWERS.job = ({ id }) => {
             <span class="hint">Skills this kind of role usually asks for</span>
             <div class="chips">${fit.matched.map((x) => html`<span class="badge ok" key=${"m" + x}><${Icon} name="check" size=${12} />${x}</span>`)}${fit.missing.map((x) => html`<span class="badge outline" key=${"x" + x}>${x}</span>`)}</div>
           </div>`}
-          <p class="hint">From the listing's title, level and location${!(profile.skills || []).length ? html`. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button> to compare skills.` : "."}</p>`
+          <p class="hint">From the listing’s title, level and location${!(profile.skills || []).length ? html`. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button> to compare skills.` : "."}</p>`
         : html`<p class="muted find-small">Set target roles and locations to see how this job fits. <button type="button" class="find-link" onClick=${() => { closeDrawer(); go("prefs"); }}>Set preferences</button></p>`}
     </section>
 
@@ -3672,7 +3709,7 @@ DRAWERS.job = ({ id }) => {
         <${find_TimeOpenStat} cs=${cs} />
         <${find_Stat} label="Reposted" value=${fmt.pct(find_repostShare(jobs, job.co))} title=${FIND_REPOST_HELP} />
       </div>
-      ${season && html`<p class="find-small find-season-line"><span class="muted">${season.term} hiring:</span> <span class="num">${fmt.num(season.open)} of ${fmt.num(season.posted)} postings still open</span>${season.read && html` <span class=${cx("badge", season.tone)}>${season.read}</span>`}</p>`}` : html`<p class="muted find-small">No company history for this listing yet.</p>`}
+      ${season && html`<dl class="kv find-kv find-season-kv"><dt>${season.term}</dt><dd><span><span class="num">${fmt.num(season.open)} of ${fmt.num(season.posted)}</span> postings still open</span>${season.read && html` <span class=${cx("badge", season.tone)}>${season.read}</span>`}</dd></dl>`}` : html`<p class="muted find-small">No company history for this listing yet.</p>`}
     </section>
   </${Drawer}>`;
 };
@@ -3683,7 +3720,7 @@ const find_openN = (jobsState, name, c) => (jobsState.byCompany.get(name) || [])
 const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.season.posted : null);
 /* One definition of "Reposted", used by the Companies table and both drawers:
    share of a company's open roles (as listed in Find) whose title it posted and closed before. */
-const FIND_REPOST_HELP = "Share of this company's open roles whose title it posted and closed at least once before. Grey under 20%, amber from 20%, red from 50%. Not proof either way.";
+const FIND_REPOST_HELP = "Share of this company’s open roles whose title it posted and closed at least once before. Grey under 20%, amber from 20%, red from 50%. Not proof either way.";
 /* Per-company figures from the listings Find shows (deduped), so every count on screen agrees. */
 const find_aggC = { jobs: null, m: null };
 function find_coAgg(jobsState) {
@@ -3734,7 +3771,7 @@ VIEWS.companies = function CompaniesView() {
   const head = html`<div class="page-head"><div><h1>Companies</h1><p>${ready ? html`<span class="num">${fmt.num(Object.keys(jobs.cstats).length)}</span> companies with open internship or new-grad roles, and how their listings usually behave.` : "Companies hiring interns and new grads, with how long their listings usually stay open."}</p></div></div>`;
   if (!ready) {
     return html`<div class="page">${head}${jobs.status === "error"
-      ? html`<div class="card"><${Empty} icon="alert" title="Couldn't load company data" action=${html`<${Btn} kind="primary" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}>`}>The listings file didn't load (${jobs.error || "unknown error"}). Check your connection and try again.</${Empty}></div>`
+      ? html`<div class="card"><${Empty} icon="alert" title="Couldn’t load company data" action=${html`<${Btn} kind="primary" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}>`}>The listings file didn’t load (${jobs.error || "unknown error"}). Check your connection and try again.</${Empty}></div>`
       : html`<div class="card"><${Skeleton} rows=${10} /></div>`}</div>`;
   }
   const rows = list.slice(0, shown);
@@ -3772,7 +3809,7 @@ VIEWS.companies = function CompaniesView() {
       const n = appsBy.get(x.k) || 0;
       return html`<button type="button" class="find-corow" key=${x.name} onClick=${() => openCompany(x.name)}>
         <${Logo} name=${x.name} />
-        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta">${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (rs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(rs.get(x.name))} reposted` : ""].filter(Boolean).join(" · ")}</span></div>
+        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta"><${find_Seps} parts=${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (rs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(rs.get(x.name))} reposted` : ""]} /></span></div>
         ${n ? html`<span class="badge accent">${n}</span>` : html`<${Icon} name="chevR" cls="faint" />`}
       </button>`;
     })}</div></div>
@@ -3780,7 +3817,7 @@ VIEWS.companies = function CompaniesView() {
       ${shown < list.length && html`<${Btn} onClick=${() => setShown((n) => n + 50)}>Show ${Math.min(50, list.length - shown)} more</${Btn}>`}
       <span class="faint num">Showing ${fmt.num(Math.min(shown, list.length))} of ${fmt.num(list.length)}</span>
     </div>`}
-    <p class="footer-note">From public listing history (SimplifyJobs). Hover a column heading to see how it's calculated.</p>
+    <p class="footer-note">From public listing history (SimplifyJobs). Hover a column heading to see how it’s calculated.</p>
   </div>`;
 };
 
@@ -3795,7 +3832,7 @@ function find_Stat({ label, value, sub, title }) {
 function find_TimeOpenStat({ cs }) {
   const nClosed = cs?.closedTimed || 0;
   const fromClosed = nClosed ? `From ${pluralize(nClosed, "closed listing")}` : "";
-  return html`<${find_Stat} label="Typical time open" value=${find_daysText(cs.medOpenDays) || html`<span class="faint find-nd">Not enough data</span>`} title=${cs.medOpenDays != null ? `Median days a closed listing stayed open. ${fromClosed}.` : "Needs at least 5 closed listings with dates."} />`;
+  return html`<${find_Stat} label="Typical time open" value=${find_daysText(cs.medOpenDays) || html`<span class="faint" aria-hidden="true">—</span><span class="sr">Not enough data</span>`} title=${cs.medOpenDays != null ? `Median days a closed listing stayed open. ${fromClosed}.` : "Needs at least 5 closed listings with dates."} />`;
 }
 function find_BriefText({ text }) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -3826,7 +3863,7 @@ For context, public listing data currently shows ${cs?.open || 0} open roles${ca
   return html`<section class="dsec" aria-labelledby="find-brief-h">
     <h3 id="find-brief-h">Company overview<span class="spacer"></span>${!st.busy && text && html`<${Btn} kind="ghost" size="sm" icon="refresh" onClick=${go}>Refresh</${Btn}>`}</h3>
     ${st.busy && html`<${find_Thinking} onStop=${stop} text=${st.partial ? "Writing…" : "Thinking…"} />`}
-    ${text ? html`<${find_BriefText} text=${text} />` : !st.busy && html`<div class="row wrap find-brief-cta"><${Btn} icon="spark" onClick=${go}>Brief me on this company</${Btn}><span class="hint">From Claude's general knowledge.</span></div>`}
+    ${text ? html`<${find_BriefText} text=${text} />` : !st.busy && html`<div class="row wrap find-brief-cta"><${Btn} icon="spark" onClick=${go}>Brief me on this company</${Btn}><span class="hint">From Claude’s general knowledge.</span></div>`}
     ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err}</span></div>`}
     ${text && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude from general knowledge · may be out of date · verify before relying on it.${fresh && !st.out && !st.busy ? ` Saved ${fmt.ago(fresh.at)}.` : ""}</span>`}
   </section>`;
@@ -3852,7 +3889,7 @@ DRAWERS.company = ({ id }) => {
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${name}</h2>
       <div class="row wrap find-dsub find-dsub-co">
-        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${(() => { const ni = open.filter((j) => j.lvl === "intern").length, ng = open.length - ni; return ni && ng ? html`<span class="sep"> · </span>${fmt.num(ni)} internship, ${fmt.num(ng)} new grad` : null; })()}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
+        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${(() => { const ni = open.filter((j) => j.lvl === "intern").length, ng = open.length - ni; return ni && ng ? html` <span class="sep-item">· ${fmt.num(ni)} internship, ${fmt.num(ng)} new grad</span>` : null; })()}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
         ${cs?.site && html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>`}
       </div>
     </div>
@@ -3871,11 +3908,11 @@ DRAWERS.company = ({ id }) => {
       <div class="find-stats">
         <${find_TimeOpenStat} cs=${cs} />
         <${find_Stat} label="Reposted" value=${fmt.pct(find_repostShare(jobs, name))} title=${FIND_REPOST_HELP} />
-        <${find_Stat} label="New in 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
+        <${find_Stat} label="New in 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "—"} title="Postings added in the last 30 days, open or closed." />
       </div>
       <details class="find-details">
         <summary>How these are calculated</summary>
-        <div class="find-details-body"><p>From public SimplifyJobs listing history. Typical time open is the median for closed listings that stayed up at least a day${cs.closedTimed ? ` (${pluralize(cs.closedTimed, "listing")} here)` : ""}; listings still open aren't counted, so it may run short. Reposted is the share of open roles whose title was posted and closed before. The data starts in March 2026${cs.first ? `; this company first appears ${fmt.date(cs.first * 1000, { month: "short", year: "numeric" })}` : ""}.</p></div>
+        <div class="find-details-body"><p>From public SimplifyJobs listing history. Typical time open is the median for closed listings that stayed up at least a day${cs.closedTimed ? ` (${pluralize(cs.closedTimed, "listing")} here)` : ""}; listings still open aren’t counted, so it may run short. Reposted is the share of open roles whose title was posted and closed before. The data starts in March 2026${cs.first ? `; this company first appears ${fmt.date(cs.first * 1000, { month: "short", year: "numeric" })}` : ""}.</p></div>
       </details>
     </section>`}
 
@@ -3973,7 +4010,7 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
       setText(String(text || "").slice(0, 40000));
       setFileNote({ ok: true, text: `Read ${f.name}. Check the text below and fix anything that came through oddly.` });
     } catch (err) {
-      setFileNote({ ok: false, text: (err && err.message) || `Couldn't read ${f.name}. Paste the text instead.` });
+      setFileNote({ ok: false, text: (err && err.message) || `Couldn’t read ${f.name}. Paste the text instead.` });
     } finally { setReading(false); }
   };
   const words = (value.text.trim().match(/\S+/g) || []).length;
@@ -3994,7 +4031,7 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     <div class="row onb-meta"><span class="hint num">${words ? pluralize(words, "word") : "Nothing pasted yet"}</span>${value.text && html`<button type="button" class="onb-link" onClick=${() => setText("")}>Clear text</button>`}</div>
     <div class="stack-sm">
       <div class="row"><span class="label">Skills</span><span class="faint num" style="font-size:var(--fs-xs)">${skills.length || ""}</span></div>
-      <span class="hint">${value.text ? "Found in your resume. Remove any that don't fit and add ones we missed." : "We'll pick these up from your resume. You can also add them by hand."}</span>
+      <span class="hint">${value.text ? "Found in your resume. Remove any that don’t fit and add ones we missed." : "We’ll pick these up from your resume. You can also add them by hand."}</span>
       ${skills.length ? html`<div class="chips">${skills.map((s) => html`<button type="button" key=${s} class="chip onb-skill" aria-pressed="true" aria-label=${"Remove " + s} title=${"Remove " + s} onClick=${() => remove(s)}>${s}<${Icon} name="x" size=${12} /></button>`)}</div>` : null}
       <form class="row onb-add" onSubmit=${(e) => { e.preventDefault(); addSkill(); }}>
         <input id=${idp + "-add"} class="input" placeholder="Add a skill, e.g. SQL" value=${add} onInput=${(e) => setAdd(e.currentTarget.value)} aria-label="Add a skill" autocomplete="off" />
@@ -4052,11 +4089,11 @@ function onbSummary(p) {
   const roles = p.roles.length ? p.roles.join(", ") : "all roles";
   const locs = p.locations.filter((l) => l !== "remote").map((l) => LOC_OPTIONS.find((o) => o.id === l)?.label || l);
   const where = locs.length ? `${locs.slice(0, 3).join(", ")}${locs.length > 3 ? ` +${locs.length - 3}` : ""}${p.remote ? ", or remote" : ""}` : p.remote ? "any location, including remote" : "any location";
-  return `${lv} · ${roles} · ${where}${p.needsSponsor ? " · sponsorship not ruled out" : ""}`;
+  return [lv, roles, where, p.needsSponsor && "sponsorship not ruled out"].filter(Boolean);
 }
 
 /* ---------- Location checklist (shared with Settings): same pattern, counts and order as Find. Counts are open roles
-   in the picked fields and levels (Find's default filters follow the profile), ordered by that count, then by the
+   in the picked fields and levels (Find’s default filters follow the profile), ordered by that count, then by the
    whole-dataset count, as Find does. Top 6 show, the rest behind "Show N more". ---------- */
 const ONB_LOC_TOP = 6;
 const onbLocCountC = { key: null, jobs: null, out: null };
@@ -4122,7 +4159,7 @@ function OnbStepTargets({ d, set }) {
       <${OnbLocChecklist} idp="onb" value=${locs} roles=${d.roles} levels=${d.levels} onChange=${(v) => set({ locations: v })} />
       <div class="onb-switches">
         <${Switch} id="onb-remote" checked=${d.remote} onChange=${(v) => set({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
-        <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I'll need visa sponsorship" />
+        <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I’ll need visa sponsorship" />
       </div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-name" title="Name" hint="Optional. Only used to greet you.">
@@ -4139,12 +4176,12 @@ function OnbStepMatches({ d, examples, setExamples }) {
   return html`<div class="stack onb-matches">
     <div class="card">
       ${J.status === "error"
-        ? html`<${Empty} icon="alert" title="Couldn't load job listings" action=${html`<${Btn} icon="refresh" onClick=${loadJobs}>Try again</${Btn}>`}>Your setup is saved either way. You can finish now and browse jobs once they load.</${Empty}>`
+        ? html`<${Empty} icon="alert" title="Couldn’t load job listings" action=${html`<${Btn} icon="refresh" onClick=${loadJobs}>Try again</${Btn}>`}>Your setup is saved either way. You can finish now and browse jobs once they load.</${Empty}>`
         : J.status !== "ready"
           ? html`<div class="onb-count"><div class="skel" style="height:28px;width:120px"></div><div class="skel" style="height:12px;width:70%"></div></div><${Skeleton} rows=${5} />`
           : html`<div class="onb-count">
               <div class="row wrap" style="align-items:baseline;gap:10px"><span class="onb-big num">${fmt.num(list.length)}</span><span class="onb-big-label">${list.length === 1 ? "open role matches" : "open roles match"}</span></div>
-              <span class="hint">${onbSummary(d)}</span>
+              <span class="hint">${onbSummary(d).map((x, i) => (i ? html` <span class="sep-item" key=${i}>· ${x}</span>` : html`<span key=${i}>${x}</span>`))}</span>
               ${list.length > 0 && html`<span class="hint num">${fmt.num(low)} of them show no ghost-job signals.</span>`}
             </div>
             ${list.length === 0
@@ -4153,10 +4190,10 @@ function OnbStepMatches({ d, examples, setExamples }) {
                 ${top.map(({ j, f }) => html`<div class="job-row onb-job" key=${j.id}>
                   <${Logo} name=${j.co} />
                   <div class="stack-sm" style="gap:2px">
-                    <span class="job-title truncate">${j.t}</span>
-                    <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+                    <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
+                    <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
                   </div>
-                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
             <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
@@ -4170,8 +4207,8 @@ function OnbStepMatches({ d, examples, setExamples }) {
 
 const ONB_STEPS = [
   { title: "What are you looking for?", lede: "Pick what fits. You can change any of this later in Settings." },
-  { title: "Add your resume (optional)", lede: "We use it to score fit and suggest interview talking points. Skip it if you'd rather not." },
-  { title: "Here's what's open for you", lede: "Real listings that match your targets, best fit first." },
+  { title: "Add your resume (optional)", lede: "We use it to score fit and suggest interview talking points. Skip it if you’d rather not." },
+  { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first." },
 ];
 
 VIEWS.__onboarding = function Onboarding() {
@@ -4205,6 +4242,10 @@ VIEWS.__onboarding = function Onboarding() {
         <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
       </header>
       ${step === 0 && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
+      ${step === 0 && typeof storage !== "undefined" && storage.corrupt && html`<div class="callout wait onb-corrupt" role="alert"><${Icon} name="alert" />
+        <span class="onb-corrupt-text">Your saved data couldn’t be read, so setup started over. A copy was kept in this browser. If you exported a backup, restore it now.</span>
+        <label class="btn sm onb-restore"><${Icon} name="upload" />Restore from backup<input id="onb-restore" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; if (typeof pfImportFile === "function") pfImportFile(f); }} /></label>
+      </div>`}
       <div class="onb-progress">
         <span class="onb-step-label num">Step ${step + 1} of 3</span>
         <div class="onboard-steps" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow=${step + 1} aria-label="Setup progress">${[0, 1, 2].map((i) => html`<i key=${i} class=${i <= step ? "on" : ""}></i>`)}</div>
@@ -4296,7 +4337,7 @@ function plStatus(a, st) {
   if (a.stage === "rejected") return { icon: "x", text: `Rejected ${fmt.ago(plStageAt(a, "rejected") || a.lastActivityAt)}` };
   if (a.stage === "ghosted") return { icon: "ghost", text: `Ghosted ${fmt.ago(plStageAt(a, "ghosted") || a.lastActivityAt)}` };
   const silent = Apps.daysSilent(a);
-  if (silent >= st.followUpDays) return { icon: silent >= st.ghostDays ? "ghost" : "clock", tone: "wait", text: `Silent ${silent}d`, title: `No reply in ${silent} days` };
+  if (silent >= st.followUpDays) return { icon: "clock", tone: "wait", text: `Silent ${silent}d`, title: `No reply in ${silent} days` };
   if (a.stage === "applied") return { icon: "send", text: `Applied ${fmt.ago(a.appliedAt)}` };
   return { icon: "reply", text: `Replied ${fmt.ago(a.lastReplyAt || a.lastActivityAt)}` };
 }
@@ -4374,6 +4415,7 @@ function plFindTime(raw) {
 /* Email parsing: the shared rule-based parser, plus our time finder and interviewer names */
 function plParse(raw) {
   const p = parseEmail(raw);
+  if (!p.title) { const m = (raw || "").match(/\btake the (.+?) (?:coding |online |technical )?(?:assessment|challenge|test)\b/i); if (m && m[1].length <= 90) p.title = m[1].trim(); }
   const ft = p.kind === "interview" || p.kind === "screen" ? plFindTime(raw) : null;
   p.interviewAt = ft ? ft.at : null;
   p.tz = ft && ft.tz ? ft.tz : "";
@@ -4450,7 +4492,7 @@ VIEWS.pipeline = function PipelineView() {
 
   return html`<div class=${cx("page wide pl-page", view === "board" && "pl-page-board", sel.size && "pl-selecting")}>
     <div class="page-head pl-head">
-      <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${sub}</p></div>
+      <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${plSepText(sub)}</p></div>
       <span class="spacer"></span>
       <div class="pl-tools">
         <div class="input-icon pl-filter">
@@ -4475,6 +4517,13 @@ VIEWS.pipeline = function PipelineView() {
 /* ---------- Selection + bulk actions ---------- */
 /* Selection lives in the view. Range order is the on-screen order (board: column by column; table: row order). */
 function plOrder() { return [...document.querySelectorAll(".pl-page [data-card], .pl-page tr[data-row]")].map((el) => el.dataset.card || el.dataset.row); }
+/* "a · b · c" as text where each "· item" wraps as one unit, so a separator never ends a line */
+function plSepText(str) {
+  const parts = String(str ?? "").split(" · ");
+  return parts.flatMap((p, i) => (i === 0 ? [p] : [" ", html`<span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${p}</span>`]));
+}
+/* Keys typed into a field are text, never shortcuts */
+function plEditable(el) { return !!el && (el.isContentEditable || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el.tagName === "INPUT" && !["checkbox", "radio", "button", "submit", "reset"].includes(el.type))); }
 function plTouch() { return window.matchMedia("(hover: none)").matches; }
 function plUseSelection(visKey, view) {
   const [ids, setIds] = useState(() => new Set());
@@ -4589,10 +4638,8 @@ function PlEmpty() {
     </div>
     <div class="pl-empty-links">
       <button type="button" class="pl-linkbtn" onClick=${() => openModal("paste")}>Log an email</button>
-      <span class="pl-sep">·</span>
-      <button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button>
-      <span class="pl-sep">·</span>
-      <button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button>
+      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button></span>
+      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button></span>
     </div>
   </div>`;
 }
@@ -4783,7 +4830,7 @@ function PlTable({ apps, settings, sort, sel }) {
   useEffect(() => { if (headRef.current) headRef.current.indeterminate = nSel > 0 && !allOn; });
   const onTableKey = (e) => {
     const t = e.target;
-    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "a" && !(t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type !== "checkbox"))) { e.preventDefault(); sel.setMany(ids, true); }
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "a" && !plEditable(t)) { e.preventDefault(); sel.setMany(ids, true); }
   };
   const rowClick = (a) => (e) => {
     if (e.target.closest("select")) return;
@@ -4816,7 +4863,7 @@ function PlTable({ apps, settings, sort, sel }) {
             return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
               onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
               <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
-              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}</span></div></div></td>
+              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.kind === "ghost" ? `No reply in ${silent} days` : `${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}`}</span></div></div></td>
               <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
               <td class="num muted">${a.appliedAt ? fmt.date(a.appliedAt) : html`<span class="faint">—</span>`}</td>
               <td class="num muted">${fmt.ago(a.lastActivityAt)}</td>
@@ -4931,24 +4978,34 @@ function PlInline({ id, label, value, display, type = "text", placeholder, onSav
   const [edit, setEdit] = useState(false);
   const ref = useRef(null);
   const done = useRef(false);
-  useEffect(() => { if (edit) { done.current = false; setTimeout(() => { ref.current?.focus(); if (type === "text" || type === "url") ref.current?.select?.(); }, 0); } }, [edit]);
-  const close = (save) => {
+  /* Focus in the commit itself (not after paint), so a key pressed right after the click lands in the input, not on the drawer's shortcuts */
+  /* Uncontrolled while editing: the value is seeded once, so a re-render (a toast, a store update) never wipes what was typed */
+  useLayoutEffect(() => { if (edit) { done.current = false; if (ref.current) ref.current.value = toInput(value); ref.current?.focus(); if (type === "text" || type === "url") ref.current?.select?.(); } }, [edit]);
+  const refocus = useRef(false);
+  useLayoutEffect(() => { if (!edit && refocus.current) { refocus.current = false; document.getElementById(id + "-v")?.focus(); } }, [edit]);
+  /* Enter and Escape hand focus back to the value; a blur leaves it wherever the person moved it */
+  const close = (save, back = true) => {
     if (done.current) return; done.current = true;
     if (save && ref.current) { const v = fromInput(ref.current.value); if (v !== value) onSave(v); }
+    refocus.current = back;
     setEdit(false);
-    setTimeout(() => document.getElementById(id + "-v")?.focus(), 0);
   };
   if (!edit) return html`<button type="button" id=${id + "-v"} class=${cx("pl-inline", !display && "is-empty")} onClick=${() => setEdit(true)} aria-label=${`${label}: ${display || "not set"}. Edit`}>
     <span class="truncate">${display || placeholder}</span><${Icon} name="edit" size=${13} />
   </button>`;
   return html`<div class="pl-inline-wrap">
-    <input id=${id} ref=${ref} type=${type} class="input pl-inline-input" aria-label=${label} placeholder=${placeholder} value=${toInput(value)}
-      onBlur=${() => close(true)} onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); close(true); } }} />
+    <input id=${id} ref=${ref} type=${type} class="input pl-inline-input" aria-label=${label} placeholder=${placeholder}
+      onBlur=${(e) => close(true, !e.relatedTarget)} onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); close(true); } }} />
     <${PlEscape} onEscape=${() => close(false)} />
   </div>`;
 }
 /* Registers on the shared Escape stack so Escape cancels the edit instead of closing the drawer */
-function PlEscape({ onEscape }) { useEscape(onEscape); return null; }
+function PlEscape({ onEscape }) {
+  /* Same contract as useEscape, but registered in a layout effect so it is on the stack before the next key event */
+  const ref = useRef(onEscape); ref.current = onEscape;
+  useLayoutEffect(() => { escStack.push(ref); return () => { const i = escStack.indexOf(ref); if (i >= 0) escStack.splice(i, 1); }; }, []);
+  return null;
+}
 
 function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : "")).replace(/\/$/, ""); } catch { return u; } }
 
@@ -4967,7 +5024,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
       <div class="stack-sm" style="flex:1;min-width:0">
         <span class="pl-eyebrow">Next step</span>
         <strong>${ns.title}</strong>
-        <span class="muted pl-small">${ns.sub}</span>
+        <span class="muted pl-small">${plSepText(ns.sub)}</span>
         ${secondary && html`<div class="pl-next-actions pl-small">${secondary}</div>`}
       </div>
     </div>
@@ -4988,7 +5045,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
         <span class="pl-kv-k">Salary</span>
         <${PlInline} id="pl-salary" label="Salary" value=${a.salary || ""} display=${a.salary} placeholder="Add salary" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { salary: v })} />
         <span class="pl-kv-k">Last reply</span>
-        <span class=${cx("pl-kv-v num", ACTIVE_STAGES.includes(a.stage) && silent >= settings.followUpDays && "pl-warn")}>${replyTxt}</span>
+        <span class=${cx("pl-kv-v num", ACTIVE_STAGES.includes(a.stage) && silent >= settings.followUpDays && "pl-warn")}><span>${plSepText(replyTxt)}</span></span>
         ${a.followedUpAt && html`<span class="pl-kv-k">Followed up</span><span class="pl-kv-v num">${fmt.dateY(a.followedUpAt)}</span>`}
       </div>
     </section>
@@ -4998,7 +5055,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
       <div class="pl-job">
         <div class="stack-sm" style="flex:1;min-width:0;gap:2px">
           <span class="truncate" style="font-weight:500">${job.t}</span>
-          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="pl-sep">·</span><span>Posted ${fmt.ago(job.p)}</span></span>
+          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="sep-item"><span class="pl-sep" aria-hidden="true">·</span> Posted ${fmt.ago(job.p)}</span></span>
         </div>
         <${Btn} size="sm" iconRight="chevR" onClick=${() => openJob(job.id)}>View listing</${Btn}>
       </div>
@@ -5156,7 +5213,7 @@ function PlTimeline({ a }) {
         <span class="tl-dot"><${Icon} name=${plEvIcon(e)} size=${12} /></span>
         <div class="stack-sm" style="gap:1px">
           <span class="tl-text">${e.text}</span>
-          <span class="tl-when num">${fmt.dateY(e.at)} · ${fmt.time(e.at)}</span>
+          <span class="tl-when num">${plSepText(`${fmt.dateY(e.at)} · ${fmt.time(e.at)}`)}</span>
         </div>
       </div>`)}
     </div>
@@ -5370,7 +5427,7 @@ ${raw.slice(0, 12000)}
     const rt = ROUND[f.roundType]?.label || "Interview";
     const round = willRound ? `adds a ${rt} round on ${plLongWhen(f.interviewAt)}` : "";
     const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
-    if (!tApp) return `Creates ${f.company || "a new application"}${f.title ? " · " + f.title : ""} in ${STAGE[stage || "applied"].label}${round ? " and " + round : ""}.`;
+    if (!tApp) return `Creates ${f.company || "a new application"}${f.title ? ` (${f.title})` : ""} in ${STAGE[stage || "applied"].label}${round ? " and " + round : ""}.`;
     if (plShouldMove(tApp.stage, stage)) return `Moves ${tApp.company} to ${STAGE[stage].label}${round ? " and " + round : " and logs this email"}.`;
     return `${round ? cap(round) + " and logs this email" : `Logs this email on ${tApp.company}`}.${dupRound ? " This round is already logged." : ""} Stage stays ${STAGE[tApp.stage].label}.`;
   })();
@@ -5534,7 +5591,7 @@ function pfParseCSV(text) {
     example: col("example"),
   };
   if (ix.applied < 0) ix.applied = colLike(/appl.*date|date.*appl/);
-  if (ix.company < 0 && ix.title < 0) return { error: "Couldn't find a company or title column. Name the first row's columns company, title, stage, applied date, url, location." };
+  if (ix.company < 0 && ix.title < 0) return { error: "Couldn’t find a company or title column. Name the first row’s columns company, title, stage, applied date, url, location." };
   const get = (r, k) => (ix[k] >= 0 ? (r[ix[k]] || "").trim() : "");
   const apps = []; let skipped = 0;
   for (const r of rows.slice(1)) {
@@ -5549,13 +5606,13 @@ function pfImportFile(file) {
   if (!file) return;
   if (file.size > 8 * 1024 * 1024) { toast("That file is over 8 MB. Import a smaller backup or CSV."); return; }
   const r = new FileReader();
-  r.onerror = () => toast(`Couldn't read ${file.name}. Try again.`);
+  r.onerror = () => toast(`Couldn’t read ${file.name}. Try again.`);
   r.onload = () => {
     const text = String(r.result || "");
     if (/\.json$/i.test(file.name) || /^\s*[{[]/.test(text)) {
-      let data; try { data = JSON.parse(text); } catch { toast("That JSON file couldn't be read. Use a backup exported from Heardback.", { ms: 6000 }); return; }
+      let data; try { data = JSON.parse(text); } catch { toast("That JSON file couldn’t be read. Use a backup exported from Heardback.", { ms: 6000 }); return; }
       const isBackup = data && typeof data === "object" && !Array.isArray(data) && (data.app === "Heardback" || data.apps && typeof data.apps === "object");
-      if (!isBackup && !Array.isArray(data)) { toast("That file isn't a Heardback backup. Export one from Settings and import that.", { ms: 6000 }); return; }
+      if (!isBackup && !Array.isArray(data)) { toast("That file isn’t a Heardback backup. Export one from Settings and import that.", { ms: 6000 }); return; }
       const rawApps = Array.isArray(data) ? data : Array.isArray(data.apps) ? data.apps : data.apps && typeof data.apps === "object" ? Object.values(data.apps) : [];
       const apps = Object.values(cleanApps(rawApps));
       const bad = rawApps.length - apps.length;
@@ -5566,7 +5623,7 @@ function pfImportFile(file) {
       const replace = apps.filter((a) => cur[a.id]).length;
       askConfirm({
         title: `Import ${pluralize(apps.length, "application")}?`,
-        body: `They'll be merged with what's here${replace ? `; ${pluralize(replace, "application")} with the same ID will be replaced by the backup's version` : ""}.${hasProfile ? " Your profile and settings will be updated from the backup." : ""}${bad ? ` ${pluralize(bad, "entry", "entries")} couldn't be read and will be skipped.` : ""}`,
+        body: `They’ll be merged with what’s here${replace ? `; ${pluralize(replace, "application")} with the same ID will be replaced by the backup’s version` : ""}.${hasProfile ? " Your profile and settings will be updated from the backup." : ""}${bad ? ` ${pluralize(bad, "entry", "entries")} couldn’t be read and will be skipped.` : ""}`,
         confirmLabel: "Import and merge",
         onConfirm: () => {
           store.set((s) => ({
@@ -5597,7 +5654,7 @@ function pfDeleteAll() {
   const shared = !!store.get().settings.shareAnon && typeof poolUnshare === "function";
   askConfirm({
     title: "Delete all your data?",
-    body: `This removes every application, round, note, your resume and your settings from this browser.${shared ? " Your shared anonymous reply data is removed too." : ""} It can't be undone. Export a backup first if you might want it later.`,
+    body: `This removes every application, round, note, your resume and your settings from this browser.${shared ? " Your shared anonymous reply data is removed too." : ""} It can’t be undone. Export a backup first if you might want it later.`,
     confirmLabel: "Delete everything",
     danger: true,
     onConfirm: async () => {
@@ -5614,7 +5671,7 @@ function pfDeleteAll() {
 function PfProfile() {
   const p = useStore((s) => s.profile);
   const locs = p.locations || [];
-  return html`<${PfCard} title="Profile" sub="Your targets shape fit scores, the jobs you see first, and Today's suggestions.">
+  return html`<${PfCard} title="Profile" sub="Your targets shape fit scores, the jobs you see first, and Today’s suggestions.">
     <${PfRow} label="Name" hint="Only used to greet you." id="pf-name">
       <input id="pf-name" class="input pf-input" autocomplete="name" maxlength="40" placeholder="Your name" value=${p.name || ""} onInput=${(e) => pfSetProfile({ name: e.currentTarget.value })} />
     </${PfRow}>
@@ -5633,8 +5690,8 @@ function PfProfile() {
     <${PfRow} label="Remote">
       <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
     </${PfRow}>
-    <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don't sponsor.">
-      <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I'll need sponsorship" />
+    <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don’t sponsor.">
+      <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I’ll need sponsorship" />
     </${PfRow}>
   </${PfCard}>`;
 }
@@ -5697,7 +5754,7 @@ function PfData() {
         <label class="btn pf-file"><${Icon} name="upload" />Choose file to import<input id="pf-import" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; pfImportFile(f); }} /></label>
       </div>
     </${PfRow}>
-    <${PfRow} label="Delete all data" hint="Removes everything from this browser. Can't be undone.">
+    <${PfRow} label="Delete all data" hint="Removes everything from this browser. Can’t be undone.">
       <${Btn} cls="danger" icon="trash" onClick=${pfDeleteAll} id="pf-delete">Delete all data</${Btn}>
     </${PfRow}>
   </${PfCard}>`;
@@ -5706,7 +5763,8 @@ function PfPrivacy() {
   return html`<section class="card pf-card" aria-label="Privacy">
     <div class="card-head"><h2>Privacy</h2></div>
     <div class="card-body stack">
-      <p class="pf-statement">Your applications, notes and resume are stored only in this browser on this device. Nothing is shared unless you turn on anonymous reply data below. Claude features run on your own Claude account and only when you click them.</p>
+      <p class="pf-statement"><b>Stored only in this browser.</b> Your applications, notes and resume stay on this device. Nothing is shared unless you turn on anonymous reply data below.</p>
+      <p class="pf-statement"><b>Claude runs on your own account,</b> and only when you click a Claude feature.</p>
       <ul class="pf-facts">
         <li>No account and no ads.</li>
         <li>Clearing browser data deletes Heardback data. Export a backup occasionally.</li>
@@ -5721,9 +5779,9 @@ function PfSource() {
   return html`<section class="card pf-card" aria-label="Data source">
     <div class="card-head"><h2>Where listings come from</h2></div>
     <div class="card-body stack">
-      <p class="muted pf-text">Listings come from the <a href="https://github.com/SimplifyJobs" target="_blank" rel="noopener">SimplifyJobs community lists on GitHub</a>. Every listing links to the employer's own application page. Ghost-job signals are estimates from posting history, not facts about any company.</p>
+      <p class="muted pf-text">Listings come from the <a href="https://github.com/SimplifyJobs" target="_blank" rel="noopener">SimplifyJobs community lists on GitHub</a>. Every listing links to the employer’s own application page. Ghost-job signals are estimates from posting history, not facts about any company.</p>
       <div class="row wrap pf-meta">
-        <span class="hint num">${J.status === "ready" ? `${fmt.num(st?.active ?? J.jobs.length)} open listings${st?.companies ? ` from ${fmt.num(st.companies)} companies` : ""}` : J.status === "error" ? "Listings couldn't load" : "Loading listings…"}</span>
+        <span class="hint num">${J.status === "ready" ? `${fmt.num(st?.active ?? J.jobs.length)} open listings${st?.companies ? ` from ${fmt.num(st.companies)} companies` : ""}` : J.status === "error" ? "Listings couldn’t load" : "Loading listings…"}</span>
         ${ts && html`<span class="hint num">Last refreshed ${fmt.dateY(ts)}, ${fmt.time(ts)}</span>`}
       </div>
     </div>
@@ -5733,7 +5791,7 @@ function PfSource() {
 VIEWS.prefs = function PrefsView() {
   return html`<div class="page pf-page">
     <div class="page-head"><div><h1>Settings</h1><p>Your profile, reminders, and data. Changes save automatically.</p></div></div>
-    ${storage.corrupt && html`<div class="callout wait pf-corrupt" role="alert"><${Icon} name="alert" /><span>Your saved data couldn't be read. A copy was kept in this browser. Import a backup to restore.</span></div>`}
+    ${storage.corrupt && html`<div class="callout wait pf-corrupt" role="alert"><${Icon} name="alert" /><span class="pf-corrupt-text">Your saved data couldn’t be read. A copy was kept in this browser. Import a backup file to restore it.</span><${Btn} size="sm" icon="upload" onClick=${() => document.getElementById("pf-import")?.click()} id="pf-restore">Restore from backup</${Btn}></div>`}
     <div class="pf-layout">
       <div class="stack pf-col">
         <${PfProfile} />
@@ -5770,26 +5828,26 @@ VIEWS.prefs = function PrefsView() {
 const PREP_BANK = {
   recruiter: [
     { q: "Walk me through your background.", t: "Two minutes, in order: school, one or two relevant experiences, why this role now." },
-    { q: "Why are you interested in this role?", t: "Connect something specific about the role to something you've done or want to learn." },
+    { q: "Why are you interested in this role?", t: "Connect something specific about the role to something you’ve done or want to learn." },
     { q: "What do you know about what we do?", t: "One accurate sentence about the product and who uses it. Check their site before the call." },
     { q: "What are you looking for in your next role?", t: "Name two or three things: the kind of work, the team, how you want to grow." },
-    { q: "What's your timeline, and are you interviewing elsewhere?", t: "Be honest and brief. Mention deadlines from other offers if you have them." },
+    { q: "What’s your timeline, and are you interviewing elsewhere?", t: "Be honest and brief. Mention deadlines from other offers if you have them." },
     { q: "When could you start, and where would you be based?", t: "Know your graduation date or term dates and your location preferences." },
-    { q: "Will you need visa sponsorship now or in the future?", t: "Answer plainly. Recruiters ask this early so nobody's time is wasted." },
-    { q: "Tell me about a project you're proud of.", t: "Short version: the problem, what you built, one result. Save the detail for later rounds." },
-    { q: "What are your compensation expectations?", t: "It's fine to ask for their range first, or give a researched range rather than one number." },
+    { q: "Will you need visa sponsorship now or in the future?", t: "Answer plainly. Recruiters ask this early so nobody’s time is wasted." },
+    { q: "Tell me about a project you’re proud of.", t: "Short version: the problem, what you built, one result. Save the detail for later rounds." },
+    { q: "What are your compensation expectations?", t: "It’s fine to ask for their range first, or give a researched range rather than one number." },
     { q: "Do you have any questions for me?", t: "Ask about the interview process and what the team is working on." },
   ],
   behavioral: [
     { q: "Tell me about a time you worked through a disagreement on a team.", t: "Show you listened, found the real issue, and kept the relationship intact." },
-    { q: "Describe a project that didn't go as planned. What did you do?", t: "Own your part, explain how you adjusted, and what you'd do differently." },
+    { q: "Describe a project that didn’t go as planned. What did you do?", t: "Own your part, explain how you adjusted, and what you’d do differently." },
     { q: "Tell me about a time you had to learn something quickly.", t: "How you learned, not just that you did. End with what you shipped with it." },
     { q: "Give an example of when you took initiative without being asked.", t: "Why you noticed the problem, what you did, and the effect on others." },
     { q: "Tell me about a mistake you made and how you handled it.", t: "A real mistake, caught and fixed, plus the habit you changed afterwards." },
     { q: "Describe a time you had several deadlines at once.", t: "How you prioritized and communicated. Be concrete about the trade-off." },
     { q: "Tell me about a time you received critical feedback.", t: "Show you took it seriously and changed something visible." },
     { q: "Describe a time you led a group or a piece of work.", t: "Leadership without a title counts: organizing, unblocking, deciding." },
-    { q: "Tell me about the hardest problem you've solved.", t: "Make the difficulty clear first, then your approach, then the outcome." },
+    { q: "Tell me about the hardest problem you’ve solved.", t: "Make the difficulty clear first, then your approach, then the outcome." },
     { q: "Why do you want to work here, and why this team?", t: "Specific reasons tied to the work, not the brand or perks." },
     { q: "Where do you want to be in a few years?", t: "Show direction and ambition that fits what this role can offer." },
   ],
@@ -5802,55 +5860,55 @@ const PREP_BANK = {
     { q: "Return the k most frequent elements in a list.", t: "Count with a map, then a heap or bucket sort. Compare the trade-offs." },
     { q: "Check whether a binary tree is a valid binary search tree.", t: "Pass min/max bounds down, or use an in-order traversal." },
     { q: "Design a URL shortener.", t: "Clarify scale, then IDs, storage, redirects, and caching. Keep it simple first." },
-    { q: "What happens when you type a URL into a browser and press Enter?", t: "DNS, TCP/TLS, HTTP request, server, response, rendering. Go deep where you're strongest." },
+    { q: "What happens when you type a URL into a browser and press Enter?", t: "DNS, TCP/TLS, HTTP request, server, response, rendering. Go deep where you’re strongest." },
     { q: "Walk me through a bug that took you a long time to find.", t: "How you narrowed it down matters more than the bug itself." },
     { q: "How would you test a function you just wrote?", t: "Normal cases, edge cases, invalid input. Mention automating them." },
   ],
   data: [
-    { q: "Explain the bias-variance trade-off.", t: "Use one concrete model example and how you'd detect each problem." },
+    { q: "Explain the bias-variance trade-off.", t: "Use one concrete model example and how you’d detect each problem." },
     { q: "How would you handle a dataset with heavy class imbalance?", t: "Better metrics first (precision/recall, PR-AUC), then resampling or class weights." },
     { q: "Write a SQL query for the top three products by revenue in each category.", t: "Window function with ROW_NUMBER or RANK, partitioned by category. Ask how ties work." },
     { q: "How would you design an A/B test for a new feature?", t: "Hypothesis, one primary metric, sample size, duration, and guardrail metrics." },
-    { q: "What's the difference between L1 and L2 regularization?", t: "L1 pushes weights to zero (sparsity), L2 shrinks them smoothly." },
-    { q: "How do you deal with missing data?", t: "First ask why it's missing. Then drop, impute, or model it, and say what each costs." },
+    { q: "What’s the difference between L1 and L2 regularization?", t: "L1 pushes weights to zero (sparsity), L2 shrinks them smoothly." },
+    { q: "How do you deal with missing data?", t: "First ask why it’s missing. Then drop, impute, or model it, and say what each costs." },
     { q: "How would you evaluate a classification model?", t: "Pick metrics that match the cost of each error. Mention validation and leakage." },
     { q: "Explain how gradient descent works.", t: "Loss, gradient, learning rate. Mention batch vs. stochastic and why it matters." },
     { q: "Walk me through a model or analysis you built end to end.", t: "Problem, data, baseline, what you tried, how you measured, what changed." },
-    { q: "How would you explain a p-value to someone non-technical?", t: "How surprising the data would be if there were no real effect. Avoid 'probability it's true'." },
+    { q: "How would you explain a p-value to someone non-technical?", t: "How surprising the data would be if there were no real effect. Avoid “probability it’s true”." },
     { q: "A key metric dropped 10% overnight. How would you investigate?", t: "Check data issues first, then segment by time, platform, region, and recent changes." },
   ],
   product: [
-    { q: "What's a product you use often, and how would you improve it?", t: "Pick a user, a real problem, one change, and how you'd measure it." },
-    { q: "How would you decide what to build next with limited engineering time?", t: "Tie options to goals, estimate impact and effort, and say what you'd cut." },
+    { q: "What’s a product you use often, and how would you improve it?", t: "Pick a user, a real problem, one change, and how you’d measure it." },
+    { q: "How would you decide what to build next with limited engineering time?", t: "Tie options to goals, estimate impact and effort, and say what you’d cut." },
     { q: "Design a product for first-year college students to find study groups.", t: "Clarify users and goals, list pain points, pick one, sketch a simple solution." },
     { q: "Daily active users dropped 15% last week. What do you do?", t: "Rule out tracking issues, then segment. Ask about launches and seasonality." },
     { q: "How would you measure the success of a new feature?", t: "One north-star metric, a few supporting metrics, and a guardrail." },
-    { q: "Tell me about a time you used data to change someone's mind.", t: "What they believed, what you showed, and what happened next." },
+    { q: "Tell me about a time you used data to change someone’s mind.", t: "What they believed, what you showed, and what happened next." },
     { q: "How do you work with engineers and designers when you disagree?", t: "Show you start from the user problem and use evidence, not authority." },
     { q: "Estimate how many rideshare trips happen in a large city on a weekday.", t: "State assumptions, structure the math, sanity-check the result." },
     { q: "What makes a product good, in your view?", t: "A clear point of view with one example you can defend." },
     { q: "Walk me through a launch you were part of.", t: "Your role, the goal, a hard decision, and what the numbers showed." },
   ],
   quant: [
-    { q: "You flip a fair coin until you get two heads in a row. What's the expected number of flips?", t: "Set up states and solve the equations. The answer is 6." },
-    { q: "What's the expected value of the maximum of two fair dice rolls?", t: "Count outcomes by maximum value. Show the method, then the number (161/36)." },
+    { q: "You flip a fair coin until you get two heads in a row. What’s the expected number of flips?", t: "Set up states and solve the equations. The answer is 6." },
+    { q: "What’s the expected value of the maximum of two fair dice rolls?", t: "Count outcomes by maximum value. Show the method, then the number (161/36)." },
     { q: "Explain what a p-value and a confidence interval tell you.", t: "Precise definitions plus one sentence on how people misread them." },
     { q: "How would you test whether a trading signal has real predictive power?", t: "Out-of-sample testing, transaction costs, multiple-testing risk, look-ahead bias." },
-    { q: "What's the difference between correlation and covariance?", t: "Covariance has units, correlation is scaled to [-1, 1]. Note what neither captures." },
+    { q: "What’s the difference between correlation and covariance?", t: "Covariance has units, correlation is scaled to [-1, 1]. Note what neither captures." },
     { q: "Explain linear regression assumptions and what happens when they break.", t: "Linearity, independence, constant variance, normal errors. Give one fix for each." },
     { q: "Implement a function to compute a moving average over a stream of prices.", t: "Running sum with a queue for O(1) per update. Discuss memory." },
     { q: "Estimate how many piano tuners work in a major city.", t: "Structure, round sensibly, and check the order of magnitude." },
-    { q: "What's an option, and what affects its price?", t: "Underlying price, strike, time, volatility, rates. Intuition beats formulas here." },
-    { q: "Walk me through a statistics or modeling project you've done.", t: "Question, data, method, how you validated it, and the result." },
+    { q: "What’s an option, and what affects its price?", t: "Underlying price, strike, time, volatility, rates. Intuition beats formulas here." },
+    { q: "Walk me through a statistics or modeling project you’ve done.", t: "Question, data, method, how you validated it, and the result." },
     { q: "Mental math: what is 17 × 24, and 7/8 as a percentage?", t: "Speed and accuracy. Say your steps out loud so they can follow." },
   ],
   hardware: [
-    { q: "Explain the difference between a microcontroller and a microprocessor.", t: "Integrated memory and peripherals versus external. Say where you'd use each." },
+    { q: "Explain the difference between a microcontroller and a microprocessor.", t: "Integrated memory and peripherals versus external. Say where you’d use each." },
     { q: "What is a race condition, and how do you prevent one in embedded code?", t: "Shared state with interrupts or threads. Mention volatile, critical sections, atomics." },
     { q: "How does an interrupt work, and what belongs in an interrupt handler?", t: "Keep handlers short: set a flag or buffer data, do the work elsewhere." },
     { q: "Explain setup and hold time.", t: "Why they exist, what happens on a violation, and how timing is closed." },
-    { q: "Walk me through how you'd debug a board that doesn't power on.", t: "Visual check, rails with a multimeter, current draw, then one block at a time." },
-    { q: "What's the difference between I2C, SPI, and UART?", t: "Wires, speed, addressing, and when you'd pick each one." },
+    { q: "Walk me through how you’d debug a board that doesn’t power on.", t: "Visual check, rails with a multimeter, current draw, then one block at a time." },
+    { q: "What’s the difference between I2C, SPI, and UART?", t: "Wires, speed, addressing, and when you’d pick each one." },
     { q: "Design a finite state machine for a traffic light.", t: "States, transitions, timing, and a pedestrian button input." },
     { q: "What does a decoupling capacitor do, and where do you place it?", t: "Supplies local current and filters noise. As close to the power pin as you can." },
     { q: "Write a function to set, clear, and toggle a bit in a register.", t: "Bitwise OR, AND with NOT, and XOR with a mask." },
@@ -5858,12 +5916,12 @@ const PREP_BANK = {
   ],
 };
 const PREP_ASK = {
-  recruiter: ["What does the rest of the interview process look like, and how long does it usually take?", "What does a typical first few months look like for someone in this role?", "What team would I be on, and what is it working on now?", "What do people who do well in this role have in common?", "Is there anything in my background you'd like me to clarify?"],
-  behavioral: ["What does success look like in this role after six months?", "How does the team give feedback, and how often?", "What's something the team changed recently because of feedback?", "How are projects chosen and prioritized?", "What do you enjoy most about working here?"],
-  technical: ["What does the team's tech stack look like, and why was it chosen?", "How does code review work on your team?", "What's a recent technical problem the team solved that you're proud of?", "How do new hires get up to speed on the codebase?", "How do you balance shipping quickly with paying down technical debt?"],
-  case: ["How do product decisions usually get made on your team?", "Which metrics does the team watch most closely?", "Can you tell me about a recent decision that changed because of user research or data?", "How do PMs, engineers, and designers split responsibilities here?", "What's the biggest open question for the product right now?"],
-  onsite: ["What would my first project likely be?", "How is mentorship set up for new hires or interns?", "What's the biggest challenge the team faces this year?", "How does the team celebrate wins or learn from misses?", "What's one thing you'd change about working here if you could?"],
-  other: ["What would you want me to accomplish in the first month?", "How does the team measure good work?", "What's the best part of working on this team?", "What are the next steps after this conversation?"],
+  recruiter: ["What does the rest of the interview process look like, and how long does it usually take?", "What does a typical first few months look like for someone in this role?", "What team would I be on, and what is it working on now?", "What do people who do well in this role have in common?", "Is there anything in my background you’d like me to clarify?"],
+  behavioral: ["What does success look like in this role after six months?", "How does the team give feedback, and how often?", "What’s something the team changed recently because of feedback?", "How are projects chosen and prioritized?", "What do you enjoy most about working here?"],
+  technical: ["What does the team’s tech stack look like, and why was it chosen?", "How does code review work on your team?", "What’s a recent technical problem the team solved that you’re proud of?", "How do new hires get up to speed on the codebase?", "How do you balance shipping quickly with paying down technical debt?"],
+  case: ["How do product decisions usually get made on your team?", "Which metrics does the team watch most closely?", "Can you tell me about a recent decision that changed because of user research or data?", "How do PMs, engineers, and designers split responsibilities here?", "What’s the biggest open question for the product right now?"],
+  onsite: ["What would my first project likely be?", "How is mentorship set up for new hires or interns?", "What’s the biggest challenge the team faces this year?", "How does the team celebrate wins or learn from misses?", "What’s one thing you’d change about working here if you could?"],
+  other: ["What would you want me to accomplish in the first month?", "How does the team measure good work?", "What’s the best part of working on this team?", "What are the next steps after this conversation?"],
 };
 const PREP_CAT_KEY = { Software: "software", "Data & AI": "data", Product: "product", Quant: "quant", Hardware: "hardware" };
 const PREP_PRACTICE_TYPES = [{ id: "recruiter", label: "Recruiter" }, { id: "behavioral", label: "Behavioral" }, { id: "technical", label: "Technical" }, { id: "case", label: "Case" }];
@@ -5894,10 +5952,10 @@ function prepQuestions(type, cat) {
 const PREP_VERBS = /^(built|led|designed|developed|created|launched|shipped|implemented|reduced|increased|improved|optimized|automated|scaled|migrated|analyzed|won|grew|cut|saved|mentored|managed|founded|organized|delivered|architected|engineered|deployed|trained|researched|wrote|published|redesigned|streamlined|owned|drove|co-?founded|prototyped|integrated|refactored|accelerated|coordinated|taught|presented)\b/i;
 const PREP_USE = [
   [/^(led|managed|mentored|organized|coordinated|founded|co-?founded|owned|drove|taught)/i, "leadership or ownership questions"],
-  [/^(reduced|cut|optimized|improved|streamlined|accelerated|refactored|saved|automated)/i, "\"Tell me about improving something\""],
-  [/^(built|shipped|launched|designed|developed|created|implemented|architected|engineered|deployed|prototyped|integrated)/i, "\"A project you're proud of\""],
-  [/^(analyzed|researched|trained|published|wrote|presented)/i, "technical deep dives and \"walk me through your work\""],
-  [/^(won|grew|increased|scaled|delivered)/i, "\"Your biggest impact\""],
+  [/^(reduced|cut|optimized|improved|streamlined|accelerated|refactored|saved|automated)/i, "“Tell me about improving something”"],
+  [/^(built|shipped|launched|designed|developed|created|implemented|architected|engineered|deployed|prototyped|integrated)/i, "“A project you’re proud of”"],
+  [/^(analyzed|researched|trained|published|wrote|presented)/i, "technical deep dives and “walk me through your work”"],
+  [/^(won|grew|increased|scaled|delivered)/i, "“Your biggest impact”"],
 ];
 function prepTalkingPoints(resume) {
   if (!resume) return [];
@@ -5912,7 +5970,7 @@ function prepTalkingPoints(resume) {
     const strong = x.l.match(/\$\d[\d,.]*\s?[kKmMbB]?\b|\d[\d,.]*\s?%|\b\d[\d,.]*x\b/g) || [];
     const plain = x.l.match(/\b\d[\d,.]*\b/);
     const metric = strong.length >= 2 ? `${strong[0]} to ${strong[1]}` : strong[0] || null;
-    const use = (PREP_USE.find(([re]) => re.test(x.l)) || [null, "behavioral questions and \"tell me about yourself\""])[1];
+    const use = (PREP_USE.find(([re]) => re.test(x.l)) || [null, "behavioral questions and “tell me about yourself”"])[1];
     return { text: x.l, metric, plain: !metric && plain ? plain[0] : null, use };
   });
 }
@@ -5991,7 +6049,7 @@ function PrepPractice({ questions, ctx, onExit }) {
     ctl.current?.abort();
     const ac = new AbortController(); ctl.current = ac;
     setBusy(true); setErr("");
-    const prompt = `You are a calm, experienced interview coach. A candidate is practicing for a ${ctx.round} interview for a ${ctx.title || ctx.cat + " role"}.\n\nQuestion: ${q.q}\n\nTheir answer outline:\n"""\n${outline.slice(0, 4000)}\n"""\n\nGive concise, specific, kind feedback as exactly three short bullets, each starting with its label:\n- What worked: ...\n- What to tighten: ...\n- A stronger opening line: "..."\nNo preamble, no headings, under 110 words total. Don't invent facts about the candidate.`;
+    const prompt = `You are a calm, experienced interview coach. A candidate is practicing for a ${ctx.round} interview for a ${ctx.title || ctx.cat + " role"}.\n\nQuestion: ${q.q}\n\nTheir answer outline:\n"""\n${outline.slice(0, 4000)}\n"""\n\nGive concise, specific, kind feedback as exactly three short bullets, each starting with its label:\n- What worked: ...\n- What to tighten: ...\n- A stronger opening line: "..."\nNo preamble, no headings, under 110 words total. Don’t invent facts about the candidate.`;
     try {
       const r = await askClaude(prompt, { signal: ac.signal, onText: (x) => setFb((f) => ({ ...f, [i]: x.text })) });
       setFb((f) => ({ ...f, [i]: r.text }));
@@ -6089,8 +6147,8 @@ function PrepTalking({ resume }) {
   return html`<div class="card">
     <div class="card-head"><h3>Your talking points</h3><span class="spacer"></span>${resume && html`<${Btn} size="sm" kind="ghost" icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}>`}</div>
     <div class="card-body">
-      ${!resume ? html`<div class="prep-cta"><p class="muted">Add your resume and we'll pull out the lines with real results, ready to turn into stories.</p><${Btn} icon="doc" onClick=${() => openModal("resume")} id="prep-add-resume">Add your resume</${Btn}></div>`
-        : !pts.length ? html`<div class="prep-cta"><p class="muted">We couldn't find lines with numbers or action verbs. Lines like "Built X that cut Y by 30%" make the best stories.</p><${Btn} icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}></div>`
+      ${!resume ? html`<div class="prep-cta"><p class="muted">Add your resume and we’ll pull out the lines with real results, ready to turn into stories.</p><${Btn} icon="doc" onClick=${() => openModal("resume")} id="prep-add-resume">Add your resume</${Btn}></div>`
+        : !pts.length ? html`<div class="prep-cta"><p class="muted">We couldn’t find lines with numbers or action verbs. Lines like "Built X that cut Y by 30%" make the best stories.</p><${Btn} icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}></div>`
         : html`<div class="prep-star-guide">
             <span class="faint">Turn each line into a two-minute story:</span>
             <span><b>S</b>ituation, what was at stake</span><span><b>T</b>ask, what you owned</span><span><b>A</b>ction, the steps that were yours</span><span><b>R</b>esult, the number</span>
@@ -6132,7 +6190,7 @@ function PrepAskCard({ type }) {
 
 /* ---------- Mock interview with Claude ----------
    The page keeps the turns. Standing instructions travel in the leading user turn; each later user turn is
-   the candidate's answer plus a short pacing note the candidate never sees. Scorecard is a separate JSON call. */
+   the candidate’s answer plus a short pacing note the candidate never sees. Scorecard is a separate JSON call. */
 const PREP_MOCK_LENGTHS = [{ id: 3, label: "3 questions" }, { id: 5, label: "5 questions" }];
 const prepIsMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
 
@@ -6166,14 +6224,14 @@ Context
 - Company: ${m.company ? `${m.company}. Do not state or invent anything about this company: its products, teams, culture, values, or interview process. Keep questions general to the role.` : "none. This is general practice, so do not name a company."}
 - Role: ${m.title || m.cat + " role"} (${m.cat}, early career: internship or new grad)
 - Round: ${m.roundLabel}. ${prepMockStyle(m.type, m.cat)}
-- Candidate's resume${res ? `:\n"""\n${res}\n"""` : ": not provided. Ask about their experience instead of assuming any."}
+- Candidate’s resume${res ? `:\n"""\n${res}\n"""` : ": not provided. Ask about their experience instead of assuming any."}
 
 How to run the interview
 - There are ${n} questions in total. Ask exactly one question per message. A follow-up that probes the previous answer counts as the next question.
 - Be kind but rigorous, like a good real interviewer: warm, specific, professional, no flattery.
 - After each answer, give 1 to 2 sentences of honest feedback on it (what landed, what was missing), then ask the next question.
 - Use the resume to ask about real projects when it suits the round. Never invent experience, numbers or details the candidate has not given.
-- If the candidate says they don't know or asks for a hint, give one small nudge, then move on.
+- If the candidate says they don’t know or asks for a hint, give one small nudge, then move on.
 - Plain text only. No markdown, headings, bullet points, or speaker labels. Keep each message under 90 words.
 
 Begin now with one short sentence of greeting, then question 1.`;
@@ -6206,7 +6264,7 @@ function prepMockCard(r) {
 function PrepMockTurn({ t, live }) {
   const me = t.role === "user";
   return html`<li class=${cx("prep-mock-turn", me ? "me" : "them")}>
-    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html`<span class="faint"> · stopped</span>`}</span>
+    <span class="prep-mock-who">${me ? "You" : "Interviewer"}${t.stopped && html` <span class="faint sep-item"><span aria-hidden="true">·</span> stopped</span>`}</span>
     <p class="prep-mock-text">${t.text}${live && html`<span class="prep-mock-caret" aria-hidden="true"></span>`}</p>
   </li>`;
 }
@@ -6276,7 +6334,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
       const next = [...turnsRef.current, { role: "assistant", text: partial, stopped: true }];
       setTurns(next);
       if (next.filter((t) => t.role === "user").length >= n) return score(next, m);
-    } else setErr("Stopped. Ask Claude again when you're ready.");
+    } else setErr("Stopped. Ask Claude again when you’re ready.");
     requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
   };
 
@@ -6322,7 +6380,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     const add = prepMockSummary(m, card, answered);
     Apps.updateRound(a.id, r.id, { prep: (cur.prep || "").trim() ? `${cur.prep.trimEnd()}\n\n${add}` : add });
     setSaved(true); onSaved && onSaved();
-    toast("Added the scorecard to this round's prep notes");
+    toast("Added the scorecard to this round’s prep notes");
   };
 
   const onKey = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } };
@@ -6358,14 +6416,16 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     <div class="card-head prep-mock-head">
       <h3 ref=${headRef} tabindex="-1">${phase === "end" ? "Mock interview scorecard" : "Mock interview"}</h3>
       <span class="spacer"></span>
-      ${phase !== "end" && html`<span class="prep-count num" aria-live="polite">${phase === "scoring" ? "Scoring" : `Question ${shownQ} of ${n}`}</span>`}
+      ${phase !== "end" && html`<span class="prep-mock-prog">
+        <span class="prep-count num" aria-live="polite">${phase === "scoring" ? "Scoring" : `Question ${shownQ} of ${n}`}</span>
+        <span class="prep-score-dots prep-mock-ticks" aria-hidden="true">${Array.from({ length: n }, (_, i) => html`<i key=${i} class=${i < (phase === "scoring" ? n : answered) ? "on" : i === shownQ - 1 ? "cur" : undefined}></i>`)}</span>
+      </span>`}
       ${live && html`<${Btn} size="sm" kind="ghost" icon="flag" onClick=${finishEarly} id="prep-mock-end"><span class="hide-sm">${answered ? "End and score" : "End"}</span><span class="show-sm">End</span></${Btn}>`}
     </div>
-    ${phase !== "end" && html`<div class="prep-mock-progress" aria-hidden="true"><i style=${`width:${Math.round(((phase === "scoring" ? n : answered) / n) * 100)}%`}></i></div>`}
     <div class="card-body prep-mock-body">
       ${phase === "end"
         ? html`<${PrepMockScore} card=${card} />
-          <details class="prep-mock-details"><summary>Transcript<span class="faint num"> · ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
+          <details class="prep-mock-details"><summary>Transcript <span class="faint num sep-item"><span aria-hidden="true">·</span> ${pluralize(turns.length, "message")}</span></summary>${transcript}</details>`
         : transcript}
       ${statusRow}
       ${err && html`<div class="callout wait prep-mock-err" role="alert"><${Icon} name="alert" /><span class="prep-mock-err-text">${err}</span><${Btn} size="sm" icon="refresh" onClick=${retry} id="prep-mock-retry">${phase === "scoring" ? "Try the scorecard again" : "Ask again"}</${Btn}></div>`}
@@ -6448,7 +6508,7 @@ function PrepWorkspace({ a, r }) {
             <${Logo} name=${a.company} size="lg" />
             <div class="prep-head-text">
               <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2></div>
-              <span class="prep-role">${a.title}<span class="prep-role-type"> · ${ROUND[r.type]?.label || "Interview"}</span></span>
+              <span class="prep-role">${a.title} <span class="prep-role-type sep-item"><span aria-hidden="true">·</span> ${ROUND[r.type]?.label || "Interview"}</span></span>
             </div>
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
@@ -6457,7 +6517,7 @@ function PrepWorkspace({ a, r }) {
             </div>
           </div>
           <dl class="prep-facts">
-            <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>· ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
+            <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint sep-item", r.at > now() && r.at - now() < DAY && "prep-soon")}><span aria-hidden="true">·</span> ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
@@ -6497,7 +6557,7 @@ VIEWS.prep = function PrepView() {
   }
   const value = sel?.practice ? "practice" : sel ? `${sel.a.id}|${sel.r.id}` : "";
   return html`<div class="page">
-    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? `${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? ` · next ${fmt.until(up[0].r.at)}` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
+    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? html`${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? html` <span class="sep-item"><span aria-hidden="true">·</span> next ${fmt.until(up[0].r.at)}</span>` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
 </div>
     <div class="prep-layout">
       <aside class="prep-side">
@@ -6593,7 +6653,7 @@ function stats_observations(s, apps, st, jobsById) {
   if (weak) out.push({ key: "rounds", icon: "prep", tone: "accent", text: `${ROUND[weak.type]?.label || "These"} rounds are your toughest so far: you passed ${weak.p} of ${weak.d}.` });
   else if (decided >= 3) {
     const passed = typed.reduce((x, y) => x + y.p, 0);
-    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You've passed ${passed} of ${decided} interview rounds with a logged outcome.` });
+    out.push({ key: "rounds", icon: "trophy", tone: "ok", text: `You’ve passed ${passed} of ${decided} interview rounds with a logged outcome.` });
   }
 
   // 5. Reply timing vs. who is still waiting
@@ -6665,7 +6725,7 @@ function stats_WeeklyChart({ weeks }) {
         <text x=${m.l - 8} y=${y(v) + 4} text-anchor="end">${v}</text>
       </g>`)}
       ${hi != null && html`<rect class="st-band" x=${xc(hi) - band / 2 + 2} y=${m.t - 6} width=${band - 4} height=${H - m.t + 4} rx="4" />`}
-      ${weeks.map((x, i) => html`<path key=${"b" + i} class="st-bar" d=${bar(i, x.applied)} />`)}
+      ${weeks.map((x, i) => html`<path key=${"b" + i} class=${cx("st-bar", i === last && "now")} d=${bar(i, x.applied)} />`)}
       ${weeks.map((x, i) => (i % every === (last % every) ? html`<text key=${"x" + i} class=${cx("st-xl", i === last && "now")} x=${xc(i)} y=${yx} text-anchor="middle">${lbl(x, i)}</text>` : null))}
       ${weeks[last].applied > 0 && html`<text class="st-val" x=${xc(last)} y=${y(weeks[last].applied) - 8} text-anchor="middle">${weeks[last].applied}</text>`}
       <line class="grid-line" x1=${0} x2=${w - m.r} y1=${yr - 18} y2=${yr - 18} />
@@ -6679,7 +6739,7 @@ function stats_WeeklyChart({ weeks }) {
     </svg>
     ${tip && html`<div class="st-tip" style=${`left:${clamp(xc(hi), 70, w - 70)}px;top:${y(tip.applied) - 12}px`}>
       <span>${hi === last ? "This week" : "Week of " + fmt.date(tip.start)}</span>
-      <span class="st-tip-row"><b>${tip.applied}</b> applied · <b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span>
+      <span class="st-tip-row"><b>${tip.applied}</b> applied <span aria-hidden="true">·</span> <b>${tip.replies}</b> ${tip.replies === 1 ? "reply" : "replies"}</span>
     </div>`}
     <table class="sr"><caption>Applications and replies per week</caption><thead><tr><th>Week of</th><th>Applied</th><th>Replies</th></tr></thead>
       <tbody>${weeks.map((x) => html`<tr key=${x.start}><td>${fmt.date(x.start)}</td><td>${x.applied}</td><td>${x.replies}</td></tr>`)}</tbody></table>
@@ -6691,8 +6751,8 @@ function stats_Kpis({ st, saved }) {
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent · ${saved} saved · ${st.thisWeek} this week</span></div>
-    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep"> · </span>${smallTag}` : null}</span></div>
+    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent <span class="sep-item"><span aria-hidden="true">·</span> ${saved} saved</span> <span class="sep-item"><span aria-hidden="true">·</span> ${st.thisWeek} this week</span></span></div>
+    <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep" aria-hidden="true"> · </span>${smallTag}` : null}</span></div>
     <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
   </section>`;
@@ -6748,7 +6808,7 @@ function stats_Stall({ obs, applied }) {
     ${applied < need
       ? html`<div class="st-unlock">
           <strong>Insights unlock after ${need} applications</strong>
-          <span class="muted td-small">You've sent ${applied}. ${need - applied} more and Heardback can start pointing out where applications stall.</span>
+          <span class="muted td-small">You’ve sent ${applied}. ${need - applied} more and Heardback can start pointing out where applications stall.</span>
           <${Meter} value=${applied} max=${need} />
           <div><${Btn} size="sm" icon="find" onClick=${() => go("find")}>Find roles to apply to</${Btn}></div>
         </div>`
@@ -6757,7 +6817,7 @@ function stats_Stall({ obs, applied }) {
             <span class="task-ico"><${Icon} name=${o.icon} /></span>
             <p>${o.text}</p>
           </div>`)}</div>`
-        : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there's enough behind them.</span></div>`}
+        : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there’s enough behind them.</span></div>`}
   </section>`;
 }
 
@@ -6767,13 +6827,13 @@ function stats_Radar({ apps, jobs }) {
   const flagged = ready ? linked.map((a) => ({ a, j: jobs.byId.get(a.jobId) })).filter((x) => x.j && x.j.g >= 50).sort((x, y) => y.j.g - x.j.g) : [];
   let body;
   if (!linked.length) body = html`<div class="td-mini-empty"><${Icon} name="ghost" cls="faint" /><span class="muted td-small td-grow">No applications are linked to a listing yet. Roles you track from Find are checked for ghost-job signals.</span><${Btn} size="sm" onClick=${() => go("find")}>Find jobs</${Btn}></div>`;
-  else if (jobs.status === "error") body = html`<div class="td-mini-empty"><span class="muted td-small td-grow">Listings didn't load, so ghost signals can't be checked right now.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (jobs.status === "error") body = html`<div class="td-mini-empty"><span class="muted td-small td-grow">Listings didn’t load, so ghost signals can’t be checked right now.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
   else if (!ready) body = html`<${Skeleton} rows=${2} />`;
   else if (!flagged.length) body = html`<div class="td-mini-empty"><span class="task-ico ok"><${Icon} name="shield" /></span><span class="muted td-small td-grow">All ${pluralize(linked.length, "linked listing")} look active.</span></div>`;
   else body = html`<div class="st-radar-big"><span class="td-big">${flagged.length}</span><span class="muted td-small">of ${pluralize(linked.length, "linked application")} show strong ghost-job signals</span></div>
     <div class="list">${flagged.map(({ a, j }) => html`<button type="button" class="st-radar-row" key=${a.id} onClick=${() => openApp(a.id)}>
       <${Logo} name=${a.company} />
-      <span class="stack-sm" style="gap:1px;min-width:0"><span class="st-radar-title truncate">${a.company} · ${a.title}</span><span class="st-radar-sub truncate">${(j.gr || [])[0] || ghostLabel(j.g)}</span></span>
+      <span class="stack-sm" style="gap:1px;min-width:0"><span class="st-radar-title truncate">${a.company}<span class="faint" aria-hidden="true"> · </span>${a.title}</span><span class="st-radar-sub truncate">${(j.gr || [])[0] || ghostLabel(j.g)}</span></span>
       <${GhostScore} g=${j.g} compact=${true} />
     </button>`)}</div>`;
   return html`<section class="card" aria-labelledby="st-radar-h">
@@ -6787,11 +6847,11 @@ function stats_Method({ ghostDays, ex }) {
     <summary><${Icon} name="chevR" size=${14} />How we calculate this</summary>
     <ul>
       <li><b>Replied</b> counts any response, including rejections. <b>Interviewed</b> counts any logged round, including recruiter calls.</li>
-      <li>Rates are shares of applications sent. Under 10 applications, they're flagged as a small sample because one reply moves them a lot.</li>
+      <li>Rates are shares of applications sent. Under 10 applications, they’re flagged as a small sample because one reply moves them a lot.</li>
       <li>Time to first reply is the median across applications that got a reply.</li>
       <li>Replies are counted in the week the first reply arrived, over the last 8 weeks.</li>
       <li>Patterns need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
-      <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It's a signal from listing data, not proof.</li>
+      <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It’s a signal from listing data, not proof.</li>
       ${ex ? html`<li>Example applications are included. Turn off “Include examples” to see only your own.</li>` : null}
     </ul>
   </details>`;
@@ -6853,6 +6913,10 @@ function today_dayLabel(ts) {
   if (diff === 0) return "Today";
   if (diff === 1) return "Tomorrow";
   return fmt.date(ts, { weekday: "short", month: "short", day: "numeric" });
+}
+/* "a · b": each "· item" wraps as one unit, so a separator never ends a line. */
+function today_seps(parts) {
+  return parts.filter(Boolean).map((x, i) => (i ? html` <span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${x}</span>` : html`<span key=${i}>${x}</span>`));
 }
 function today_setPrepFocus(focus) { store.set((s) => ({ ...s, ui: { ...s.ui, prepFocus: focus } })); }
 function today_undismiss(key, prev) {
@@ -6939,10 +7003,12 @@ const TODAY_SNOOZE = [{ d: 1, label: "Snooze 1 day" }, { d: 3, label: "Snooze 3 
 function today_taskCopy(tk) {
   const a = tk.app;
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark ghosted" };
-  if (tk.kind === "apply") return { sub: tk.sub, action: "Apply" };
-  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it's fresh.`, action: "Log outcome" };
-  return { sub: tk.sub, action: tk.action };
+  if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
+  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
+  return { sub: today_typo(tk.sub), action: tk.action };
 }
+/* Core builds task text with straight apostrophes; display them typographically. */
+function today_typo(t) { return typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t; }
 
 function today_TaskRow({ tk, first }) {
   const [menu, setMenu] = useState(null);
@@ -6968,7 +7034,7 @@ function today_TaskRow({ tk, first }) {
   return html`<div class="task td-task" data-key=${tk.key}>
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
-      <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${tk.title}</button>
+      <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
       <div class="task-sub">${copy.sub}</div>
     </div>
     <div class="task-actions td-task-actions">
@@ -6996,7 +7062,7 @@ function today_NeedsYou({ tasks, fresh }) {
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
-            <strong>${fresh ? "Nothing to do yet" : "You're all caught up"}</strong>
+            <strong>${fresh ? "Nothing to do yet" : "You’re all caught up"}</strong>
             <span class="muted td-small">${fresh
               ? "Follow-ups, interview prep and thank-you notes show up here once you track applications."
               : "Nothing needs a reply, prep or follow-up right now."}</span>
@@ -7018,7 +7084,7 @@ function today_Upcoming({ up }) {
             <span class="td-up-time num">${fmt.time(r.at)}</span>
             <${Logo} name=${a.company} size="sm" />
             <span class="td-up-main">
-              <span class="td-up-title truncate"><b>${a.company}</b><span class="faint"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
+              <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
               <span class="td-up-sub truncate">${r.interviewers ? `With ${r.interviewers}` : a.title}</span>
             </span>
             ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}
@@ -7059,19 +7125,19 @@ function today_NewForYou({ jobs, m }) {
   const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
     <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
   let body;
-  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn't load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
   else if (!m) body = html`<${Skeleton} rows=${4} />`;
   else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
   else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
   else body = html`<div class="list">${m.list.map(({ j, f }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
-        <span class="job-title truncate">${j.t}</span>
-        <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+        <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
+        <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
       </div>
       <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
-    <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer's own page.</div>`;
+    <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer’s own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
 }
 
@@ -7085,26 +7151,24 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
   });
   const max = Math.max(1, ...days.map((x) => x.n));
   const left = Math.max(0, goal - thisWeek);
+  // Same treatment as the rail's goal card on every other page: count, meter, what's left.
   return html`<section class="card td-week" aria-labelledby="td-week-h">
     <div class="td-week-top">
       <h2 id="td-week-h">This week</h2>
-      ${thisWeek > 0 ? html`<span class="td-count num">${thisWeek} of ${goal}</span>` : null}
       <span class="spacer"></span>
       <button type="button" class="btn ghost sm td-goal-edit" onClick=${() => go("prefs")}>Edit goal</button>
     </div>
-    ${thisWeek === 0
-      ? html`<p class="td-week-zero">No applications yet. Your goal is ${goal}.</p>`
-      : html`<div>
-          <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
-          <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
-        </div>
-        <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
+    <div class="td-week-goal">
+      <div class="goal-top"><span class="num td-week-n">${thisWeek} / ${goal} applied</span><span class="hint">${thisWeek >= goal ? "Goal reached." : `${left} more to hit your goal`}</span></div>
+      <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
+    </div>
+    ${thisWeek > 0 ? html`<div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
           ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
             <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
             <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
             <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
           </div>`)}
-        </div>`}
+        </div>` : null}
   </section>`;
 }
 
@@ -7183,7 +7247,7 @@ function today_View() {
     <header class="greeting td-head">
       <div style="min-width:0">
         <h1>${today_greeting()}${name ? `, ${name}` : ""}</h1>
-        <p>${parts.join(" · ")}</p>
+        <p>${today_seps(parts)}</p>
       </div>
       <span class="spacer"></span>
       <span class="td-date hide-sm">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>
@@ -7535,7 +7599,7 @@ const SHARE_THEMES = [{ id: "light", label: "Light", icon: "sun" }, { id: "dark"
 const SHARE_TOKENS = ["--bg", "--surface", "--surface-2", "--line", "--line-strong", "--fg", "--fg-2", "--fg-3", "--accent", "--accent-fg", "--accent-soft", "--ok"];
 
 /* Read the light and dark token sets straight from styles.css, so the card always matches the app.
-   Falls back to the currently computed tokens if the rules can't be read. */
+   Falls back to the currently computed tokens if the rules can’t be read. */
 let share_tokenCache = null;
 function share_tokens(theme) {
   if (!share_tokenCache) {
@@ -7783,14 +7847,14 @@ MODALS.share = function ShareModal() {
 
   const saveImage = async () => {
     if (!img) return;
-    if (!caps.downloads) { toast("Downloads aren't available here. Right-click or long-press the preview to save the image."); return; }
+    if (!caps.downloads) { toast("Downloads aren’t available here. Right-click or long-press the preview to save the image."); return; }
     await saveFile("heardback-progress.png", img.blob, "image/png");
   };
 
   if (!d.hasReal) {
     return html`<${Modal} title="Share your progress" onClose=${closeModal} size="lg share-modal">
       <${Empty} icon="send" title="Add a real application to make your card" action=${html`<${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}>`}>
-        Your card only counts applications you've added yourself. Example data is never included.
+        Your card only counts applications you’ve added yourself. Example data is never included.
       </${Empty}>
     </${Modal}>`;
   }

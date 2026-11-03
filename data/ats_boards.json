@@ -300,6 +300,14 @@
   "lastSeen": "2026-10-23"
  },
  {
+  "company": "Dyna Robotics",
+  "ats": "ashby",
+  "board": "dyna-robotics",
+  "openInDataset": 7,
+  "seenInDataset": 9,
+  "lastSeen": "2026-10-30"
+ },
+ {
   "company": "Freeform",
   "ats": "greenhouse",
   "board": "freeformfuturecorp",
@@ -387,14 +395,6 @@
   "openInDataset": 6,
   "seenInDataset": 6,
   "lastSeen": "2026-07-16"
- },
- {
-  "company": "Dyna Robotics",
-  "ats": "ashby",
-  "board": "dyna-robotics",
-  "openInDataset": 6,
-  "seenInDataset": 9,
-  "lastSeen": "2026-10-30"
  },
  {
   "company": "Humble Robotics",
@@ -2836,14 +2836,6 @@
   "lastSeen": "2026-10-16"
  },
  {
-  "company": "AI Fund",
-  "ats": "lever",
-  "board": "aifund",
-  "openInDataset": 1,
-  "seenInDataset": 16,
-  "lastSeen": "2026-10-23"
- },
- {
   "company": "AiDash",
   "ats": "greenhouse",
   "board": "aidashinc",
@@ -4119,14 +4111,6 @@
   "lastSeen": "2026-10-28"
  },
  {
-  "company": "Galatea Associates",
-  "ats": "lever",
-  "board": "galatea-associates",
-  "openInDataset": 1,
-  "seenInDataset": 1,
-  "lastSeen": "2026-10-17"
- },
- {
   "company": "Gallup",
   "ats": "greenhouse",
   "board": "gallup",
@@ -5162,14 +5146,6 @@
   "openInDataset": 1,
   "seenInDataset": 1,
   "lastSeen": "2026-07-30"
- },
- {
-  "company": "Northwood Space",
-  "ats": "ashby",
-  "board": "NorthwoodSpace",
-  "openInDataset": 1,
-  "seenInDataset": 12,
-  "lastSeen": "2026-09-03"
  },
  {
   "company": "Nova Talent",
@@ -6912,6 +6888,14 @@
   "openInDataset": 0,
   "seenInDataset": 1,
   "lastSeen": "2026-03-11"
+ },
+ {
+  "company": "AI Fund",
+  "ats": "lever",
+  "board": "aifund",
+  "openInDataset": 0,
+  "seenInDataset": 16,
+  "lastSeen": "2026-10-23"
  },
  {
   "company": "AI Intern to the CEO",
@@ -9712,6 +9696,14 @@
   "lastSeen": "2026-09-23"
  },
  {
+  "company": "Galatea Associates",
+  "ats": "lever",
+  "board": "galatea-associates",
+  "openInDataset": 0,
+  "seenInDataset": 1,
+  "lastSeen": "2026-10-17"
+ },
+ {
   "company": "Galaxy",
   "ats": "greenhouse",
   "board": "galaxydigitalservices",
@@ -12099,6 +12091,14 @@
   "openInDataset": 0,
   "seenInDataset": 1,
   "lastSeen": "2026-04-17"
+ },
+ {
+  "company": "Northwood Space",
+  "ats": "ashby",
+  "board": "NorthwoodSpace",
+  "openInDataset": 0,
+  "seenInDataset": 12,
+  "lastSeen": "2026-09-03"
  },
  {
   "company": "NORY",

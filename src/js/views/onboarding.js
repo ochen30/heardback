@@ -60,7 +60,7 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
       setText(String(text || "").slice(0, 40000));
       setFileNote({ ok: true, text: `Read ${f.name}. Check the text below and fix anything that came through oddly.` });
     } catch (err) {
-      setFileNote({ ok: false, text: (err && err.message) || `Couldn't read ${f.name}. Paste the text instead.` });
+      setFileNote({ ok: false, text: (err && err.message) || `Couldn’t read ${f.name}. Paste the text instead.` });
     } finally { setReading(false); }
   };
   const words = (value.text.trim().match(/\S+/g) || []).length;
@@ -81,7 +81,7 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     <div class="row onb-meta"><span class="hint num">${words ? pluralize(words, "word") : "Nothing pasted yet"}</span>${value.text && html`<button type="button" class="onb-link" onClick=${() => setText("")}>Clear text</button>`}</div>
     <div class="stack-sm">
       <div class="row"><span class="label">Skills</span><span class="faint num" style="font-size:var(--fs-xs)">${skills.length || ""}</span></div>
-      <span class="hint">${value.text ? "Found in your resume. Remove any that don't fit and add ones we missed." : "We'll pick these up from your resume. You can also add them by hand."}</span>
+      <span class="hint">${value.text ? "Found in your resume. Remove any that don’t fit and add ones we missed." : "We’ll pick these up from your resume. You can also add them by hand."}</span>
       ${skills.length ? html`<div class="chips">${skills.map((s) => html`<button type="button" key=${s} class="chip onb-skill" aria-pressed="true" aria-label=${"Remove " + s} title=${"Remove " + s} onClick=${() => remove(s)}>${s}<${Icon} name="x" size=${12} /></button>`)}</div>` : null}
       <form class="row onb-add" onSubmit=${(e) => { e.preventDefault(); addSkill(); }}>
         <input id=${idp + "-add"} class="input" placeholder="Add a skill, e.g. SQL" value=${add} onInput=${(e) => setAdd(e.currentTarget.value)} aria-label="Add a skill" autocomplete="off" />
@@ -139,11 +139,11 @@ function onbSummary(p) {
   const roles = p.roles.length ? p.roles.join(", ") : "all roles";
   const locs = p.locations.filter((l) => l !== "remote").map((l) => LOC_OPTIONS.find((o) => o.id === l)?.label || l);
   const where = locs.length ? `${locs.slice(0, 3).join(", ")}${locs.length > 3 ? ` +${locs.length - 3}` : ""}${p.remote ? ", or remote" : ""}` : p.remote ? "any location, including remote" : "any location";
-  return `${lv} · ${roles} · ${where}${p.needsSponsor ? " · sponsorship not ruled out" : ""}`;
+  return [lv, roles, where, p.needsSponsor && "sponsorship not ruled out"].filter(Boolean);
 }
 
 /* ---------- Location checklist (shared with Settings): same pattern, counts and order as Find. Counts are open roles
-   in the picked fields and levels (Find's default filters follow the profile), ordered by that count, then by the
+   in the picked fields and levels (Find’s default filters follow the profile), ordered by that count, then by the
    whole-dataset count, as Find does. Top 6 show, the rest behind "Show N more". ---------- */
 const ONB_LOC_TOP = 6;
 const onbLocCountC = { key: null, jobs: null, out: null };
@@ -209,7 +209,7 @@ function OnbStepTargets({ d, set }) {
       <${OnbLocChecklist} idp="onb" value=${locs} roles=${d.roles} levels=${d.levels} onChange=${(v) => set({ locations: v })} />
       <div class="onb-switches">
         <${Switch} id="onb-remote" checked=${d.remote} onChange=${(v) => set({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
-        <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I'll need visa sponsorship" />
+        <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I’ll need visa sponsorship" />
       </div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-name" title="Name" hint="Optional. Only used to greet you.">
@@ -226,12 +226,12 @@ function OnbStepMatches({ d, examples, setExamples }) {
   return html`<div class="stack onb-matches">
     <div class="card">
       ${J.status === "error"
-        ? html`<${Empty} icon="alert" title="Couldn't load job listings" action=${html`<${Btn} icon="refresh" onClick=${loadJobs}>Try again</${Btn}>`}>Your setup is saved either way. You can finish now and browse jobs once they load.</${Empty}>`
+        ? html`<${Empty} icon="alert" title="Couldn’t load job listings" action=${html`<${Btn} icon="refresh" onClick=${loadJobs}>Try again</${Btn}>`}>Your setup is saved either way. You can finish now and browse jobs once they load.</${Empty}>`
         : J.status !== "ready"
           ? html`<div class="onb-count"><div class="skel" style="height:28px;width:120px"></div><div class="skel" style="height:12px;width:70%"></div></div><${Skeleton} rows=${5} />`
           : html`<div class="onb-count">
               <div class="row wrap" style="align-items:baseline;gap:10px"><span class="onb-big num">${fmt.num(list.length)}</span><span class="onb-big-label">${list.length === 1 ? "open role matches" : "open roles match"}</span></div>
-              <span class="hint">${onbSummary(d)}</span>
+              <span class="hint">${onbSummary(d).map((x, i) => (i ? html` <span class="sep-item" key=${i}>· ${x}</span>` : html`<span key=${i}>${x}</span>`))}</span>
               ${list.length > 0 && html`<span class="hint num">${fmt.num(low)} of them show no ghost-job signals.</span>`}
             </div>
             ${list.length === 0
@@ -240,10 +240,10 @@ function OnbStepMatches({ d, examples, setExamples }) {
                 ${top.map(({ j, f }) => html`<div class="job-row onb-job" key=${j.id}>
                   <${Logo} name=${j.co} />
                   <div class="stack-sm" style="gap:2px">
-                    <span class="job-title truncate">${j.t}</span>
-                    <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
+                    <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
+                    <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep" aria-hidden="true">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
                   </div>
-                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+                  <div class="job-side">${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}<${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
             <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
@@ -257,8 +257,8 @@ function OnbStepMatches({ d, examples, setExamples }) {
 
 const ONB_STEPS = [
   { title: "What are you looking for?", lede: "Pick what fits. You can change any of this later in Settings." },
-  { title: "Add your resume (optional)", lede: "We use it to score fit and suggest interview talking points. Skip it if you'd rather not." },
-  { title: "Here's what's open for you", lede: "Real listings that match your targets, best fit first." },
+  { title: "Add your resume (optional)", lede: "We use it to score fit and suggest interview talking points. Skip it if you’d rather not." },
+  { title: "Here’s what’s open for you", lede: "Real listings that match your targets, best fit first." },
 ];
 
 VIEWS.__onboarding = function Onboarding() {
@@ -292,6 +292,10 @@ VIEWS.__onboarding = function Onboarding() {
         <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
       </header>
       ${step === 0 && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
+      ${step === 0 && typeof storage !== "undefined" && storage.corrupt && html`<div class="callout wait onb-corrupt" role="alert"><${Icon} name="alert" />
+        <span class="onb-corrupt-text">Your saved data couldn’t be read, so setup started over. A copy was kept in this browser. If you exported a backup, restore it now.</span>
+        <label class="btn sm onb-restore"><${Icon} name="upload" />Restore from backup<input id="onb-restore" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; if (typeof pfImportFile === "function") pfImportFile(f); }} /></label>
+      </div>`}
       <div class="onb-progress">
         <span class="onb-step-label num">Step ${step + 1} of 3</span>
         <div class="onboard-steps" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow=${step + 1} aria-label="Setup progress">${[0, 1, 2].map((i) => html`<i key=${i} class=${i <= step ? "on" : ""}></i>`)}</div>

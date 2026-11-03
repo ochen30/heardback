@@ -65,7 +65,7 @@ function plStatus(a, st) {
   if (a.stage === "rejected") return { icon: "x", text: `Rejected ${fmt.ago(plStageAt(a, "rejected") || a.lastActivityAt)}` };
   if (a.stage === "ghosted") return { icon: "ghost", text: `Ghosted ${fmt.ago(plStageAt(a, "ghosted") || a.lastActivityAt)}` };
   const silent = Apps.daysSilent(a);
-  if (silent >= st.followUpDays) return { icon: silent >= st.ghostDays ? "ghost" : "clock", tone: "wait", text: `Silent ${silent}d`, title: `No reply in ${silent} days` };
+  if (silent >= st.followUpDays) return { icon: "clock", tone: "wait", text: `Silent ${silent}d`, title: `No reply in ${silent} days` };
   if (a.stage === "applied") return { icon: "send", text: `Applied ${fmt.ago(a.appliedAt)}` };
   return { icon: "reply", text: `Replied ${fmt.ago(a.lastReplyAt || a.lastActivityAt)}` };
 }
@@ -143,6 +143,7 @@ function plFindTime(raw) {
 /* Email parsing: the shared rule-based parser, plus our time finder and interviewer names */
 function plParse(raw) {
   const p = parseEmail(raw);
+  if (!p.title) { const m = (raw || "").match(/\btake the (.+?) (?:coding |online |technical )?(?:assessment|challenge|test)\b/i); if (m && m[1].length <= 90) p.title = m[1].trim(); }
   const ft = p.kind === "interview" || p.kind === "screen" ? plFindTime(raw) : null;
   p.interviewAt = ft ? ft.at : null;
   p.tz = ft && ft.tz ? ft.tz : "";
@@ -219,7 +220,7 @@ VIEWS.pipeline = function PipelineView() {
 
   return html`<div class=${cx("page wide pl-page", view === "board" && "pl-page-board", sel.size && "pl-selecting")}>
     <div class="page-head pl-head">
-      <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${sub}</p></div>
+      <div class="pl-head-title"><h1>Pipeline</h1><p class="num">${plSepText(sub)}</p></div>
       <span class="spacer"></span>
       <div class="pl-tools">
         <div class="input-icon pl-filter">
@@ -244,6 +245,13 @@ VIEWS.pipeline = function PipelineView() {
 /* ---------- Selection + bulk actions ---------- */
 /* Selection lives in the view. Range order is the on-screen order (board: column by column; table: row order). */
 function plOrder() { return [...document.querySelectorAll(".pl-page [data-card], .pl-page tr[data-row]")].map((el) => el.dataset.card || el.dataset.row); }
+/* "a · b · c" as text where each "· item" wraps as one unit, so a separator never ends a line */
+function plSepText(str) {
+  const parts = String(str ?? "").split(" · ");
+  return parts.flatMap((p, i) => (i === 0 ? [p] : [" ", html`<span class="sep-item" key=${i}><span aria-hidden="true">·</span> ${p}</span>`]));
+}
+/* Keys typed into a field are text, never shortcuts */
+function plEditable(el) { return !!el && (el.isContentEditable || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el.tagName === "INPUT" && !["checkbox", "radio", "button", "submit", "reset"].includes(el.type))); }
 function plTouch() { return window.matchMedia("(hover: none)").matches; }
 function plUseSelection(visKey, view) {
   const [ids, setIds] = useState(() => new Set());
@@ -358,10 +366,8 @@ function PlEmpty() {
     </div>
     <div class="pl-empty-links">
       <button type="button" class="pl-linkbtn" onClick=${() => openModal("paste")}>Log an email</button>
-      <span class="pl-sep">·</span>
-      <button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button>
-      <span class="pl-sep">·</span>
-      <button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button>
+      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button></span>
+      <span class="sep-item pl-sep-pair"><span class="pl-sep" aria-hidden="true">·</span><button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button></span>
     </div>
   </div>`;
 }
@@ -552,7 +558,7 @@ function PlTable({ apps, settings, sort, sel }) {
   useEffect(() => { if (headRef.current) headRef.current.indeterminate = nSel > 0 && !allOn; });
   const onTableKey = (e) => {
     const t = e.target;
-    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "a" && !(t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type !== "checkbox"))) { e.preventDefault(); sel.setMany(ids, true); }
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "a" && !plEditable(t)) { e.preventDefault(); sel.setMany(ids, true); }
   };
   const rowClick = (a) => (e) => {
     if (e.target.closest("select")) return;
@@ -585,7 +591,7 @@ function PlTable({ apps, settings, sort, sel }) {
             return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
               onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
               <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
-              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}</span></div></div></td>
+              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.kind === "ghost" ? `No reply in ${silent} days` : `${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}`}</span></div></div></td>
               <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
               <td class="num muted">${a.appliedAt ? fmt.date(a.appliedAt) : html`<span class="faint">—</span>`}</td>
               <td class="num muted">${fmt.ago(a.lastActivityAt)}</td>
@@ -700,24 +706,34 @@ function PlInline({ id, label, value, display, type = "text", placeholder, onSav
   const [edit, setEdit] = useState(false);
   const ref = useRef(null);
   const done = useRef(false);
-  useEffect(() => { if (edit) { done.current = false; setTimeout(() => { ref.current?.focus(); if (type === "text" || type === "url") ref.current?.select?.(); }, 0); } }, [edit]);
-  const close = (save) => {
+  /* Focus in the commit itself (not after paint), so a key pressed right after the click lands in the input, not on the drawer's shortcuts */
+  /* Uncontrolled while editing: the value is seeded once, so a re-render (a toast, a store update) never wipes what was typed */
+  useLayoutEffect(() => { if (edit) { done.current = false; if (ref.current) ref.current.value = toInput(value); ref.current?.focus(); if (type === "text" || type === "url") ref.current?.select?.(); } }, [edit]);
+  const refocus = useRef(false);
+  useLayoutEffect(() => { if (!edit && refocus.current) { refocus.current = false; document.getElementById(id + "-v")?.focus(); } }, [edit]);
+  /* Enter and Escape hand focus back to the value; a blur leaves it wherever the person moved it */
+  const close = (save, back = true) => {
     if (done.current) return; done.current = true;
     if (save && ref.current) { const v = fromInput(ref.current.value); if (v !== value) onSave(v); }
+    refocus.current = back;
     setEdit(false);
-    setTimeout(() => document.getElementById(id + "-v")?.focus(), 0);
   };
   if (!edit) return html`<button type="button" id=${id + "-v"} class=${cx("pl-inline", !display && "is-empty")} onClick=${() => setEdit(true)} aria-label=${`${label}: ${display || "not set"}. Edit`}>
     <span class="truncate">${display || placeholder}</span><${Icon} name="edit" size=${13} />
   </button>`;
   return html`<div class="pl-inline-wrap">
-    <input id=${id} ref=${ref} type=${type} class="input pl-inline-input" aria-label=${label} placeholder=${placeholder} value=${toInput(value)}
-      onBlur=${() => close(true)} onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); close(true); } }} />
+    <input id=${id} ref=${ref} type=${type} class="input pl-inline-input" aria-label=${label} placeholder=${placeholder}
+      onBlur=${(e) => close(true, !e.relatedTarget)} onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); close(true); } }} />
     <${PlEscape} onEscape=${() => close(false)} />
   </div>`;
 }
 /* Registers on the shared Escape stack so Escape cancels the edit instead of closing the drawer */
-function PlEscape({ onEscape }) { useEscape(onEscape); return null; }
+function PlEscape({ onEscape }) {
+  /* Same contract as useEscape, but registered in a layout effect so it is on the stack before the next key event */
+  const ref = useRef(onEscape); ref.current = onEscape;
+  useLayoutEffect(() => { escStack.push(ref); return () => { const i = escStack.indexOf(ref); if (i >= 0) escStack.splice(i, 1); }; }, []);
+  return null;
+}
 
 function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : "")).replace(/\/$/, ""); } catch { return u; } }
 
@@ -736,7 +752,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
       <div class="stack-sm" style="flex:1;min-width:0">
         <span class="pl-eyebrow">Next step</span>
         <strong>${ns.title}</strong>
-        <span class="muted pl-small">${ns.sub}</span>
+        <span class="muted pl-small">${plSepText(ns.sub)}</span>
         ${secondary && html`<div class="pl-next-actions pl-small">${secondary}</div>`}
       </div>
     </div>
@@ -757,7 +773,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
         <span class="pl-kv-k">Salary</span>
         <${PlInline} id="pl-salary" label="Salary" value=${a.salary || ""} display=${a.salary} placeholder="Add salary" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { salary: v })} />
         <span class="pl-kv-k">Last reply</span>
-        <span class=${cx("pl-kv-v num", ACTIVE_STAGES.includes(a.stage) && silent >= settings.followUpDays && "pl-warn")}>${replyTxt}</span>
+        <span class=${cx("pl-kv-v num", ACTIVE_STAGES.includes(a.stage) && silent >= settings.followUpDays && "pl-warn")}><span>${plSepText(replyTxt)}</span></span>
         ${a.followedUpAt && html`<span class="pl-kv-k">Followed up</span><span class="pl-kv-v num">${fmt.dateY(a.followedUpAt)}</span>`}
       </div>
     </section>
@@ -767,7 +783,7 @@ function PlOverview({ a, ns, settings, jobs, setTab }) {
       <div class="pl-job">
         <div class="stack-sm" style="flex:1;min-width:0;gap:2px">
           <span class="truncate" style="font-weight:500">${job.t}</span>
-          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="pl-sep">·</span><span>Posted ${fmt.ago(job.p)}</span></span>
+          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="sep-item"><span class="pl-sep" aria-hidden="true">·</span> Posted ${fmt.ago(job.p)}</span></span>
         </div>
         <${Btn} size="sm" iconRight="chevR" onClick=${() => openJob(job.id)}>View listing</${Btn}>
       </div>
@@ -925,7 +941,7 @@ function PlTimeline({ a }) {
         <span class="tl-dot"><${Icon} name=${plEvIcon(e)} size=${12} /></span>
         <div class="stack-sm" style="gap:1px">
           <span class="tl-text">${e.text}</span>
-          <span class="tl-when num">${fmt.dateY(e.at)} · ${fmt.time(e.at)}</span>
+          <span class="tl-when num">${plSepText(`${fmt.dateY(e.at)} · ${fmt.time(e.at)}`)}</span>
         </div>
       </div>`)}
     </div>
@@ -1139,7 +1155,7 @@ ${raw.slice(0, 12000)}
     const rt = ROUND[f.roundType]?.label || "Interview";
     const round = willRound ? `adds a ${rt} round on ${plLongWhen(f.interviewAt)}` : "";
     const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
-    if (!tApp) return `Creates ${f.company || "a new application"}${f.title ? " · " + f.title : ""} in ${STAGE[stage || "applied"].label}${round ? " and " + round : ""}.`;
+    if (!tApp) return `Creates ${f.company || "a new application"}${f.title ? ` (${f.title})` : ""} in ${STAGE[stage || "applied"].label}${round ? " and " + round : ""}.`;
     if (plShouldMove(tApp.stage, stage)) return `Moves ${tApp.company} to ${STAGE[stage].label}${round ? " and " + round : " and logs this email"}.`;
     return `${round ? cap(round) + " and logs this email" : `Logs this email on ${tApp.company}`}.${dupRound ? " This round is already logged." : ""} Stage stays ${STAGE[tApp.stage].label}.`;
   })();
