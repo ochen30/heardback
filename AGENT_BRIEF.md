@@ -34,3 +34,6 @@ Heardback is a job-search + application-tracking web app for early-career job se
 
 ## Report back (≤ 200 words)
 What you built, files touched, anything not working, and any core changes you need.
+
+## Testing AI / shared-data paths
+Run with `MOCK=1` to inject a QA-only fake `window.claude` (qa/mock-claude.js) so `caps.sample`, `caps.db`, `caps.user`, `caps.downloads` exist. Its answers are canned placeholder text. Without MOCK, caps are null (the non-AI fallback path) — test both.

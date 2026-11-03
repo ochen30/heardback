@@ -26,6 +26,7 @@ const server = http.createServer((req, res) => {
     route.fulfill({ path: path.join(nm, m[1], m[2]), contentType: 'text/javascript' });
   });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
+  if (process.env.MOCK) await page.addInitScript({ path: path.join(__dirname, 'mock-claude.js') });
   const setup = process.env.SETUP || 'examples';
   if (setup !== 'fresh') {
     await page.addInitScript((setup) => {
