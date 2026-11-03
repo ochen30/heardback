@@ -110,3 +110,6 @@ A second usability test played a graduating senior on a phone, looking for new-g
 - **"Remote" means remote in the US**; Canada/UK remote roles appear under their own locations.
 - Prep opens your soonest round by default; imported reply dates no longer produce a fake "first reply in 0 days".
 - Phone: Find's count area is two clean lines with large tap targets; toasts wrap instead of cutting off.
+
+### 04:35 PT — accessibility
+- Automated axe-core scan (WCAG 2 A/AA) on every route in light and dark: fixed page language, progress bar names, an invalid ARIA attribute on job rows, chip-count contrast, and inline links that relied on color alone. Result: zero violations.
