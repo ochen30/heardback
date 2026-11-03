@@ -54,6 +54,7 @@ const server = http.createServer((req, res) => {
     if (action && process.env.ACTIONS) { const mod = require(path.resolve(process.env.ACTIONS)); if (mod[action]) await mod[action](page); await page.waitForTimeout(500); }
     const ow = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
     if (ow.sw > ow.cw + 1) errors.push(`OVERFLOW on ${r}: scrollWidth ${ow.sw} > ${ow.cw}`);
+    if (process.env.CLEAN) await page.addStyleTag({ content: '.toasts{display:none!important}' });
     const file = path.join(out, `${r.replace(/[:]/g, '-')}-${W}-${theme}.png`);
     await page.screenshot({ path: file, fullPage: false });
     console.log('shot', file);

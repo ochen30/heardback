@@ -124,7 +124,7 @@ const pad = (n) => String(n).padStart(2, '0');
     await page.keyboard.press('Escape');
     T.check('console errors', errors.length === 0, errors.slice(0, 5).join(' | '));
   } catch (e) { T.check('exception', false, e.message.split('\n')[0]); await shot(page, `email-exc-${W}`); }
-  require('fs').writeFileSync(__dirname + '/out/misparses.json', JSON.stringify(mis, null, 2));
+  require('fs').writeFileSync(require('./lib').OUTD + '/misparses.json', JSON.stringify(mis, null, 2));
   await close();
   dump(__dirname + `/out/res-email-${W}${MOCK ? '-mock' : ''}.json`);
 })();

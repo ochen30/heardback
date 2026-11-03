@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs'); const http = require('http');
 const root = path.resolve(__dirname, '..', '..'); const nm = path.join(root, 'tools', 'node_modules');
 const qa = path.join(root, 'qa');
+const OUTD = process.env.E2E_OUT ? path.resolve(process.env.E2E_OUT) : path.join(__dirname, 'out2'); fs.mkdirSync(OUTD, { recursive: true });
 const types = { '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.js': 'text/javascript' };
 
 function serve(dist) {
@@ -18,7 +19,7 @@ function serve(dist) {
 const PROFILE = { roles: ['Software', 'Data & AI'], levels: ['intern', 'newgrad'], locations: ['sf bay area', 'new york', 'remote'], remote: true, needsSponsor: false, resume: '', skills: ['Python', 'Java', 'React', 'SQL', 'Machine Learning', 'AWS', 'Algorithms', 'Git'], onboarded: true, name: 'Alex Kim', weeklyGoal: 10 };
 
 async function open(o = {}) {
-  const dist = o.dist || process.env.DIST || path.join(root, 'dist');
+  const dist = o.dist || process.env.DIST || (fs.existsSync(path.join(OUTD, 'dist', 'index.html')) ? path.join(OUTD, 'dist') : path.join(root, 'dist'));
   const server = await serve(dist);
   const port = server.address().port;
   const W = o.W || 1440, H = o.H || (W < 600 ? 812 : 900);
@@ -28,9 +29,9 @@ async function open(o = {}) {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
-  await page.route(/cdn\.jsdelivr\.net\/npm\/(preact@10\.19\.3|htm@3\.1\.1)\/(.*)|cdnjs\.cloudflare\.com\/ajax\/libs\/(preact|htm)\/[\d.]+\/(.*)|unpkg\.com\/(preact|htm)@[\d.]+\/(.*)/, (route) => {
+  await page.route(/cdn\.jsdelivr\.net\/npm\/(preact@10\.19\.3|htm@3\.1\.1|pdfjs-dist@3\.11\.174)\/(.*)|cdnjs\.cloudflare\.com\/ajax\/libs\/(preact|htm)\/[\d.]+\/(.*)|unpkg\.com\/(preact|htm)@[\d.]+\/(.*)/, (route) => {
     const u = route.request().url();
-    let m = u.match(/npm\/(preact|htm)@[\d.]+\/(.*)$/) || u.match(/unpkg\.com\/(preact|htm)@[\d.]+\/(.*)$/);
+    let m = u.match(/npm\/(preact|htm|pdfjs-dist)@[\d.]+\/(.*)$/) || u.match(/unpkg\.com\/(preact|htm)@[\d.]+\/(.*)$/);
     if (m) return route.fulfill({ path: path.join(nm, m[1], m[2]), contentType: 'text/javascript' });
     m = u.match(/libs\/(preact|htm)\/[\d.]+\/(.*)$/);
     return route.fulfill({ path: path.join(nm, m[1], 'dist', m[2]), contentType: 'text/javascript' });
@@ -70,9 +71,10 @@ function mk(area) {
   const log = (ok, name, detail) => { results.push({ area, ok, name, detail: detail == null ? '' : String(detail) }); console.log(`${ok ? 'PASS' : 'FAIL'} [${area}] ${name}${detail != null && detail !== '' ? ' :: ' + detail : ''}`); return ok; };
   return { check: (name, cond, detail) => log(!!cond, name, detail), note: (name, detail) => { results.push({ area, ok: null, name, detail: String(detail ?? '') }); console.log(`NOTE [${area}] ${name} :: ${detail ?? ''}`); } };
 }
-function dump(file) { fs.writeFileSync(file, JSON.stringify(results, null, 2)); }
+function dump(file) { file = path.join(OUTD, path.basename(file)); fs.writeFileSync(file, JSON.stringify(results, null, 2)); }
 async function overflow(page) { return page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, ok: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1 })); }
 async function clearToasts(page) { await page.evaluate(() => ui.set({ toasts: [] })); }
 async function flush(page) { await page.waitForTimeout(250); }
-async function shot(page, name) { const d = path.join(__dirname, 'out'); fs.mkdirSync(d, { recursive: true }); await page.screenshot({ path: path.join(d, name + '.png') }); }
-module.exports = { open, mk, dump, results, overflow, clearToasts, flush, shot, root, PROFILE };
+async function shot(page, name) { const d = OUTD; fs.mkdirSync(d, { recursive: true }); await page.screenshot({ path: path.join(d, name + '.png') }); }
+function resFile(name) { return path.join(OUTD, name); }
+module.exports = { OUTD, resFile, open, mk, dump, results, overflow, clearToasts, flush, shot, root, PROFILE };
