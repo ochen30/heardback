@@ -57,6 +57,7 @@ a { color: var(--accent-text); }
 .stats > div + div { border-left: 1px solid var(--line); }
 .stats b { font-size: 24px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stats span { font-size: 13px; color: var(--fg-3); }
+.tl-wrap summary { cursor: pointer; color: var(--accent-text); font-weight: 500; padding: 4px 0 8px; }
 .tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .tl li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
 .tl li:first-child { border-top: 0; }
@@ -91,30 +92,17 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--fg-2); display: flex; fle
 <div class="wrap">
   <header class="hero">
     <div class="brand"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M9 11.5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-4.5L12 23v-3.5a3 3 0 0 1-3-3z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="m13 14.2 2 2 4-4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Heardback</div>
-    <span class="eyebrow">Night 1 · Nov 3, 2026 · built 12:30–9:00 AM PT</span>
-    <h1>The job search app that knows which jobs are real, who actually replies, and what to do next.</h1>
+    <span class="eyebrow">Night 1 · Nov 3 · 12:30–7:45 AM PT</span>
+    <h1>Heardback is live: __JOBS__ internship and new-grad roles, a ghost-job check on each, and a tracker that tells you what to do next.</h1>
     <div class="cta">
       <a class="btn" href="https://claude.ai/artifact/CUYnHDx5AYEtoPjDxxVobm" target="_blank" rel="noopener">Open Heardback</a>
-      <span class="url">claude.ai/artifact/CUYnHDx5AYEtoPjDxxVobm</span>
     </div>
-    <p>Private to you until you share it from the page's Share menu.</p>
   </header>
-
-  <section>
-    <h2>What it does now</h2>
-    <ol class="lines">
-      <li><span class="n">01</span><span><b>Real roles.</b> __JOBS__ open internship and new-grad roles (__POSTINGS__ postings, identical repeats shown once) from __COMPANIES__ companies, each linking to the employer's own application page, refreshed from live data tonight.</span></li>
-      <li><span class="n">02</span><span><b>A ghost-job check on every listing,</b> with the exact reasons: how long it's been up, how often it was posted and closed before, how many cities it's blasted across, and how fast this company usually closes roles.</span></li>
-      <li><span class="n">03</span><span><b>A pipeline for every application and interview round.</b> Paste a recruiter email and it logs itself: new application, stage move or a scheduled round.</span></li>
-      <li><span class="n">04</span><span><b>A Today view</b> that says what to do: prep for tomorrow's round, send the thank-you note, follow up, notice a posting that was taken down, or call it ghosted.</span></li>
-      <li><span class="n">05</span><span><b>Interview prep, insights and opt-in anonymous reply data,</b> with Claude on your own account for tailoring, feedback and drafts.</span></li>
-    </ol>
-  </section>
 
   <section class="callout need">
     <h2>Needs you (about 5 minutes)</h2>
     <ol>
-      <li><b>Create the GitHub repo <code>ochen30/heardback</code></b> (empty). <span>This session can't create repos, and neither name existed tonight. Full git history is ready to push.</span></li>
+      <li><b>Create the GitHub repo <code>ochen30/heardback</code></b> (empty). <span>I can't create repos from here; the full git history is ready to push.</span></li>
       <li><b>Decide on the data source.</b> <span>Listings come from the SimplifyJobs community lists on GitHub, which have no license file. Fine for a private prototype; before a public launch, ask them or switch to direct company boards (next item).</span></li>
       <li><b>Allow three hosts</b> in this environment's network settings: <code>boards-api.greenhouse.io</code>, <code>api.lever.co</code>, <code>api.ashbyhq.com</code>. <span>Then the ready-made script pulls 822 company boards directly, with full job descriptions.</span></li>
       <li><b>Try "Add to calendar" once</b> on a real interview round. <span>It uses your Google Calendar connector and matches its schema, but I didn't fire it tonight because it would create a real event.</span></li>
@@ -123,11 +111,23 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--fg-2); display: flex; fle
   </section>
 
   <section>
+    <h2>What it does now</h2>
+    <ol class="lines">
+      <li><span class="n">01</span><span><b>Real roles.</b> __JOBS__ open internship and new-grad roles from __COMPANIES__ companies, each linking to the employer's own application page. Refreshed 7:30 AM.</span></li>
+      <li><span class="n">02</span><span><b>A ghost-job check on every listing,</b> with the exact reasons: how long it's been up, how often it was posted and closed before, how many cities it's blasted across, and how fast this company usually closes roles.</span></li>
+      <li><span class="n">03</span><span><b>A pipeline for every application and interview round.</b> Paste a recruiter email and it logs itself: new application, stage move or a scheduled round.</span></li>
+      <li><span class="n">04</span><span><b>A Today view</b> that says what to do: prep for tomorrow's round, send the thank-you note, follow up, notice a posting that was taken down, or call it ghosted.</span></li>
+      <li><span class="n">05</span><span><b>Interview prep, mock interviews and insights,</b> with Claude on your own account for tailoring, feedback and drafts. Public reply-rate data needs a small backend (night 2).</span></li>
+    </ol>
+  </section>
+
+
+  <section>
     <h2>Numbers</h2>
     <div class="stats">
       <div><b>__JOBS__</b><span>open roles</span></div>
       <div><b>__GHOSTSTRONG__</b><span>with strong ghost signals</span></div>
-      <div><b>__VERSIONS__</b><span>published versions</span></div>
+      <div><b>__CHECKS__</b><span>automated checks passing</span></div>
       <div><b>__SCORE__</b><span>design score (from 6.3)</span></div>
     </div>
   </section>
@@ -155,9 +155,11 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--fg-2); display: flex; fle
 <div class="wrap">
   <section>
     <h2>Tonight, cycle by cycle</h2>
+    <details class="tl-wrap"><summary>__VERSIONS__ versions, 12:30 to 7:45 AM</summary>
     <ol class="tl">
 __TIMELINE__
     </ol>
+    </details>
     <p style="margin-top:10px">Full detail: CHANGELOG.md in the repo bundle below.</p>
   </section>
 
@@ -248,7 +250,7 @@ __KNOWN__
     <p>The GitHub repo didn't exist tonight, so the source ships here: <a href="source/heardback-app.txt">the built app (single file)</a>, <a href="source/refresh_jobs.py.txt">data refresh script</a>, <a href="source/fetch_ats.py.txt">direct ATS fetcher</a>, <a href="source/CHANGELOG.md.txt">changelog</a> and <a href="source/NOTES.md.txt">engineering notes</a>. The full git history is in the session workspace, ready to push.</p>
   </section>
 
-  <p class="foot">Built overnight by Claude with a team of agents: builders working in parallel, seven design reviews, three usability tests, an accessibility audit and a QA suite of __CHECKS__ automated checks. Nothing was posted publicly.</p>
+  <p class="foot">Built overnight by Claude with a team of agents: builders working in parallel, twelve design reviews, four usability tests and a cold-visitor test, an accessibility audit, a chaos test and a QA suite of __CHECKS__ automated checks. Nothing was posted publicly.</p>
 </div>
 
 <script>

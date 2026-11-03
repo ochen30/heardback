@@ -33,21 +33,9 @@ App renamed to **Heardback** at 08:50 UTC per user request. Repo to attach: oche
 - Preact 10.19.3 + htm 3.1.1 (UMD, cdnjs/unpkg pinned).
 - State: one store object, persisted to localStorage (`ghosted:v1`), with schema version + migrations.
 
-## Backlog (priority order; update every cycle)
-1. [ ] Data pipeline: listings → compact jobs index + company stats + ghost signals
-2. [ ] App shell, design tokens, nav, routing, command palette
-3. [ ] Find view (search/filter/virtualized list/job drawer, ghost score)
-4. [ ] Pipeline board + table, drag/drop, keyboard
-5. [ ] Application detail: rounds, notes, timeline
-6. [ ] Paste-email auto-log (rule parser + Claude)
-7. [ ] Today view + nudges
-8. [ ] Onboarding (roles, locations, resume)
-9. [ ] Match scoring + tailor (Claude)
-10. [ ] Companies view + company page (real posting stats + pooled stats)
-11. [ ] Prep view (round prep, practice mode)
-12. [ ] Stats view (funnel, weekly activity)
-13. [ ] Settings: theme, privacy, export/import, example data toggle
-14. [ ] QA + design critique loops
+## Backlog (end of night 1)
+Done tonight: all 14 original items, plus calendar, PDF resumes, takedown detection, season signals, mock interview, bulk actions, palette context, methodology page, share card, accessibility, usability fixes from 4 studies + cold-visitor test.
+Next (night 2): direct ATS ingestion with descriptions (needs network allowlist), daily snapshots + ghost-score hit rate, small backend for sync and public reply data, nightly scheduled refresh/republish, Gmail import (optional).
 
 ## Live artifact
 - URL: https://claude.ai/artifact/CUYnHDx5AYEtoPjDxxVobm (private to the owner until shared via the page's Share menu)
