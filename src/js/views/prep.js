@@ -733,14 +733,20 @@ VIEWS.prep = function PrepView() {
   const find = (f) => f && !f.practice && all.find((x) => x.a.id === f.appId && x.r.id === f.roundId);
   const hit = find(focus);
   const [anyway, setAnyway] = useState(false);
-  const sel = hit ? hit : focus?.practice || anyway ? { practice: true } : up[0] || past[0] || null;
+  /* Practice mode only sticks while it was picked on this visit and no new round has appeared since.
+     Otherwise Prep opens on the soonest upcoming round (or the most recent one waiting on an outcome). */
+  const pin = useRef(null); // round ids that existed when practice was picked
+  const ids = all.map((x) => x.r.id);
+  if (pin.current && ids.some((id) => !pin.current.includes(id))) pin.current = null;
+  const practice = !hit && (!all.length ? focus?.practice || anyway : !!pin.current && focus?.practice);
+  const sel = hit ? hit : practice ? { practice: true } : up[0] || past[0] || null;
   const isSel = (x) => sel && !sel.practice && sel.a.id === x.a.id && sel.r.id === x.r.id;
-  const choose = (x) => { prepSetFocus(x ? { appId: x.a.id, roundId: x.r.id } : { practice: true }); document.getElementById("workspace")?.scrollTo?.({ top: 0 }); };
+  const choose = (x) => { pin.current = x ? null : ids; prepSetFocus(x ? { appId: x.a.id, roundId: x.r.id } : { practice: true }); document.getElementById("workspace")?.scrollTo?.({ top: 0 }); };
 
   if (!all.length && !sel?.practice) {
     return html`<div class="page">
       <div class="page-head"><div><h1>Interview prep</h1><p>Likely questions, talking points from your resume, and timed practice for every round.</p></div></div>
-      <div class="card"><${Empty} icon="prep" title="No interviews on your calendar yet" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" onClick=${() => go("pipeline")} id="prep-open-pipeline">Open Pipeline</${Btn}><${Btn} icon="play" onClick=${() => { setAnyway(true); prepSetFocus({ practice: true }); }} id="prep-anyway">Practice anyway</${Btn}></div>`}>
+      <div class="card"><${Empty} icon="prep" title="No interviews on your calendar yet" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" onClick=${() => go("pipeline")} id="prep-open-pipeline">Open Pipeline</${Btn}><${Btn} icon="play" onClick=${() => { setAnyway(true); pin.current = []; prepSetFocus({ practice: true }); }} id="prep-anyway">Practice anyway</${Btn}></div>`}>
         Add an interview round to an application and it shows up here with likely questions and a place for notes.
       </${Empty}></div>
     </div>`;

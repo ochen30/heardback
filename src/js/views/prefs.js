@@ -39,13 +39,16 @@ function pfExportCSV() {
   const rows = apps.map((a) => [a.company, a.title, a.location, STAGE[a.stage]?.label || a.stage, iso(a.appliedAt), iso(a.lastActivityAt), a.url, (a.rounds || []).length, a.example ? "yes" : ""]);
   saveFile("heardback-applications.csv", [head, ...rows].map((r) => r.map(csvEscape).join(",")).join("\n"), "text/csv");
 }
+/* Spreadsheet status words → stage. Checked in order, so "Rejected after onsite" is rejected and
+   "Phone screen" is a screen. Anything unrecognized is Applied (or Saved when there's no date either). */
 const PF_STAGE_WORDS = [
   [/offer|accepted/i, "offer"], [/reject|declin|no longer|not selected|turned down/i, "rejected"], [/ghost|no response|no reply|silent/i, "ghosted"],
-  [/interview|onsite|final|technical|superday/i, "interview"], [/screen|recruiter|phone/i, "screen"], [/appl|submitted|sent|waiting/i, "applied"], [/save|wish|bookmark|interested|to apply/i, "saved"],
+  [/\boa\b|online assessment|assessment|take[- ]?home|hirevue|phone screen|recruiter|\bscreen/i, "screen"],
+  [/interview|onsite|on-site|final|technical|superday/i, "interview"], [/appl|submitted|sent|waiting/i, "applied"], [/save|wish|bookmark|interested|to apply/i, "saved"],
 ];
 function pfStage(raw, hasDate) {
   const t = (raw || "").trim();
-  if (t) { const id = t.toLowerCase(); if (STAGE[id]) return id; const hit = PF_STAGE_WORDS.find(([re]) => re.test(t)); if (hit) return hit[1]; }
+  if (t) { const id = t.toLowerCase(); if (STAGE[id]) return id; const hit = PF_STAGE_WORDS.find(([re]) => re.test(t)); return hit ? hit[1] : "applied"; }
   return hasDate ? "applied" : "saved";
 }
 function pfDate(raw) {
@@ -90,7 +93,7 @@ function pfParseCSV(text) {
     const company = get(r, "company").slice(0, 120), title = get(r, "title").slice(0, 200);
     if (!company && !title) { skipped++; continue; }
     const appliedAt = pfDate(get(r, "applied"));
-    apps.push(pfBuildApp({ company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) }));
+    apps.push({ key: "r" + apps.length, company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, rawStage: get(r, "stage").slice(0, 60), stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) });
   }
   return { apps, skipped };
 }
@@ -136,12 +139,40 @@ function pfImportFile(file) {
     const fresh = []; let dup = 0;
     for (const a of res.apps) { const k = pfAppKey(a); if (existing.has(k)) { dup++; continue; } existing.add(k); fresh.push(a); }
     if (!fresh.length) { toast(dup ? `Nothing new to import. All ${pluralize(dup, "row")} are already tracked.` : "No rows with a company or title were found."); return; }
-    store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(fresh.map((a) => [a.id, a])) } }));
-    const extra = [dup && `${dup} already tracked`, res.skipped && `${res.skipped} without a company or title`].filter(Boolean).join(", ");
-    toast(`Imported ${pluralize(fresh.length, "application")}${extra ? `. Skipped ${extra}.` : ""}`, { ms: 6000, undo: () => store.set((s) => { const apps = { ...s.apps }; fresh.forEach((a) => delete apps[a.id]); return { ...s, apps }; }) });
+    openModal("pfImport", { rows: fresh, dup, skipped: res.skipped, name: file.name });
   };
   r.readAsText(file);
 }
+/* CSV import preview: one row per application, with the stage we read and a select to fix it. */
+MODALS.pfImport = function PfImport({ rows, dup, skipped }) {
+  const [stages, setStages] = useState(() => Object.fromEntries(rows.map((r) => [r.key, r.stage])));
+  const n = rows.length;
+  const doImport = () => {
+    const apps = rows.map((r) => pfBuildApp({ ...r, stage: stages[r.key] || r.stage }));
+    store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(apps.map((a) => [a.id, a])) } }));
+    closeModal();
+    const extra = [dup && `${dup} already tracked`, skipped && `${skipped} without a company or title`].filter(Boolean).join(", ");
+    toast(`Imported ${pluralize(apps.length, "application")}${extra ? `. Skipped ${extra}.` : ""}`, { ms: 6000, undo: () => store.set((s) => { const next = { ...s.apps }; apps.forEach((a) => delete next[a.id]); return { ...s, apps: next }; }) });
+  };
+  const extra = [dup && `${dup} already tracked`, skipped && `${skipped} without a company or title`].filter(Boolean).join(" and ");
+  return html`<${Modal} title="Import from spreadsheet" size="lg" onClose=${closeModal}
+    foot=${html`<${Btn} onClick=${closeModal}>Cancel</${Btn}><${Btn} kind="primary" id="pf-imp-go" onClick=${doImport}>Import ${n}</${Btn}>`}>
+    <p class="pf-imp-lead"><b>${pluralize(n, "row")} found.</b> Check the stages:${extra ? html` <span class="muted">Skipping ${extra}.</span>` : null}</p>
+    <div class="pf-imp" role="list" aria-label="Rows to import">
+      ${rows.map((r, i) => html`<div class="pf-imp-row" role="listitem" key=${r.key}>
+        <div class="pf-imp-main">
+          <span class="pf-imp-co truncate">${r.company}</span>
+          <span class="pf-imp-sub truncate">${r.title}</span>
+          <span class="pf-imp-meta">${r.appliedAt ? `Applied ${fmt.date(r.appliedAt, { month: "short", day: "numeric", year: "numeric" })}` : "No applied date"}${r.rawStage && norm(r.rawStage) !== norm(STAGE[r.stage]?.label || "") && norm(r.rawStage) !== r.stage ? html`<span class="faint"> · Sheet says “${r.rawStage}”</span>` : null}</span>
+        </div>
+        <label class="sr" for=${"pf-imp-st-" + i}>Stage for ${r.company}</label>
+        <select id=${"pf-imp-st-" + i} class="select pf-imp-sel" value=${stages[r.key]} onChange=${(e) => { const v = e.currentTarget.value; setStages((m) => ({ ...m, [r.key]: v })); }}>
+          ${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}
+        </select>
+      </div>`)}
+    </div>
+  </${Modal}>`;
+};
 function pfDeleteAll() {
   const shared = !!store.get().settings.shareAnon && typeof poolUnshare === "function";
   askConfirm({

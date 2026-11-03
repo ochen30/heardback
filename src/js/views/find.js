@@ -209,6 +209,30 @@ function find_GhostHint({ g }) {
   return html`<span class=${cx("gscore", lv)} title=${`${ghostLabel(g)} (${g}/100). Not proof either way. Open the listing to see why.`}><span class="gbars" aria-hidden="true"><i></i><i></i><i></i></span><span class="find-g-l">${ghostLabel(g)}</span></span>`;
 }
 
+/* Phone count bar: two deliberate lines. Line 1 is the count and sort; line 2 is one quiet line that says
+   what's filtering the list ("Your preferences · Hiding 220 likely stale · Show"), each part a 44px target. */
+function find_BarNarrow({ list, f, counts, profile, usingPrefs, sort }) {
+  const fresh = visit.since && f.posted !== "since" ? list.filter((j) => j.p > visit.since).length : 0;
+  const prefs = find_hasPrefs(profile);
+  const hid = f.hideGhost ? counts.ghostHidden : counts.ghostShown;
+  const parts = [];
+  if (prefs) parts.push(usingPrefs
+    ? html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" title="Filtered by your preferences. Tap to change filters" aria-label="Filtered by your preferences. Change filters" onClick=${() => openModal("findFilters")}>Your preferences</button>`
+    : html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" onClick=${() => find_setFilters(null)}>Use my preferences</button>`);
+  if (hid > 0) parts.push(html`<span class="find-bar-ghost" title="Listings with strong ghost signals: likely stale or not actively hiring"><span>${f.hideGhost ? "Hiding " : ""}<span class="num">${fmt.num(hid)}</span> likely stale</span><span class="find-bar-dot" aria-hidden="true">·</span><button type="button" class="find-link find-bar-btn" id="find-bar-ghost" aria-label=${f.hideGhost ? `Show ${hid} listings with strong ghost signals` : `Hide ${hid} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: !f.hideGhost })}>${f.hideGhost ? "Show" : "Hide"}</button></span>`);
+  return html`<div class="find-bar2">
+    <div class="find-bar2-top">
+      <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
+      ${fresh ? html`<button type="button" class="find-link find-bar-btn find-bar-new" onClick=${() => find_setFilters({ posted: "since" })}><span class="num">${fmt.num(fresh)}</span> new</button>` : null}
+      <span class="spacer"></span>
+      <select id="find-sort-sm" class="select find-sort-sm" aria-label="Sort by" value=${sort} onChange=${(e) => { const v = e.currentTarget.value; store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } })); }}>
+        ${FIND_SORTS.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}
+      </select>
+    </div>
+    ${parts.length ? html`<div class="find-bar2-sub">${parts.map((p, i) => html`${i ? html`<span class="find-bar-dot" aria-hidden="true">·</span>` : null}${p}`)}</div>` : null}
+  </div>`;
+}
+
 /* true at phone width (≤520px); follows resizes */
 function find_useNarrow() {
   const mq = useMemo(() => (window.matchMedia ? window.matchMedia("(max-width: 520px)") : null), []);
@@ -445,7 +469,7 @@ VIEWS.find = function FindView() {
           </div>
           <${Btn} cls="find-fbtn" icon="filter" onClick=${() => openModal("findFilters")} aria-label=${`Filters${nActive ? `, ${nActive} active` : ""}`}>Filters${nActive ? html`<span class="find-fcount num">${nActive}</span>` : null}</${Btn}>
         </div>
-        <div class="find-bar">
+        ${narrow ? html`<${find_BarNarrow} list=${list} f=${f} counts=${counts} profile=${profile} usingPrefs=${usingPrefs} sort=${sort} />` : html`<div class="find-bar">
           <div class="find-count meta-list">
             <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
             ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
@@ -460,7 +484,7 @@ VIEWS.find = function FindView() {
           <select id="find-sort-sm" class="select find-sort-sm show-sm" aria-label="Sort by" value=${sort} onChange=${(e) => { const v = e.currentTarget.value; store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } })); }}>
             ${FIND_SORTS.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}
           </select>
-        </div>
+        </div>`}
         ${list.length
           ? html`<div class=${cx("card find-results", rows.some((j) => { const a = byJob.get(j.id); return a && a.stage !== "saved"; }) && "find-has-stage")}><div class="list" role="list" aria-label="Job results">
               ${rows.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${profile} i=${i} sel=${i === sel} onSelect=${setSel} />`)}

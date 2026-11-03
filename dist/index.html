@@ -865,6 +865,18 @@ a.find-link { cursor: pointer; }
 .onb-resumed .ico { color: var(--ok); }
 .meta-list > .find-ghost-note { white-space: normal; }
 .find-fgroups:focus, .find-fgroups:focus-visible { outline: none; box-shadow: none; }
+/* Phone count bar (find_BarNarrow): count + sort, then one quiet line of what's filtering the list. */
+.find-bar2 { display: flex; flex-direction: column; gap: 0; }
+.find-bar2-top { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--fs-sm); color: var(--fg-2); }
+.find-bar2-top .spacer { flex: 1; }
+.find-bar2-top strong { color: var(--fg); font-weight: 600; }
+.find-bar2-top .find-sort-sm { min-width: 0; width: auto; height: 44px; flex: none; }
+.find-bar2-sub { display: flex; align-items: center; flex-wrap: nowrap; gap: 0 6px; font-size: var(--fs-xs); color: var(--fg-3); white-space: nowrap; min-width: 0; overflow: hidden; margin-top: -4px; }
+.find-bar-ghost { display: inline-flex; align-items: center; gap: 0 6px; min-width: 0; }
+.find-bar-btn { min-height: 44px; display: inline-flex; align-items: center; font-size: inherit; }
+.find-bar2-sub .find-bar-btn { padding-inline: 2px; min-width: 44px; }
+.find-bar-new { padding-inline: 4px; }
+.find-bar-dot { color: var(--fg-3); }
 
 /* ===== Pipeline ===== */
 .pl-page.wide { max-width: 1680px; }
@@ -1647,6 +1659,22 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .prep-mock-details summary { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .prep-mock-caret { animation: none; } .prep-mock-ticks i { transition: none; } }
+
+/* Settings: CSV import preview */
+.pf-imp-lead { font-size: var(--fs-sm); color: var(--fg-2); }
+.pf-imp-lead b { color: var(--fg); font-weight: 600; }
+.pf-imp { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-md); }
+.pf-imp-row { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 8px 16px; align-items: center; padding: 10px 14px; }
+.pf-imp-row + .pf-imp-row { border-top: 1px solid var(--line); }
+.pf-imp-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pf-imp-co { font-weight: 600; font-size: var(--fs-sm); }
+.pf-imp-sub { font-size: var(--fs-sm); color: var(--fg-2); }
+.pf-imp-meta { font-size: var(--fs-xs); color: var(--fg-3); font-variant-numeric: tabular-nums; }
+.pf-imp-sel { width: 100%; }
+@media (max-width: 600px) {
+  .pf-imp-row { grid-template-columns: minmax(0, 1fr) 128px; padding: 10px 12px; gap: 8px 10px; }
+  .pf-imp-sel { min-height: 44px; }
+}
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -3339,6 +3367,30 @@ function find_GhostHint({ g }) {
   return html`<span class=${cx("gscore", lv)} title=${`${ghostLabel(g)} (${g}/100). Not proof either way. Open the listing to see why.`}><span class="gbars" aria-hidden="true"><i></i><i></i><i></i></span><span class="find-g-l">${ghostLabel(g)}</span></span>`;
 }
 
+/* Phone count bar: two deliberate lines. Line 1 is the count and sort; line 2 is one quiet line that says
+   what's filtering the list ("Your preferences · Hiding 220 likely stale · Show"), each part a 44px target. */
+function find_BarNarrow({ list, f, counts, profile, usingPrefs, sort }) {
+  const fresh = visit.since && f.posted !== "since" ? list.filter((j) => j.p > visit.since).length : 0;
+  const prefs = find_hasPrefs(profile);
+  const hid = f.hideGhost ? counts.ghostHidden : counts.ghostShown;
+  const parts = [];
+  if (prefs) parts.push(usingPrefs
+    ? html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" title="Filtered by your preferences. Tap to change filters" aria-label="Filtered by your preferences. Change filters" onClick=${() => openModal("findFilters")}>Your preferences</button>`
+    : html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" onClick=${() => find_setFilters(null)}>Use my preferences</button>`);
+  if (hid > 0) parts.push(html`<span class="find-bar-ghost" title="Listings with strong ghost signals: likely stale or not actively hiring"><span>${f.hideGhost ? "Hiding " : ""}<span class="num">${fmt.num(hid)}</span> likely stale</span><span class="find-bar-dot" aria-hidden="true">·</span><button type="button" class="find-link find-bar-btn" id="find-bar-ghost" aria-label=${f.hideGhost ? `Show ${hid} listings with strong ghost signals` : `Hide ${hid} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: !f.hideGhost })}>${f.hideGhost ? "Show" : "Hide"}</button></span>`);
+  return html`<div class="find-bar2">
+    <div class="find-bar2-top">
+      <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
+      ${fresh ? html`<button type="button" class="find-link find-bar-btn find-bar-new" onClick=${() => find_setFilters({ posted: "since" })}><span class="num">${fmt.num(fresh)}</span> new</button>` : null}
+      <span class="spacer"></span>
+      <select id="find-sort-sm" class="select find-sort-sm" aria-label="Sort by" value=${sort} onChange=${(e) => { const v = e.currentTarget.value; store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } })); }}>
+        ${FIND_SORTS.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}
+      </select>
+    </div>
+    ${parts.length ? html`<div class="find-bar2-sub">${parts.map((p, i) => html`${i ? html`<span class="find-bar-dot" aria-hidden="true">·</span>` : null}${p}`)}</div>` : null}
+  </div>`;
+}
+
 /* true at phone width (≤520px); follows resizes */
 function find_useNarrow() {
   const mq = useMemo(() => (window.matchMedia ? window.matchMedia("(max-width: 520px)") : null), []);
@@ -3575,7 +3627,7 @@ VIEWS.find = function FindView() {
           </div>
           <${Btn} cls="find-fbtn" icon="filter" onClick=${() => openModal("findFilters")} aria-label=${`Filters${nActive ? `, ${nActive} active` : ""}`}>Filters${nActive ? html`<span class="find-fcount num">${nActive}</span>` : null}</${Btn}>
         </div>
-        <div class="find-bar">
+        ${narrow ? html`<${find_BarNarrow} list=${list} f=${f} counts=${counts} profile=${profile} usingPrefs=${usingPrefs} sort=${sort} />` : html`<div class="find-bar">
           <div class="find-count meta-list">
             <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
             ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
@@ -3590,7 +3642,7 @@ VIEWS.find = function FindView() {
           <select id="find-sort-sm" class="select find-sort-sm show-sm" aria-label="Sort by" value=${sort} onChange=${(e) => { const v = e.currentTarget.value; store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } })); }}>
             ${FIND_SORTS.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}
           </select>
-        </div>
+        </div>`}
         ${list.length
           ? html`<div class=${cx("card find-results", rows.some((j) => { const a = byJob.get(j.id); return a && a.stage !== "saved"; }) && "find-has-stage")}><div class="list" role="list" aria-label="Job results">
               ${rows.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${profile} i=${i} sel=${i === sel} onSelect=${setSel} />`)}
@@ -5699,13 +5751,16 @@ function pfExportCSV() {
   const rows = apps.map((a) => [a.company, a.title, a.location, STAGE[a.stage]?.label || a.stage, iso(a.appliedAt), iso(a.lastActivityAt), a.url, (a.rounds || []).length, a.example ? "yes" : ""]);
   saveFile("heardback-applications.csv", [head, ...rows].map((r) => r.map(csvEscape).join(",")).join("\n"), "text/csv");
 }
+/* Spreadsheet status words → stage. Checked in order, so "Rejected after onsite" is rejected and
+   "Phone screen" is a screen. Anything unrecognized is Applied (or Saved when there's no date either). */
 const PF_STAGE_WORDS = [
   [/offer|accepted/i, "offer"], [/reject|declin|no longer|not selected|turned down/i, "rejected"], [/ghost|no response|no reply|silent/i, "ghosted"],
-  [/interview|onsite|final|technical|superday/i, "interview"], [/screen|recruiter|phone/i, "screen"], [/appl|submitted|sent|waiting/i, "applied"], [/save|wish|bookmark|interested|to apply/i, "saved"],
+  [/\boa\b|online assessment|assessment|take[- ]?home|hirevue|phone screen|recruiter|\bscreen/i, "screen"],
+  [/interview|onsite|on-site|final|technical|superday/i, "interview"], [/appl|submitted|sent|waiting/i, "applied"], [/save|wish|bookmark|interested|to apply/i, "saved"],
 ];
 function pfStage(raw, hasDate) {
   const t = (raw || "").trim();
-  if (t) { const id = t.toLowerCase(); if (STAGE[id]) return id; const hit = PF_STAGE_WORDS.find(([re]) => re.test(t)); if (hit) return hit[1]; }
+  if (t) { const id = t.toLowerCase(); if (STAGE[id]) return id; const hit = PF_STAGE_WORDS.find(([re]) => re.test(t)); return hit ? hit[1] : "applied"; }
   return hasDate ? "applied" : "saved";
 }
 function pfDate(raw) {
@@ -5750,7 +5805,7 @@ function pfParseCSV(text) {
     const company = get(r, "company").slice(0, 120), title = get(r, "title").slice(0, 200);
     if (!company && !title) { skipped++; continue; }
     const appliedAt = pfDate(get(r, "applied"));
-    apps.push(pfBuildApp({ company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) }));
+    apps.push({ key: "r" + apps.length, company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, rawStage: get(r, "stage").slice(0, 60), stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) });
   }
   return { apps, skipped };
 }
@@ -5796,12 +5851,40 @@ function pfImportFile(file) {
     const fresh = []; let dup = 0;
     for (const a of res.apps) { const k = pfAppKey(a); if (existing.has(k)) { dup++; continue; } existing.add(k); fresh.push(a); }
     if (!fresh.length) { toast(dup ? `Nothing new to import. All ${pluralize(dup, "row")} are already tracked.` : "No rows with a company or title were found."); return; }
-    store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(fresh.map((a) => [a.id, a])) } }));
-    const extra = [dup && `${dup} already tracked`, res.skipped && `${res.skipped} without a company or title`].filter(Boolean).join(", ");
-    toast(`Imported ${pluralize(fresh.length, "application")}${extra ? `. Skipped ${extra}.` : ""}`, { ms: 6000, undo: () => store.set((s) => { const apps = { ...s.apps }; fresh.forEach((a) => delete apps[a.id]); return { ...s, apps }; }) });
+    openModal("pfImport", { rows: fresh, dup, skipped: res.skipped, name: file.name });
   };
   r.readAsText(file);
 }
+/* CSV import preview: one row per application, with the stage we read and a select to fix it. */
+MODALS.pfImport = function PfImport({ rows, dup, skipped }) {
+  const [stages, setStages] = useState(() => Object.fromEntries(rows.map((r) => [r.key, r.stage])));
+  const n = rows.length;
+  const doImport = () => {
+    const apps = rows.map((r) => pfBuildApp({ ...r, stage: stages[r.key] || r.stage }));
+    store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(apps.map((a) => [a.id, a])) } }));
+    closeModal();
+    const extra = [dup && `${dup} already tracked`, skipped && `${skipped} without a company or title`].filter(Boolean).join(", ");
+    toast(`Imported ${pluralize(apps.length, "application")}${extra ? `. Skipped ${extra}.` : ""}`, { ms: 6000, undo: () => store.set((s) => { const next = { ...s.apps }; apps.forEach((a) => delete next[a.id]); return { ...s, apps: next }; }) });
+  };
+  const extra = [dup && `${dup} already tracked`, skipped && `${skipped} without a company or title`].filter(Boolean).join(" and ");
+  return html`<${Modal} title="Import from spreadsheet" size="lg" onClose=${closeModal}
+    foot=${html`<${Btn} onClick=${closeModal}>Cancel</${Btn}><${Btn} kind="primary" id="pf-imp-go" onClick=${doImport}>Import ${n}</${Btn}>`}>
+    <p class="pf-imp-lead"><b>${pluralize(n, "row")} found.</b> Check the stages:${extra ? html` <span class="muted">Skipping ${extra}.</span>` : null}</p>
+    <div class="pf-imp" role="list" aria-label="Rows to import">
+      ${rows.map((r, i) => html`<div class="pf-imp-row" role="listitem" key=${r.key}>
+        <div class="pf-imp-main">
+          <span class="pf-imp-co truncate">${r.company}</span>
+          <span class="pf-imp-sub truncate">${r.title}</span>
+          <span class="pf-imp-meta">${r.appliedAt ? `Applied ${fmt.date(r.appliedAt, { month: "short", day: "numeric", year: "numeric" })}` : "No applied date"}${r.rawStage && norm(r.rawStage) !== norm(STAGE[r.stage]?.label || "") && norm(r.rawStage) !== r.stage ? html`<span class="faint"> · Sheet says “${r.rawStage}”</span>` : null}</span>
+        </div>
+        <label class="sr" for=${"pf-imp-st-" + i}>Stage for ${r.company}</label>
+        <select id=${"pf-imp-st-" + i} class="select pf-imp-sel" value=${stages[r.key]} onChange=${(e) => { const v = e.currentTarget.value; setStages((m) => ({ ...m, [r.key]: v })); }}>
+          ${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}
+        </select>
+      </div>`)}
+    </div>
+  </${Modal}>`;
+};
 function pfDeleteAll() {
   const shared = !!store.get().settings.shareAnon && typeof poolUnshare === "function";
   askConfirm({
@@ -6706,14 +6789,20 @@ VIEWS.prep = function PrepView() {
   const find = (f) => f && !f.practice && all.find((x) => x.a.id === f.appId && x.r.id === f.roundId);
   const hit = find(focus);
   const [anyway, setAnyway] = useState(false);
-  const sel = hit ? hit : focus?.practice || anyway ? { practice: true } : up[0] || past[0] || null;
+  /* Practice mode only sticks while it was picked on this visit and no new round has appeared since.
+     Otherwise Prep opens on the soonest upcoming round (or the most recent one waiting on an outcome). */
+  const pin = useRef(null); // round ids that existed when practice was picked
+  const ids = all.map((x) => x.r.id);
+  if (pin.current && ids.some((id) => !pin.current.includes(id))) pin.current = null;
+  const practice = !hit && (!all.length ? focus?.practice || anyway : !!pin.current && focus?.practice);
+  const sel = hit ? hit : practice ? { practice: true } : up[0] || past[0] || null;
   const isSel = (x) => sel && !sel.practice && sel.a.id === x.a.id && sel.r.id === x.r.id;
-  const choose = (x) => { prepSetFocus(x ? { appId: x.a.id, roundId: x.r.id } : { practice: true }); document.getElementById("workspace")?.scrollTo?.({ top: 0 }); };
+  const choose = (x) => { pin.current = x ? null : ids; prepSetFocus(x ? { appId: x.a.id, roundId: x.r.id } : { practice: true }); document.getElementById("workspace")?.scrollTo?.({ top: 0 }); };
 
   if (!all.length && !sel?.practice) {
     return html`<div class="page">
       <div class="page-head"><div><h1>Interview prep</h1><p>Likely questions, talking points from your resume, and timed practice for every round.</p></div></div>
-      <div class="card"><${Empty} icon="prep" title="No interviews on your calendar yet" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" onClick=${() => go("pipeline")} id="prep-open-pipeline">Open Pipeline</${Btn}><${Btn} icon="play" onClick=${() => { setAnyway(true); prepSetFocus({ practice: true }); }} id="prep-anyway">Practice anyway</${Btn}></div>`}>
+      <div class="card"><${Empty} icon="prep" title="No interviews on your calendar yet" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" onClick=${() => go("pipeline")} id="prep-open-pipeline">Open Pipeline</${Btn}><${Btn} icon="play" onClick=${() => { setAnyway(true); pin.current = []; prepSetFocus({ practice: true }); }} id="prep-anyway">Practice anyway</${Btn}></div>`}>
         Add an interview round to an application and it shows up here with likely questions and a place for notes.
       </${Empty}></div>
     </div>`;
@@ -7140,7 +7229,7 @@ function today_runTask(tk) {
     }
   }
   else if (tk.kind === "ghost") Apps.move(a.id, "ghosted");
-  else if (tk.kind === "outcome") openApp(a.id, "rounds");
+  else if (tk.kind === "outcome" || tk.kind === "nextround") openApp(a.id, "rounds");
   else if (tk.kind === "confirm") {
     if (MODALS.draft) openModal("draft", { appId: a.id, roundId: tk.round?.id, kind: "confirm" });
     else openApp(a.id, "rounds");
@@ -7194,6 +7283,7 @@ function today_taskCopy(tk) {
   const a = tk.app;
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
   if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
+  if (tk.kind === "nextround") return { sub: `${a.stage === "screen" ? "In screening" : "Interviewing"}, nothing scheduled yet. Add the next round’s date.`, action: "Add a round" };
   if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
   return { sub: today_typo(tk.sub), action: tk.action };
 }
@@ -7296,16 +7386,28 @@ function today_matches(jobs, profile, apps) {
   const tracked = new Set(Object.values(apps).map((a) => a.jobId).filter(Boolean));
   const cut = now() - 3 * DAY;
   const recent = [], older = [], seen = new Set();
+  // Level, role and location are hard filters whenever the profile sets them (as in Find): a new-grad-only
+  // profile never sees internships, however well the rest scores.
+  const lv = profile.levels || [], roles = profile.roles || [];
+  const locs = (profile.locations || []).slice();
+  if (profile.remote && locs.length && !locs.includes("remote")) locs.push("remote");
+  const okLoc = (j) => !locs.length || locs.some((l) => (l === "remote" ? jobRemoteUS(j) : jobInLoc(j, l)));
   for (const j of jobs.jobs) {
     if (j.g >= 50 || tracked.has(j.id)) continue;
+    if (lv.length && !lv.includes(j.lvl)) continue;
+    if (roles.length && !roles.includes(j.cat)) continue;
+    if (!okLoc(j)) continue;
     const dk = j.co + "|" + norm(j.t);
     if (seen.has(dk)) continue;
     const f = fitScore(j, profile);
     if (!f) return { list: [], recentCount: 0, noProfile: true };
     if (f.score < 60) continue;
     seen.add(dk);
-    if (j.p >= cut) recent.push({ j, f });
-    else { if (recent.length >= 6) break; older.push({ j, f }); if (older.length >= 6) break; }
+    // Show the location that made it match: a listed city on the profile, else its US-remote entry.
+    const city = locs.length ? (j.l || []).find((l) => locs.some((id) => id !== "remote" && jobInLoc({ ...j, l: [l] }, id))) : null;
+    const loc = city || (locs.includes("remote") && jobRemoteUS(j) ? (j.l || []).find((l) => /remote/i.test(l)) : null) || (j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0]) || "Location not listed";
+    if (j.p >= cut) recent.push({ j, f, loc });
+    else { if (recent.length >= 6) break; older.push({ j, f, loc }); if (older.length >= 6) break; }
   }
   // Strongest fits first among the fresh ones, newest first within each band.
   const band = (f) => (f.score >= 80 ? 0 : f.score >= 70 ? 1 : 2);
@@ -7321,11 +7423,11 @@ function today_NewForYou({ jobs, m }) {
   else if (!m) body = html`<${Skeleton} rows=${4} />`;
   else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
   else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
-  else body = html`<div class="list">${m.list.map(({ j, f }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
+  else body = html`<div class="list">${m.list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-        ${today_meta([j.co, `${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
+        ${today_meta([j.co, `${loc}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
       <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>

@@ -334,3 +334,19 @@
   .prep-mock-details summary { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .prep-mock-caret { animation: none; } .prep-mock-ticks i { transition: none; } }
+
+/* Settings: CSV import preview */
+.pf-imp-lead { font-size: var(--fs-sm); color: var(--fg-2); }
+.pf-imp-lead b { color: var(--fg); font-weight: 600; }
+.pf-imp { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-md); }
+.pf-imp-row { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 8px 16px; align-items: center; padding: 10px 14px; }
+.pf-imp-row + .pf-imp-row { border-top: 1px solid var(--line); }
+.pf-imp-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pf-imp-co { font-weight: 600; font-size: var(--fs-sm); }
+.pf-imp-sub { font-size: var(--fs-sm); color: var(--fg-2); }
+.pf-imp-meta { font-size: var(--fs-xs); color: var(--fg-3); font-variant-numeric: tabular-nums; }
+.pf-imp-sel { width: 100%; }
+@media (max-width: 600px) {
+  .pf-imp-row { grid-template-columns: minmax(0, 1fr) 128px; padding: 10px 12px; gap: 8px 10px; }
+  .pf-imp-sel { min-height: 44px; }
+}

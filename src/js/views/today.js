@@ -59,7 +59,7 @@ function today_runTask(tk) {
     }
   }
   else if (tk.kind === "ghost") Apps.move(a.id, "ghosted");
-  else if (tk.kind === "outcome") openApp(a.id, "rounds");
+  else if (tk.kind === "outcome" || tk.kind === "nextround") openApp(a.id, "rounds");
   else if (tk.kind === "confirm") {
     if (MODALS.draft) openModal("draft", { appId: a.id, roundId: tk.round?.id, kind: "confirm" });
     else openApp(a.id, "rounds");
@@ -113,6 +113,7 @@ function today_taskCopy(tk) {
   const a = tk.app;
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
   if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
+  if (tk.kind === "nextround") return { sub: `${a.stage === "screen" ? "In screening" : "Interviewing"}, nothing scheduled yet. Add the next round’s date.`, action: "Add a round" };
   if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
   return { sub: today_typo(tk.sub), action: tk.action };
 }
@@ -215,16 +216,28 @@ function today_matches(jobs, profile, apps) {
   const tracked = new Set(Object.values(apps).map((a) => a.jobId).filter(Boolean));
   const cut = now() - 3 * DAY;
   const recent = [], older = [], seen = new Set();
+  // Level, role and location are hard filters whenever the profile sets them (as in Find): a new-grad-only
+  // profile never sees internships, however well the rest scores.
+  const lv = profile.levels || [], roles = profile.roles || [];
+  const locs = (profile.locations || []).slice();
+  if (profile.remote && locs.length && !locs.includes("remote")) locs.push("remote");
+  const okLoc = (j) => !locs.length || locs.some((l) => (l === "remote" ? jobRemoteUS(j) : jobInLoc(j, l)));
   for (const j of jobs.jobs) {
     if (j.g >= 50 || tracked.has(j.id)) continue;
+    if (lv.length && !lv.includes(j.lvl)) continue;
+    if (roles.length && !roles.includes(j.cat)) continue;
+    if (!okLoc(j)) continue;
     const dk = j.co + "|" + norm(j.t);
     if (seen.has(dk)) continue;
     const f = fitScore(j, profile);
     if (!f) return { list: [], recentCount: 0, noProfile: true };
     if (f.score < 60) continue;
     seen.add(dk);
-    if (j.p >= cut) recent.push({ j, f });
-    else { if (recent.length >= 6) break; older.push({ j, f }); if (older.length >= 6) break; }
+    // Show the location that made it match: a listed city on the profile, else its US-remote entry.
+    const city = locs.length ? (j.l || []).find((l) => locs.some((id) => id !== "remote" && jobInLoc({ ...j, l: [l] }, id))) : null;
+    const loc = city || (locs.includes("remote") && jobRemoteUS(j) ? (j.l || []).find((l) => /remote/i.test(l)) : null) || (j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0]) || "Location not listed";
+    if (j.p >= cut) recent.push({ j, f, loc });
+    else { if (recent.length >= 6) break; older.push({ j, f, loc }); if (older.length >= 6) break; }
   }
   // Strongest fits first among the fresh ones, newest first within each band.
   const band = (f) => (f.score >= 80 ? 0 : f.score >= 70 ? 1 : 2);
@@ -240,11 +253,11 @@ function today_NewForYou({ jobs, m }) {
   else if (!m) body = html`<${Skeleton} rows=${4} />`;
   else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
   else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
-  else body = html`<div class="list">${m.list.map(({ j, f }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
+  else body = html`<div class="list">${m.list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
-        ${today_meta([j.co, `${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
+        ${today_meta([j.co, `${loc}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
       <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>

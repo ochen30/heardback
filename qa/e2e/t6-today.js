@@ -119,6 +119,35 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     const resp = await page.evaluate(() => { const st = computeStats(); return st; });
     const sub = await page.locator('.td-resp .stat-sub').nth(1).innerText().catch(() => '');
     T.note('Response card median subtext', `${sub} | replied=${resp.replied}`);
+    // Silence counts from appliedAt (not from later non-reply activity like notes)
+    const sil = await page.evaluate(() => {
+      const d = (n) => Date.now() - n * 864e5;
+      const a = Apps.create({ company: 'Quiet Notes Co', title: 'SWE Intern', stage: 'applied', appliedAt: d(25), createdAt: d(26), lastActivityAt: d(1) });
+      ui.set({ toasts: [] });
+      const t = computeTasks().find((x) => x.app.id === a.id);
+      return { days: Apps.daysSilent(Apps.get(a.id)), kind: t && t.kind, title: t && t.title };
+    });
+    T.check('silence counts from appliedAt (25 days despite recent activity)', sil.days === 25 && sil.kind === 'ghost' && sil.title === 'No reply from Quiet Notes Co in 25 days', JSON.stringify(sil));
+    // Upcoming lists the next rounds whatever the date, including beyond 7 days
+    await page.evaluate(() => {
+      const H = 36e5, D = 864e5, base = Math.ceil(Date.now() / D) * D;
+      const a = Apps.create({ company: 'Far Future Co', title: 'Data Intern', stage: 'interview', appliedAt: Date.now() - 5 * D });
+      Apps.addRound(a.id, { type: 'technical', at: base + 9 * D + 15 * H });
+      Apps.addRound(a.id, { type: 'behavioral', at: base + 20 * D + 16 * H });
+      ui.set({ toasts: [] });
+    });
+    await page.waitForTimeout(300);
+    const upExp = await page.evaluate(() => {
+      const t = Date.now(); const it = [];
+      for (const a of Apps.list()) for (const r of a.rounds || []) if (r.at && r.at >= t - 36e5 && r.outcome !== 'cancelled' && !['rejected', 'ghosted'].includes(a.stage)) it.push({ co: a.company, type: ROUND[r.type]?.label || 'Interview', at: r.at });
+      it.sort((x, y) => x.at - y.at);
+      return { total: it.length, rows: it.slice(0, 5).map((x) => `${x.co} · ${x.type}`), beyond7: it.slice(0, 5).filter((x) => x.at > t + 7 * 864e5).length };
+    });
+    const upRows = (await page.locator('.td-up-row .td-up-title').allInnerTexts()).map((x) => x.replace(/\s+/g, ' ').trim());
+    T.check('Upcoming lists the next rounds (sorted, up to 5)', JSON.stringify(upRows) === JSON.stringify(upExp.rows), `${upRows.join(' | ')} vs ${upExp.rows.join(' | ')}`);
+    T.check('Upcoming includes rounds beyond 7 days', upExp.beyond7 > 0 && upRows.some((r) => r.startsWith('Far Future Co')), `${upExp.beyond7} beyond 7d`);
+    const upN = await page.locator('.card-head:has(#td-up-h) .td-count').innerText().catch(() => '');
+    T.check('Upcoming count = all upcoming rounds', upN === String(upExp.total), `${upN} vs ${upExp.total}`);
     T.check('console errors', errors.length === 0, errors.slice(0, 5).join(' | '));
   } catch (e) { T.check('exception', false, e.message.split('\n')[0]); await shot(page, `today-exc-${W}`); }
   await close();

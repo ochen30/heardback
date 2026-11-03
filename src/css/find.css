@@ -250,3 +250,15 @@ a.find-link { cursor: pointer; }
 .onb-resumed .ico { color: var(--ok); }
 .meta-list > .find-ghost-note { white-space: normal; }
 .find-fgroups:focus, .find-fgroups:focus-visible { outline: none; box-shadow: none; }
+/* Phone count bar (find_BarNarrow): count + sort, then one quiet line of what's filtering the list. */
+.find-bar2 { display: flex; flex-direction: column; gap: 0; }
+.find-bar2-top { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--fs-sm); color: var(--fg-2); }
+.find-bar2-top .spacer { flex: 1; }
+.find-bar2-top strong { color: var(--fg); font-weight: 600; }
+.find-bar2-top .find-sort-sm { min-width: 0; width: auto; height: 44px; flex: none; }
+.find-bar2-sub { display: flex; align-items: center; flex-wrap: nowrap; gap: 0 6px; font-size: var(--fs-xs); color: var(--fg-3); white-space: nowrap; min-width: 0; overflow: hidden; margin-top: -4px; }
+.find-bar-ghost { display: inline-flex; align-items: center; gap: 0 6px; min-width: 0; }
+.find-bar-btn { min-height: 44px; display: inline-flex; align-items: center; font-size: inherit; }
+.find-bar2-sub .find-bar-btn { padding-inline: 2px; min-width: 44px; }
+.find-bar-new { padding-inline: 4px; }
+.find-bar-dot { color: var(--fg-3); }

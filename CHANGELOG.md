@@ -101,3 +101,12 @@ A fresh-eyes usability test (an agent playing a stressed CS student doing 8 real
 - Onboarding keeps your choices if you reload mid-way; Prep re-renders correctly on reload or deep link.
 - Mobile: the + button offers "Add an application" or "Log an email".
 - Typography: no line ever starts with a "·" separator; Insights outcomes sum to 100%; consistent "Mark as ghosted" wording; Fit highlight only on clean top matches.
+
+### 04:25 PT — v9 published (usability test 2: mobile, new grad)
+A second usability test played a graduating senior on a phone, looking for new-grad data roles and importing 6 applications from a spreadsheet. Fixed:
+- Apps at Screen or Interviews aren't nudged toward "ghosted" right after import; instead "What's next with X?" asks for the next round.
+- **CSV import preview:** "6 rows found. Check the stages." with an editable stage per row; common words map correctly (OA/assessment → Screen, Interviewing → Interviews).
+- "New for you" respects your level, roles and locations strictly (new-grad users never see internships).
+- **"Remote" means remote in the US**; Canada/UK remote roles appear under their own locations.
+- Prep opens your soonest round by default; imported reply dates no longer produce a fake "first reply in 0 days".
+- Phone: Find's count area is two clean lines with large tap targets; toasts wrap instead of cutting off.
