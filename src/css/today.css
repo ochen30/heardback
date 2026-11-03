@@ -28,8 +28,8 @@
 /* Hover devices: the "more" button floats just left of the action, so it reserves no width and every action ends flush with the card edge. */
 @media (hover: hover) and (pointer: fine) and (min-width: 641px) {
   .td-task-actions { position: relative; }
-  .td-more { position: absolute; right: calc(100% + 4px); top: 50%; translate: 0 -50%; background: var(--surface); opacity: 0; pointer-events: none; transition: opacity var(--t-fast); }
-  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
+  .td-more { position: absolute; right: calc(100% + 4px); top: 50%; translate: 0 -50%; background: var(--surface); opacity: 0; transition: opacity var(--t-fast); }
+  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; }
 }
 .td-menu { min-width: 180px; }
 .td-menu-hint { font-size: var(--fs-xs); }
@@ -195,7 +195,7 @@
   .st-funnel .funnel-row { grid-template-columns: 78px minmax(0, 1fr) 76px; gap: 10px; }
   .st-chart-wrap { padding: 12px 8px 8px; }
 }
-.st-grid-top { align-items: stretch; }
+.st-grid-top { align-items: start; }
 .st-funnel-card { display: flex; flex-direction: column; }
 .st-funnel-card .st-funnel { flex: 1; }
 .st-steps { display: flex; flex-direction: column; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }

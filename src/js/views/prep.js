@@ -346,7 +346,7 @@ function PrepQuestionsCard({ questions, onPractice, title }) {
   const [open, setOpen] = useState(null);
   return html`<div class="card">
     <div class="card-head"><h3>${title || "Likely questions"}</h3><span class="prep-count num">${questions.length}</span><span class="spacer"></span>
-      <${Btn} size="sm" kind="primary" icon="play" onClick=${onPractice} id="prep-practice">Practice</${Btn}></div>
+      <${Btn} size="sm" icon="play" onClick=${onPractice} id="prep-practice">Practice</${Btn}></div>
     <ol class="prep-qlist prep-qlist-lg">
       ${questions.map((q, i) => html`<li key=${q.q} class=${open === i ? "open" : undefined}>
         <button type="button" class="prep-qbtn" aria-expanded=${open === i ? "true" : "false"} onClick=${() => setOpen(open === i ? null : i)}>
@@ -396,8 +396,8 @@ function PrepWorkspace({ a, r }) {
           <div class="prep-head-main">
             <${Logo} name=${a.company} size="lg" />
             <div class="prep-head-text">
-              <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2>${a.example && html`<${ExampleTag} />`}<${Badge} kind="accent">${ROUND[r.type]?.label || "Interview"}</${Badge}></div>
-              <span class="prep-role">${a.title}</span>
+              <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2></div>
+              <span class="prep-role">${a.title}<span class="prep-role-type"> · ${ROUND[r.type]?.label || "Interview"}</span></span>
             </div>
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>

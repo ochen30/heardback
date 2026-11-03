@@ -661,16 +661,20 @@ const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.
 /* One definition of "Reposted", used by the Companies table and both drawers:
    share of a company's open roles (as listed in Find) whose title it posted and closed before. */
 const FIND_REPOST_HELP = "Share of this company's open roles whose title it posted and closed at least once before. Grey under 20%, amber from 20%, red from 50%. Not proof either way.";
-const find_repC = { jobs: null, m: null };
-function find_repostMap(jobsState) {
-  if (find_repC.jobs !== jobsState.jobs) {
+/* Per-company figures from the listings Find shows (deduped), so every count on screen agrees. */
+const find_aggC = { jobs: null, m: null };
+function find_coAgg(jobsState) {
+  if (find_aggC.jobs !== jobsState.jobs) {
     const m = new Map();
-    for (const [co, list] of jobsState.byCompany) { let r = 0; for (const j of list) if (j.rp >= 1) r++; m.set(co, list.length ? r / list.length : 0); }
-    find_repC.jobs = jobsState.jobs; find_repC.m = m;
+    for (const [co, list] of jobsState.byCompany) {
+      let r = 0, ni = 0; for (const j of list) { if (j.rp >= 1) r++; if (j.lvl === "intern") ni++; }
+      m.set(co, { n: list.length, rep: list.length ? r / list.length : 0, ni, ng: list.length - ni });
+    }
+    find_aggC.jobs = jobsState.jobs; find_aggC.m = m;
   }
-  return find_repC.m;
+  return find_aggC.m;
 }
-const find_repostShare = (jobsState, name) => find_repostMap(jobsState).get(name) ?? jobsState.cstats[name]?.repostShare ?? 0;
+const find_repostShare = (jobsState, name) => find_coAgg(jobsState).get(name)?.rep ?? jobsState.cstats[name]?.repostShare ?? 0;
 const find_repTone = (r) => (r >= 0.5 ? "high" : r >= 0.2 ? "mid" : "");
 function find_useAppsByCompany() {
   const s = useStore();
@@ -686,7 +690,8 @@ VIEWS.companies = function CompaniesView() {
   const [shown, setShown] = useState(50);
   useEffect(() => { const t = setTimeout(() => setQ(qIn), 120); return () => clearTimeout(t); }, [qIn]);
   const ready = jobs.status === "ready";
-  const rs = ready ? find_repostMap(jobs) : null;
+  const agg = ready ? find_coAgg(jobs) : null;
+  const rs = { get: (name) => agg?.get(name)?.rep };
   const list = useMemo(() => {
     if (!ready) return [];
     const words = norm(q).split(" ").filter(Boolean);
@@ -731,7 +736,7 @@ VIEWS.companies = function CompaniesView() {
           return html`<tr key=${x.name} tabindex="0" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
             <td><div class="row"><${Logo} name=${x.name} size="sm" /><span class="truncate find-coname">${x.name}</span></div></td>
             <td class="r num">${fmt.num(x.open)}</td>
-            <td><div class="find-split" title=${`${x.c.intern} internships · ${x.c.newgrad} new grad`}><span class="find-split-bar"><i style=${`width:${x.c.open ? (x.c.intern / x.c.open) * 100 : 0}%`}></i></span><span class="num muted">${x.c.intern} / ${x.c.newgrad}</span></div></td>
+            ${(() => { const a = agg.get(x.name) || { n: x.c.open, ni: x.c.intern, ng: x.c.newgrad }; return html`<td><div class="find-split" title=${`${pluralize(a.ni, "internship")} · ${a.ng} new grad`}><span class="find-split-bar"><i style=${`width:${a.n ? (a.ni / a.n) * 100 : 0}%`}></i></span><span class="num muted">${fmt.num(a.ni)} / ${fmt.num(a.ng)}</span></div></td>`; })()}
             <td class="r num">${lifetime(x.c)}</td>
             <td class="r num">${find_stillShare(x.c) != null ? html`<span title=${`${x.c.season.open} of ${x.c.season.posted} ${x.c.season.term} postings open`}>${fmt.pct(find_stillShare(x.c))}</span>` : html`<span class="faint">–</span>`}</td>
             <td class="r num"><span class=${cx("find-gshare", find_repTone(g))}>${fmt.pct(g)}</span></td>
@@ -822,7 +827,7 @@ DRAWERS.company = ({ id }) => {
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${name}</h2>
       <div class="row wrap find-dsub find-dsub-co">
-        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${cs && (cs.intern || cs.newgrad) ? html`<span class="sep"> · </span>${fmt.num(cs.intern)} internship, ${fmt.num(cs.newgrad)} new grad` : null}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
+        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${(() => { const ni = open.filter((j) => j.lvl === "intern").length, ng = open.length - ni; return ni && ng ? html`<span class="sep"> · </span>${fmt.num(ni)} internship, ${fmt.num(ng)} new grad` : null; })()}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
         ${cs?.site && html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>`}
       </div>
     </div>
@@ -837,7 +842,7 @@ DRAWERS.company = ({ id }) => {
       <div class="find-stats">
         <${find_TimeOpenStat} cs=${cs} />
         <${find_Stat} label="Reposted" value=${fmt.pct(find_repostShare(jobs, name))} title=${FIND_REPOST_HELP} />
-        <${find_Stat} label="New in last 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
+        <${find_Stat} label="New in 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
       </div>
       <details class="find-details">
         <summary>How these are calculated</summary>

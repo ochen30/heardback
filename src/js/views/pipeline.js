@@ -346,7 +346,7 @@ function PlCard({ a, settings, dragging, onMenu, ...rest }) {
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="truncate pl-status-extra">· ${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="pl-status-dot" aria-hidden="true">·</span><span class="truncate pl-status-extra">${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -719,7 +719,7 @@ function PlRound({ a, r, onDone }) {
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
       <span class="spacer" style="flex:1"></span>
-      <${Btn} kind="ghost" size="sm" icon="chevU" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
+      <${Btn} kind="ghost" size="sm" icon="check" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
     </div>
     <div class="pl-round-grid">
       <${Field} label="Date and time" id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>

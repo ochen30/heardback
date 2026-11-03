@@ -49,18 +49,19 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     if (detected.includes(s)) onChange({ ...value, removed: value.removed.filter((x) => x !== s) });
     else onChange({ ...value, added: [...value.added, s] });
   };
-  const onFile = (e) => {
+  const [reading, setReading] = useState(false);
+  const onFile = async (e) => {
     const f = e.currentTarget.files && e.currentTarget.files[0];
     e.currentTarget.value = "";
     if (!f) return;
-    if (/\.(txt|md|markdown|text)$/i.test(f.name) || /^text\//.test(f.type)) {
-      const r = new FileReader();
-      r.onload = () => { setText(String(r.result || "").slice(0, 40000)); setFileNote({ ok: true, text: `Read ${f.name}. Check the text below.` }); };
-      r.onerror = () => setFileNote({ ok: false, text: `Couldn't read ${f.name}. Paste the text instead.` });
-      r.readAsText(f);
-    } else {
-      setFileNote({ ok: false, text: `${/\.pdf$/i.test(f.name) ? "PDF" : /\.docx?$/i.test(f.name) ? "Word" : "That"} files can't be read here. Open it, copy all the text, and paste it below. Files stay on your device.` });
-    }
+    setReading(true); setFileNote(null);
+    try {
+      const { text } = await readResumeFile(f);
+      setText(String(text || "").slice(0, 40000));
+      setFileNote({ ok: true, text: `Read ${f.name}. Check the text below and fix anything that came through oddly.` });
+    } catch (err) {
+      setFileNote({ ok: false, text: (err && err.message) || `Couldn't read ${f.name}. Paste the text instead.` });
+    } finally { setReading(false); }
   };
   const words = (value.text.trim().match(/\S+/g) || []).length;
   const sugg = onbSuggest(add, skills);
@@ -71,8 +72,10 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     <div class="onb-resume-head">
       <label class="label" for=${idp + "-text"}>Resume text</label>
       <span class="spacer"></span>
-      <label class="btn sm onb-file"><${Icon} name="upload" />Upload .txt or .md<input id=${idp + "-file"} class="sr" type="file" accept=".txt,.md,.markdown,.pdf,.doc,.docx,text/plain,text/markdown" onChange=${onFile} /></label>
+      <label class=${cx("btn sm onb-file", reading && "is-busy")} aria-disabled=${reading ? "true" : null}><${Icon} name="upload" />${reading ? "Reading…" : "Upload PDF"}<input id=${idp + "-file"} class="sr" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" disabled=${reading} onChange=${onFile} /></label>
     </div>
+    <span class="hint onb-resume-hint">Upload a PDF or paste the text. It stays in this browser.</span>
+    ${reading && html`<div class="callout info" role="status"><span class="onb-spin" aria-hidden="true"></span><span>Reading your resume…</span></div>`}
     ${fileNote && html`<div class=${cx("callout", fileNote.ok ? "info" : "wait")} role="status"><${Icon} name=${fileNote.ok ? "check" : "info"} /><span>${fileNote.text}</span></div>`}
     <textarea id=${idp + "-text"} class="textarea onb-textarea" placeholder="Paste the text of your resume here. Experience, projects, skills: plain text is fine." value=${value.text} onInput=${(e) => setText(e.currentTarget.value)}></textarea>
     <div class="row onb-meta"><span class="hint num">${words ? pluralize(words, "word") : "Nothing pasted yet"}</span>${value.text && html`<button type="button" class="onb-link" onClick=${() => setText("")}>Clear text</button>`}</div>
@@ -89,7 +92,7 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
         ${sugg.map((n) => html`<button type="button" key=${n} class="onb-sugg-btn" onClick=${() => addSkill(n)} aria-label=${"Add " + n}><${Icon} name="plus" size=${12} />${n}</button>`)}
       </div>`}
     </div>
-    <p class="onb-privacy"><${Icon} name="shield" /><span>Your resume stays in this browser. It's only sent to Claude when you click an AI action.</span></p>
+    <p class="onb-privacy"><${Icon} name="shield" /><span>Your resume is only sent to Claude when you click an AI action.</span></p>
   </div>`;
 }
 
@@ -139,6 +142,41 @@ function onbSummary(p) {
   return `${lv} · ${roles} · ${where}${p.needsSponsor ? " · sponsorship not ruled out" : ""}`;
 }
 
+/* ---------- Location checklist (shared with Settings): same pattern as Find. Top 6 by open roles, rest behind "Show N more". ---------- */
+const ONB_LOC_TOP = 6;
+const onbLocCountC = { jobs: null, counts: null };
+function onbLocCounts(jobs) {
+  if (!jobs || !jobs.length) return null;
+  if (onbLocCountC.jobs !== jobs) {
+    const opts = onbLocChoices();
+    const c = {}; for (const o of opts) c[o.id] = 0;
+    for (const j of jobs) for (const o of opts) if (jobInLoc(j, o.id)) c[o.id]++;
+    onbLocCountC.jobs = jobs; onbLocCountC.counts = c;
+  }
+  return onbLocCountC.counts;
+}
+function OnbLocChecklist({ idp, value, onChange, label }) {
+  const jobs = useJobs();
+  const [more, setMore] = useState(false);
+  const counts = jobs.status === "ready" ? onbLocCounts(jobs.jobs) : null;
+  const opts = onbLocChoices().map((o, i) => ({ ...o, n: counts ? counts[o.id] : null, i }));
+  if (counts) opts.sort((a, b) => b.n - a.n || a.i - b.i);
+  const top = opts.slice(0, ONB_LOC_TOP);
+  const shown = more ? opts : top.concat(opts.slice(ONB_LOC_TOP).filter((o) => value.includes(o.id)));
+  const hidden = opts.length - shown.length;
+  return html`<div class="onb-locs" role="group" aria-label=${label || "Locations"}>
+    <div class="find-opts onb-opts">${shown.map((o) => {
+      const id = `${idp}-loc-${o.id.replace(/\W+/g, "-")}`;
+      return html`<label class="find-opt onb-opt" for=${id} key=${o.id}>
+        <input id=${id} type="checkbox" checked=${value.includes(o.id)} onChange=${() => onChange(onbToggle(value, o.id))} />
+        <span class="find-opt-l">${o.label}</span>
+        ${o.n != null && html`<span class="find-opt-n">${fmt.num(o.n)}</span>`}
+      </label>`;
+    })}</div>
+    ${(hidden > 0 || more) && html`<button type="button" class="onb-more" aria-expanded=${more ? "true" : "false"} onClick=${() => setMore(!more)}>${more ? "Show fewer" : `Show ${hidden} more`}</button>`}
+  </div>`;
+}
+
 /* ---------- Steps ---------- */
 function OnbGroup({ title, hint, children, id }) {
   return html`<section class="onb-group" aria-labelledby=${id}>
@@ -156,7 +194,7 @@ function OnbStepTargets({ d, set }) {
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}</div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-loc" title="Locations" hint="Leave empty to see every location.">
-      <div class="chips">${onbLocChoices().map((o) => html`<${Chip} key=${o.id} on=${locs.includes(o.id)} onClick=${() => set({ locations: onbToggle(locs, o.id) })}>${o.label}</${Chip}>`)}</div>
+      <${OnbLocChecklist} idp="onb" value=${locs} onChange=${(v) => set({ locations: v })} />
       <div class="onb-switches">
         <${Switch} id="onb-remote" checked=${d.remote} onChange=${(v) => set({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
         <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I'll need visa sponsorship" />

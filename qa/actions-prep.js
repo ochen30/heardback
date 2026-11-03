@@ -18,12 +18,34 @@ const wait = (p, ms = 300) => p.waitForTimeout(ms);
 async function step1(page) {
   await page.getByRole('button', { name: 'Software', exact: true }).click();
   await page.getByRole('button', { name: 'Data & AI', exact: true }).click();
-  await page.getByRole('button', { name: 'SF Bay Area', exact: true }).click();
-  await page.getByRole('button', { name: 'New York', exact: true }).click();
+  await page.check('#onb-loc-sf-bay-area');
+  await page.check('#onb-loc-new-york');
   await page.fill('#onb-name', 'Alex');
 }
 module.exports = {
   async onbStep1(page) { await step1(page); },
+  async onbLocMore(page) {
+    await step1(page);
+    const before = await page.locator('.onb-opt').count();
+    await page.click('.onb-more'); await wait(page);
+    const after = await page.locator('.onb-opt').count();
+    console.log('[prep]', before === 6 && after === 12 ? 'ok' : 'FAIL', `location list ${before} -> ${after}`);
+  },
+  async onbResumePdf(page) {
+    await step1(page); await page.click('#onb-next'); await wait(page);
+    await page.setInputFiles('#onb-res-file', 'qa/fixtures/sample-resume.pdf');
+    await page.waitForFunction(() => document.querySelector('#onb-res-text')?.value.length > 40, null, { timeout: 15000 }).catch(() => null);
+    await wait(page, 400);
+    const st = await page.evaluate(() => ({ len: document.querySelector('#onb-res-text').value.length, skills: document.querySelectorAll('.onb-skill').length }));
+    console.log('[prep]', st.len > 40 && st.skills > 0 ? 'ok' : 'FAIL', `PDF read: ${st.len} chars, ${st.skills} skills`);
+  },
+  async onbResumeBad(page) {
+    await step1(page); await page.click('#onb-next'); await wait(page);
+    await page.setInputFiles('#onb-res-file', { name: 'resume.docx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
+    await wait(page, 400);
+    console.log('[prep]', (await page.locator('.onb-resume .callout').count()) ? 'ok' : 'FAIL', 'unsupported file shows inline message');
+  },
+  async prefsLocMore(page) { await page.click('.onb-more'); await wait(page); },
   async onbStep2(page) {
     await step1(page); await page.click('#onb-next'); await wait(page);
     await page.fill('#onb-res-text', RESUME); await wait(page);

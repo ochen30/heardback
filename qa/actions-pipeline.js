@@ -5,9 +5,16 @@ const stageOf = (page, company) => page.evaluate((c) => Object.values(store.get(
 const wait = async (page, ms = 250) => { await page.waitForTimeout(ms); await page.evaluate(() => ui.set({ toasts: [] })); };
 
 async function firstCard(page, company) { return page.locator(`.pl-card:has-text("${company}")`).first(); }
-// Close any drawer/modal/menu and return to the board so each action starts clean.
+// Close any drawer/modal/menu, restore the 10 example applications (dropping anything an earlier
+// action created or changed) and return to the board, so every action is order-independent.
 async function reset(page, view = 'board') {
-  await page.evaluate((v) => { ui.set({ drawer: null, modal: null, palette: false, toasts: [] }); store.set((s) => ({ ...s, ui: { ...s.ui, pipelineView: v, pipelineClosedOpen: false } })); if (location.hash !== '#pipeline') location.hash = 'pipeline'; }, view);
+  await page.evaluate((v) => {
+    ui.set({ drawer: null, modal: null, palette: false, toasts: [] });
+    store.set((s) => ({ ...s, apps: {}, settings: { ...s.settings, showExamples: true }, ui: { ...s.ui, pipelineView: v, pipelineClosedOpen: false, pipelineHintDone: false, pipelineSort: undefined } }));
+    loadExamples();
+    ui.set({ toasts: [] });
+    if (location.hash !== '#pipeline') location.hash = 'pipeline';
+  }, view);
   await page.keyboard.press('Escape').catch(() => {});
   await page.waitForTimeout(150);
 }
@@ -117,6 +124,8 @@ const actions = {
     await wait(page);
     const n = await page.locator('.pl-round').count();
     assert(n === 2, `2 rounds (got ${n})`);
+    const open = await page.locator('.pl-round-open').count();
+    assert(open === 1, `only the next upcoming round is expanded (got ${open})`);
   },
   async drawerAddRound(page) {
     await actions.drawerRounds(page);
@@ -129,8 +138,10 @@ const actions = {
     await wait(page, 700);
     const v = await page.evaluate(() => { const a = Object.values(store.get().apps).find((x) => x.company === 'Northwind Labs'); return a.rounds[a.rounds.length - 1]; });
     assert(v.interviewers === 'Sam Ortiz' && /caching/.test(v.reflection), 'round fields autosave');
-    await page.click(`[data-round="${rid}"] .pl-outcome button:has-text("Passed")`);
+    await page.selectOption(`#pl-r-${rid}-out`, 'passed');
     await wait(page, 150);
+    const o = await page.evaluate(() => { const a = Object.values(store.get().apps).find((x) => x.company === 'Northwind Labs'); return a.rounds[a.rounds.length - 1].outcome; });
+    assert(o === 'passed', 'outcome select saves');
   },
   async drawerTimeline(page) {
     await actions.drawer(page);
@@ -156,6 +167,8 @@ const actions = {
   async drawerContacts(page) {
     await page.click('.pl-card:has-text("Fernhill Capital")');
     await wait(page, 300);
+    assert(await page.locator('#pl-c-name').count() === 0, 'contact form hidden until asked for');
+    await page.click('#pl-c-add');
     await page.fill('#pl-c-name', 'Marcus Webb');
     await page.fill('#pl-c-role', 'Recruiter');
     await page.fill('#pl-c-email', 'marcus@fernhill.example');
@@ -201,6 +214,8 @@ const actions = {
   },
   async thanks(page) {
     await actions.drawerRounds(page);
+    await page.locator('.pl-round').first().locator('.pl-round-sum').click();
+    await wait(page, 150);
     await page.locator('.pl-round').first().locator('button:has-text("Draft thank-you")').click();
     await wait(page, 300);
   },
@@ -325,6 +340,18 @@ const actions = {
     await actions.paste_interview(page);
     await page.click('.pl-raw-sum button:has-text("Show")');
     await wait(page, 150);
+  },
+  async drawerRoundEdit(page) {
+    await actions.drawerRounds(page);
+    await page.locator('.pl-round-sum').first().click();
+    await wait(page, 150);
+    assert(await page.locator('.pl-round-open').count() === 2, 'Edit expands a collapsed round');
+  },
+  async contactForm(page) {
+    await page.click('.pl-card:has-text("Fernhill Capital")');
+    await wait(page, 300);
+    await page.click('#pl-c-add');
+    await wait(page, 100);
   },
   async scrollBoard(page) { await page.evaluate(() => document.querySelector('.pl-board').scrollBy({ left: 300, behavior: 'instant' })); await wait(page, 300); },
 };

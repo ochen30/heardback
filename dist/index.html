@@ -572,6 +572,17 @@ p { margin: 0; }
 .palette-input input:focus, .palette-input input:focus-visible { box-shadow: none; outline: none; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .btn.primary .kbd { border-color: color-mix(in srgb, currentColor 35%, transparent); }
+/* Custom checkbox: consistent in both themes */
+input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; margin: 0; flex: none; border: 1.5px solid var(--line-strong); border-radius: 4px; background: var(--surface); display: inline-grid; place-content: center; cursor: pointer; transition: background var(--t-fast), border-color var(--t-fast); }
+input[type="checkbox"]:hover { border-color: var(--fg-3); }
+input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]:checked::after { content: ""; width: 8px; height: 4.5px; border: 2px solid var(--accent-fg); border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+.switch input[type="checkbox"] { width: 100%; height: 100%; border: 0; background: transparent; opacity: 0; }
+.switch input[type="checkbox"]::after { display: none; }
+input[type="radio"] { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; margin: 0; flex: none; border: 1.5px solid var(--line-strong); border-radius: 50%; background: var(--surface); display: inline-grid; place-content: center; cursor: pointer; }
+input[type="radio"]:hover { border-color: var(--fg-3); }
+input[type="radio"]:checked { border-color: var(--accent); }
+input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -716,6 +727,7 @@ a.find-link { cursor: pointer; }
 .find-stat .stat-label { font-size: var(--fs-xs); color: var(--fg-3); }
 .find-stat-v { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
 .find-nd { font-size: var(--fs-sm); font-weight: 500; }
+.find-stat-v:has(.find-nd) { display: flex; align-items: center; min-height: calc(var(--fs-lg) * 1.3); }
 .find-stat .stat-sub { line-height: 1.4; }
 .find-season-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--fs-sm); justify-content: space-between; }
 .find-dlist { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -20px; }
@@ -797,7 +809,7 @@ a.find-link { cursor: pointer; }
   display: flex; gap: 10px; align-items: flex-start; overflow-x: auto; overscroll-behavior-x: contain;
   min-height: 0; padding-bottom: 10px; scroll-padding-inline: 2px;
 }
-.pl-col { flex: 1 1 0; min-width: 180px; max-width: 340px; min-height: 0; align-self: flex-start; }
+.pl-col { flex: 1 1 0; min-width: 200px; max-width: 340px; min-height: 0; align-self: flex-start; }
 .pl-col .col-head { min-height: 44px; padding: 10px 8px 6px 12px; }
 .pl-col .col-head .spacer { flex: 1; }
 .pl-col .col-body { padding: 2px 8px 8px; gap: 8px; min-height: 0; }
@@ -828,7 +840,7 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-col-closed .pl-drop { flex: 1; min-height: 64px; }
 .pl-drop.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
 
-.pl-card { gap: 4px; padding: 10px 10px 10px 12px; user-select: none; -webkit-user-select: none; }
+.pl-card { position: relative; gap: 4px; padding: 10px 10px 10px 12px; user-select: none; -webkit-user-select: none; }
 .pl-card:active { cursor: grabbing; }
 .pl-card:focus-visible { border-color: var(--accent); }
 .pl-card.closed { opacity: .82; }
@@ -843,6 +855,9 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-card-foot { flex-wrap: nowrap; min-height: 22px; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 6px; min-width: 0; }
 .pl-status { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pl-status .truncate { min-width: 0; }
+.pl-status-main { flex: none; }
+.pl-status-dot { flex: none; margin-inline: -2px; color: var(--fg-3); font-weight: 400; }
+.pl-status-extra { color: var(--fg-2); font-weight: 400; }
 .pl-status .ico { flex: none; }
 .pl-status.accent { color: var(--fg); font-weight: 500; }
 .pl-status.accent .ico { color: var(--accent-text); }
@@ -857,6 +872,11 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-card:hover .pl-more, .pl-card:focus-within .pl-more, .pl-more:focus-visible, .pl-more[aria-expanded="true"] { opacity: 1; }
 .pl-more:hover { background: var(--surface-2); color: var(--fg); }
 @media (hover: none) { .pl-more { opacity: 1; } }
+/* On pointer devices the menu button floats over the card corner instead of reserving width */
+@media (hover: hover) {
+  .pl-more { position: absolute; top: 7px; right: 7px; margin: 0; background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+  .pl-more:hover { background: var(--surface-2); }
+}
 .pl-tip { font-size: var(--fs-xs); color: var(--fg-3); display: flex; align-items: center; gap: 6px; margin-top: -10px; align-self: flex-start; }
 .pl-tip .kbd { min-width: 18px; height: 18px; }
 .pl-tip-x { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: var(--r-sm); background: none; color: var(--fg-3); }
@@ -878,7 +898,9 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-table th button:hover { color: var(--fg); }
 .pl-table th[aria-sort="ascending"] button, .pl-table th[aria-sort="descending"] button { color: var(--fg); }
 .pl-num { text-align: right; }
-.pl-table th.pl-num button { flex-direction: row-reverse; }
+.pl-table th.pl-num { text-align: right; }
+.pl-table th.pl-num button { position: relative; }
+.pl-table th.pl-num button .ico { position: absolute; left: 100%; margin-left: 2px; }
 .pl-sort { transition: transform var(--t-fast); transform: rotate(180deg); }
 .pl-sort.desc { transform: none; }
 .pl-sort-idle { opacity: 0; }
@@ -926,7 +948,6 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 }
 .pl-step i { display: block; height: 4px; border-radius: 99px; background: var(--surface-3); transition: background var(--t-fast); }
 .pl-step span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pl-step-s { display: none; }
 .pl-step:hover i { background: var(--line-strong); }
 .pl-step:hover { color: var(--fg); }
 .pl-step.done i { background: var(--accent); opacity: .45; }
@@ -954,6 +975,8 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 .pl-next-card.wait .pl-next-ico { color: var(--wait); }
 .pl-next-card.ok .pl-next-ico { color: var(--ok); }
 .pl-next-actions { margin-top: 4px; }
+.pl-next-card .pl-linkbtn, .pl-next-card .pl-linkbtn:hover { text-decoration: none; font-weight: 500; }
+.pl-next-card .pl-linkbtn:hover { color: var(--fg); }
 
 .pl-kv { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 2px 16px; align-items: center; font-size: var(--fs-sm); }
 .pl-kv-k { color: var(--fg-3); font-weight: 400; font-size: var(--fs-sm); }
@@ -978,23 +1001,35 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 .pl-contacts { border: 1px solid var(--line); border-radius: var(--r-md); }
 .pl-contact { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; font-size: var(--fs-sm); }
 .pl-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--fg-2); font-size: var(--fs-xs); font-weight: 600; border: 1px solid var(--line); }
-.pl-contact-form { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 6px; }
+.pl-contact-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.pl-contact-actions { display: flex; align-items: center; gap: 6px; }
+.pl-none { font-size: var(--fs-sm); color: var(--fg-3); }
+.dsec > h3 .btn { margin-block: -6px; margin-right: -8px; font-weight: 500; }
 
-.pl-round { gap: 12px; padding: 14px; background: var(--surface); }
-.pl-round-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.pl-round-type { flex: none; width: auto; min-width: 0; font-weight: 600; border-color: transparent; background-color: transparent; padding-left: 8px; }
-.pl-round-type:hover, .pl-round-type:focus { border-color: var(--line-strong); }
-.pl-round-head .pl-inline, .pl-round-head .pl-inline-wrap { flex: 1 1 200px; width: auto; color: var(--fg-2); }
-.pl-round-head .badge { flex: none; }
-.pl-round-out { display: flex; align-items: center; gap: 12px; }
-.pl-round-out .label { flex: none; }
+.pl-round-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.pl-round-list > .pl-round + .pl-round { border-top: 1px solid var(--line); }
+.pl-round-sum {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 12px 8px 14px; border: 0; background: none;
+  text-align: left; color: var(--fg); font: inherit; font-size: var(--fs-sm); border-radius: var(--r-md);
+}
+.pl-round-sum:hover { background: var(--surface-2); }
+.pl-round-name { flex: none; font-weight: 600; min-width: 112px; }
+.pl-round-meta { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: var(--fg-2); white-space: nowrap; }
+.pl-round-meta .badge { flex: none; }
+.pl-round-edit { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); font-weight: 500; color: var(--fg-3); }
+.pl-round-sum:hover .pl-round-edit { color: var(--fg); }
+.pl-round-open { gap: 14px; padding: 12px 14px 14px; border: 0; border-radius: 0; background: var(--surface); }
+.pl-round-list > .pl-round-open:first-child { border-radius: var(--r-md) var(--r-md) 0 0; }
+.pl-round-list > .pl-round-open:last-child { border-radius: 0 0 var(--r-md) var(--r-md); }
+.pl-round-list > .pl-round-open:only-child { border-radius: var(--r-md); }
+.pl-round-head { display: flex; align-items: center; gap: 6px; margin-bottom: -4px; }
+.pl-round-type { flex: none; width: auto; min-width: 0; font-weight: 600; border-color: transparent; background-color: transparent; padding-left: 0; margin-left: 0; height: 32px; min-height: 32px; }
+.pl-round-type:hover, .pl-round-type:focus { border-color: var(--line-strong); padding-left: 8px; margin-left: -8px; }
 .pl-round-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.pl-round-grid .textarea { min-height: 84px; }
-.pl-outcome { flex: 1; }
-.pl-outcome button { flex: 1 1 auto; justify-content: center; padding: 0 6px; font-size: var(--fs-xs); white-space: nowrap; }
-.pl-outcome button.o-passed[aria-pressed="true"] { color: var(--ok); }
-.pl-outcome button.o-failed[aria-pressed="true"] { color: var(--bad); }
-.pl-outcome button.o-cancelled[aria-pressed="true"] { color: var(--fg-3); }
+.pl-round-grid .textarea { min-height: 72px; }
+.pl-out-sel.o-passed { color: var(--ok); font-weight: 500; }
+.pl-out-sel.o-failed { color: var(--bad); font-weight: 500; }
+.pl-out-sel.o-cancelled { color: var(--fg-3); }
 .pl-round-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--line); }
 
 .pl-quicknote { display: flex; gap: 8px; }
@@ -1027,6 +1062,7 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 .pl-form .field > label .faint { font-weight: 400; font-size: var(--fs-xs); margin-left: 4px; }
 .pl-form .input[disabled] { background: var(--surface-2); color: var(--fg-3); }
 
+.pl-raw-tools { justify-content: flex-end; margin-bottom: -2px; }
 .pl-raw { min-height: 200px; font-size: var(--fs-sm); line-height: 1.55; transition: min-height var(--t-med) var(--ease); }
 .pl-raw.short { min-height: 140px; }
 .pl-raw-sum { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); font-size: var(--fs-sm); color: var(--fg-2); }
@@ -1061,23 +1097,24 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
   .pl-banner { flex-wrap: nowrap; padding: 4px 4px 4px 12px; }
   .pl-banner .btn { height: 32px; }
   .pl-board { margin-inline: -16px; padding-inline: 16px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; gap: 10px; }
-  .pl-col { flex: 0 0 82%; min-width: 0; max-width: none; scroll-snap-align: start; }
+  .pl-col { flex: 0 0 288px; min-width: 0; max-width: none; scroll-snap-align: start; }
   .pl-rail { scroll-snap-align: start; }
   .pl-close-btn { height: 36px; }
   .pl-kv { grid-template-columns: 110px minmax(0, 1fr); }
   .pl-preview-grid, .pl-form { grid-template-columns: minmax(0, 1fr); }
   .pl-round-grid { grid-template-columns: minmax(0, 1fr); }
-  .pl-contact-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .pl-contact-form .btn { grid-column: auto; }
 }
 @media (max-width: 520px) {
   .pl-dhead .logo { display: none; }
-  .pl-step-l { display: none; }
-  .pl-step-s { display: block; }
+  .pl-steps { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, .8fr); }
   .pl-stage-line > .pl-small { flex-basis: 100%; margin-bottom: 2px; }
   .pl-stage-line > .spacer { display: none; }
   .pl-close-btn { flex: 1; justify-content: center; }
-  .pl-outcome button { padding: 0 4px; }
+  .pl-col { flex-basis: 82%; }
+  .pl-round-name { min-width: 0; }
+  .pl-round-sum { flex-wrap: wrap; row-gap: 4px; }
+  .pl-round-meta { order: 3; flex-basis: 100%; }
+  .pl-round-edit { margin-left: auto; }
   .pl-table { min-width: 0; table-layout: fixed; }
   .pl-table th:nth-child(2) { width: 134px; }
   .pl-table th:nth-child(n+3), .pl-table td:nth-child(n+3) { display: none; }
@@ -1090,8 +1127,6 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
   .pl-stage-sel .select { width: 118px; }
   .pl-more { width: 36px; height: 36px; margin: -8px -6px -8px 0; }
   .pl-step { min-height: 36px; justify-content: flex-end; }
-  .pl-round-head .pl-inline, .pl-round-head .pl-inline-wrap { flex: 1 1 100%; }
-  .pl-round-out { flex-direction: column; align-items: stretch; gap: 6px; }
   .pl-dtabs { gap: 16px; }
   .pl-dtabs button { height: 44px; }
   .pl-round-foot .btn { flex: 1; }
@@ -1222,8 +1257,8 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
   border-radius: var(--r-md); text-align: left; transition: background var(--t-fast) var(--ease);
 }
 .prep-item:hover { background: var(--surface-2); }
-.prep-item[aria-current="true"] { background: var(--accent-soft); }
-.prep-item[aria-current="true"] .prep-item-title { color: var(--accent-text); }
+.prep-item[aria-current="true"] { background: var(--surface-2); }
+.prep-item[aria-current="true"] .prep-item-title { color: var(--fg); font-weight: 600; }
 .prep-item-main { flex: 1; gap: 0; }
 .prep-item-title { font-size: var(--fs-sm); font-weight: 500; color: var(--fg); }
 .prep-item-sub { font-size: var(--fs-xs); color: var(--fg-2); }
@@ -1237,6 +1272,7 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .prep-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .prep-head-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 .prep-role { font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.45; overflow-wrap: anywhere; }
+.prep-role-type { white-space: nowrap; }
 .prep-head-actions { flex: none; display: flex; align-items: center; gap: 8px; }
 .prep-cal:empty { display: none; }
 .prep-head-ico { width: 48px; height: 48px; flex: none; border-radius: var(--r-lg); display: grid; place-items: center; background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line); }
@@ -1350,6 +1386,17 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
   .prep-pick .seg button { flex: 1; padding: 0 6px; }
   .prep-cat { width: 100%; }
 }
+.onb-resume-hint { margin-top: -8px; }
+.onb-file.is-busy { cursor: progress; color: var(--fg-3); }
+.onb-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--fg-2); animation: onb-spin .8s linear infinite; margin-top: 2px; }
+@keyframes onb-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .onb-spin { animation: none; } }
+/* location checklist (onboarding + settings), mirrors Find's compact list */
+.onb-locs { display: flex; flex-direction: column; gap: 4px; max-width: 360px; }
+.onb-opts { margin: 0 -8px; }
+.onb-more { align-self: flex-start; border: 0; background: none; padding: 4px 0; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.onb-more:hover { text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 640px) { .onb-opt { min-height: 40px; } .onb-more { min-height: 44px; } .onb-locs { max-width: none; } }
 
 /* ===== Today ===== */
 .td-head { display: flex; align-items: flex-end; gap: 16px; }
@@ -1381,8 +1428,8 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 /* Hover devices: the "more" button floats just left of the action, so it reserves no width and every action ends flush with the card edge. */
 @media (hover: hover) and (pointer: fine) and (min-width: 641px) {
   .td-task-actions { position: relative; }
-  .td-more { position: absolute; right: calc(100% + 4px); top: 50%; translate: 0 -50%; background: var(--surface); opacity: 0; pointer-events: none; transition: opacity var(--t-fast); }
-  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
+  .td-more { position: absolute; right: calc(100% + 4px); top: 50%; translate: 0 -50%; background: var(--surface); opacity: 0; transition: opacity var(--t-fast); }
+  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; }
 }
 .td-menu { min-width: 180px; }
 .td-menu-hint { font-size: var(--fs-xs); }
@@ -1548,7 +1595,7 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
   .st-funnel .funnel-row { grid-template-columns: 78px minmax(0, 1fr) 76px; gap: 10px; }
   .st-chart-wrap { padding: 12px 8px 8px; }
 }
-.st-grid-top { align-items: stretch; }
+.st-grid-top { align-items: start; }
 .st-funnel-card { display: flex; flex-direction: column; }
 .st-funnel-card .st-funnel { flex: 1; }
 .st-steps { display: flex; flex-direction: column; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }
@@ -3419,16 +3466,20 @@ const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.
 /* One definition of "Reposted", used by the Companies table and both drawers:
    share of a company's open roles (as listed in Find) whose title it posted and closed before. */
 const FIND_REPOST_HELP = "Share of this company's open roles whose title it posted and closed at least once before. Grey under 20%, amber from 20%, red from 50%. Not proof either way.";
-const find_repC = { jobs: null, m: null };
-function find_repostMap(jobsState) {
-  if (find_repC.jobs !== jobsState.jobs) {
+/* Per-company figures from the listings Find shows (deduped), so every count on screen agrees. */
+const find_aggC = { jobs: null, m: null };
+function find_coAgg(jobsState) {
+  if (find_aggC.jobs !== jobsState.jobs) {
     const m = new Map();
-    for (const [co, list] of jobsState.byCompany) { let r = 0; for (const j of list) if (j.rp >= 1) r++; m.set(co, list.length ? r / list.length : 0); }
-    find_repC.jobs = jobsState.jobs; find_repC.m = m;
+    for (const [co, list] of jobsState.byCompany) {
+      let r = 0, ni = 0; for (const j of list) { if (j.rp >= 1) r++; if (j.lvl === "intern") ni++; }
+      m.set(co, { n: list.length, rep: list.length ? r / list.length : 0, ni, ng: list.length - ni });
+    }
+    find_aggC.jobs = jobsState.jobs; find_aggC.m = m;
   }
-  return find_repC.m;
+  return find_aggC.m;
 }
-const find_repostShare = (jobsState, name) => find_repostMap(jobsState).get(name) ?? jobsState.cstats[name]?.repostShare ?? 0;
+const find_repostShare = (jobsState, name) => find_coAgg(jobsState).get(name)?.rep ?? jobsState.cstats[name]?.repostShare ?? 0;
 const find_repTone = (r) => (r >= 0.5 ? "high" : r >= 0.2 ? "mid" : "");
 function find_useAppsByCompany() {
   const s = useStore();
@@ -3444,7 +3495,8 @@ VIEWS.companies = function CompaniesView() {
   const [shown, setShown] = useState(50);
   useEffect(() => { const t = setTimeout(() => setQ(qIn), 120); return () => clearTimeout(t); }, [qIn]);
   const ready = jobs.status === "ready";
-  const rs = ready ? find_repostMap(jobs) : null;
+  const agg = ready ? find_coAgg(jobs) : null;
+  const rs = { get: (name) => agg?.get(name)?.rep };
   const list = useMemo(() => {
     if (!ready) return [];
     const words = norm(q).split(" ").filter(Boolean);
@@ -3489,7 +3541,7 @@ VIEWS.companies = function CompaniesView() {
           return html`<tr key=${x.name} tabindex="0" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
             <td><div class="row"><${Logo} name=${x.name} size="sm" /><span class="truncate find-coname">${x.name}</span></div></td>
             <td class="r num">${fmt.num(x.open)}</td>
-            <td><div class="find-split" title=${`${x.c.intern} internships · ${x.c.newgrad} new grad`}><span class="find-split-bar"><i style=${`width:${x.c.open ? (x.c.intern / x.c.open) * 100 : 0}%`}></i></span><span class="num muted">${x.c.intern} / ${x.c.newgrad}</span></div></td>
+            ${(() => { const a = agg.get(x.name) || { n: x.c.open, ni: x.c.intern, ng: x.c.newgrad }; return html`<td><div class="find-split" title=${`${pluralize(a.ni, "internship")} · ${a.ng} new grad`}><span class="find-split-bar"><i style=${`width:${a.n ? (a.ni / a.n) * 100 : 0}%`}></i></span><span class="num muted">${fmt.num(a.ni)} / ${fmt.num(a.ng)}</span></div></td>`; })()}
             <td class="r num">${lifetime(x.c)}</td>
             <td class="r num">${find_stillShare(x.c) != null ? html`<span title=${`${x.c.season.open} of ${x.c.season.posted} ${x.c.season.term} postings open`}>${fmt.pct(find_stillShare(x.c))}</span>` : html`<span class="faint">–</span>`}</td>
             <td class="r num"><span class=${cx("find-gshare", find_repTone(g))}>${fmt.pct(g)}</span></td>
@@ -3580,7 +3632,7 @@ DRAWERS.company = ({ id }) => {
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${name}</h2>
       <div class="row wrap find-dsub find-dsub-co">
-        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${cs && (cs.intern || cs.newgrad) ? html`<span class="sep"> · </span>${fmt.num(cs.intern)} internship, ${fmt.num(cs.newgrad)} new grad` : null}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
+        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${(() => { const ni = open.filter((j) => j.lvl === "intern").length, ng = open.length - ni; return ni && ng ? html`<span class="sep"> · </span>${fmt.num(ni)} internship, ${fmt.num(ng)} new grad` : null; })()}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
         ${cs?.site && html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>`}
       </div>
     </div>
@@ -3595,7 +3647,7 @@ DRAWERS.company = ({ id }) => {
       <div class="find-stats">
         <${find_TimeOpenStat} cs=${cs} />
         <${find_Stat} label="Reposted" value=${fmt.pct(find_repostShare(jobs, name))} title=${FIND_REPOST_HELP} />
-        <${find_Stat} label="New in last 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
+        <${find_Stat} label="New in 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
       </div>
       <details class="find-details">
         <summary>How these are calculated</summary>
@@ -3686,18 +3738,19 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     if (detected.includes(s)) onChange({ ...value, removed: value.removed.filter((x) => x !== s) });
     else onChange({ ...value, added: [...value.added, s] });
   };
-  const onFile = (e) => {
+  const [reading, setReading] = useState(false);
+  const onFile = async (e) => {
     const f = e.currentTarget.files && e.currentTarget.files[0];
     e.currentTarget.value = "";
     if (!f) return;
-    if (/\.(txt|md|markdown|text)$/i.test(f.name) || /^text\//.test(f.type)) {
-      const r = new FileReader();
-      r.onload = () => { setText(String(r.result || "").slice(0, 40000)); setFileNote({ ok: true, text: `Read ${f.name}. Check the text below.` }); };
-      r.onerror = () => setFileNote({ ok: false, text: `Couldn't read ${f.name}. Paste the text instead.` });
-      r.readAsText(f);
-    } else {
-      setFileNote({ ok: false, text: `${/\.pdf$/i.test(f.name) ? "PDF" : /\.docx?$/i.test(f.name) ? "Word" : "That"} files can't be read here. Open it, copy all the text, and paste it below. Files stay on your device.` });
-    }
+    setReading(true); setFileNote(null);
+    try {
+      const { text } = await readResumeFile(f);
+      setText(String(text || "").slice(0, 40000));
+      setFileNote({ ok: true, text: `Read ${f.name}. Check the text below and fix anything that came through oddly.` });
+    } catch (err) {
+      setFileNote({ ok: false, text: (err && err.message) || `Couldn't read ${f.name}. Paste the text instead.` });
+    } finally { setReading(false); }
   };
   const words = (value.text.trim().match(/\S+/g) || []).length;
   const sugg = onbSuggest(add, skills);
@@ -3708,8 +3761,10 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     <div class="onb-resume-head">
       <label class="label" for=${idp + "-text"}>Resume text</label>
       <span class="spacer"></span>
-      <label class="btn sm onb-file"><${Icon} name="upload" />Upload .txt or .md<input id=${idp + "-file"} class="sr" type="file" accept=".txt,.md,.markdown,.pdf,.doc,.docx,text/plain,text/markdown" onChange=${onFile} /></label>
+      <label class=${cx("btn sm onb-file", reading && "is-busy")} aria-disabled=${reading ? "true" : null}><${Icon} name="upload" />${reading ? "Reading…" : "Upload PDF"}<input id=${idp + "-file"} class="sr" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" disabled=${reading} onChange=${onFile} /></label>
     </div>
+    <span class="hint onb-resume-hint">Upload a PDF or paste the text. It stays in this browser.</span>
+    ${reading && html`<div class="callout info" role="status"><span class="onb-spin" aria-hidden="true"></span><span>Reading your resume…</span></div>`}
     ${fileNote && html`<div class=${cx("callout", fileNote.ok ? "info" : "wait")} role="status"><${Icon} name=${fileNote.ok ? "check" : "info"} /><span>${fileNote.text}</span></div>`}
     <textarea id=${idp + "-text"} class="textarea onb-textarea" placeholder="Paste the text of your resume here. Experience, projects, skills: plain text is fine." value=${value.text} onInput=${(e) => setText(e.currentTarget.value)}></textarea>
     <div class="row onb-meta"><span class="hint num">${words ? pluralize(words, "word") : "Nothing pasted yet"}</span>${value.text && html`<button type="button" class="onb-link" onClick=${() => setText("")}>Clear text</button>`}</div>
@@ -3726,7 +3781,7 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
         ${sugg.map((n) => html`<button type="button" key=${n} class="onb-sugg-btn" onClick=${() => addSkill(n)} aria-label=${"Add " + n}><${Icon} name="plus" size=${12} />${n}</button>`)}
       </div>`}
     </div>
-    <p class="onb-privacy"><${Icon} name="shield" /><span>Your resume stays in this browser. It's only sent to Claude when you click an AI action.</span></p>
+    <p class="onb-privacy"><${Icon} name="shield" /><span>Your resume is only sent to Claude when you click an AI action.</span></p>
   </div>`;
 }
 
@@ -3776,6 +3831,41 @@ function onbSummary(p) {
   return `${lv} · ${roles} · ${where}${p.needsSponsor ? " · sponsorship not ruled out" : ""}`;
 }
 
+/* ---------- Location checklist (shared with Settings): same pattern as Find. Top 6 by open roles, rest behind "Show N more". ---------- */
+const ONB_LOC_TOP = 6;
+const onbLocCountC = { jobs: null, counts: null };
+function onbLocCounts(jobs) {
+  if (!jobs || !jobs.length) return null;
+  if (onbLocCountC.jobs !== jobs) {
+    const opts = onbLocChoices();
+    const c = {}; for (const o of opts) c[o.id] = 0;
+    for (const j of jobs) for (const o of opts) if (jobInLoc(j, o.id)) c[o.id]++;
+    onbLocCountC.jobs = jobs; onbLocCountC.counts = c;
+  }
+  return onbLocCountC.counts;
+}
+function OnbLocChecklist({ idp, value, onChange, label }) {
+  const jobs = useJobs();
+  const [more, setMore] = useState(false);
+  const counts = jobs.status === "ready" ? onbLocCounts(jobs.jobs) : null;
+  const opts = onbLocChoices().map((o, i) => ({ ...o, n: counts ? counts[o.id] : null, i }));
+  if (counts) opts.sort((a, b) => b.n - a.n || a.i - b.i);
+  const top = opts.slice(0, ONB_LOC_TOP);
+  const shown = more ? opts : top.concat(opts.slice(ONB_LOC_TOP).filter((o) => value.includes(o.id)));
+  const hidden = opts.length - shown.length;
+  return html`<div class="onb-locs" role="group" aria-label=${label || "Locations"}>
+    <div class="find-opts onb-opts">${shown.map((o) => {
+      const id = `${idp}-loc-${o.id.replace(/\W+/g, "-")}`;
+      return html`<label class="find-opt onb-opt" for=${id} key=${o.id}>
+        <input id=${id} type="checkbox" checked=${value.includes(o.id)} onChange=${() => onChange(onbToggle(value, o.id))} />
+        <span class="find-opt-l">${o.label}</span>
+        ${o.n != null && html`<span class="find-opt-n">${fmt.num(o.n)}</span>`}
+      </label>`;
+    })}</div>
+    ${(hidden > 0 || more) && html`<button type="button" class="onb-more" aria-expanded=${more ? "true" : "false"} onClick=${() => setMore(!more)}>${more ? "Show fewer" : `Show ${hidden} more`}</button>`}
+  </div>`;
+}
+
 /* ---------- Steps ---------- */
 function OnbGroup({ title, hint, children, id }) {
   return html`<section class="onb-group" aria-labelledby=${id}>
@@ -3793,7 +3883,7 @@ function OnbStepTargets({ d, set }) {
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}</div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-loc" title="Locations" hint="Leave empty to see every location.">
-      <div class="chips">${onbLocChoices().map((o) => html`<${Chip} key=${o.id} on=${locs.includes(o.id)} onClick=${() => set({ locations: onbToggle(locs, o.id) })}>${o.label}</${Chip}>`)}</div>
+      <${OnbLocChecklist} idp="onb" value=${locs} onChange=${(v) => set({ locations: v })} />
       <div class="onb-switches">
         <${Switch} id="onb-remote" checked=${d.remote} onChange=${(v) => set({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
         <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I'll need visa sponsorship" />
@@ -4251,7 +4341,7 @@ function PlCard({ a, settings, dragging, onMenu, ...rest }) {
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="truncate pl-status-extra">· ${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="pl-status-dot" aria-hidden="true">·</span><span class="truncate pl-status-extra">${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -4624,7 +4714,7 @@ function PlRound({ a, r, onDone }) {
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
       <span class="spacer" style="flex:1"></span>
-      <${Btn} kind="ghost" size="sm" icon="chevU" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
+      <${Btn} kind="ghost" size="sm" icon="check" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
     </div>
     <div class="pl-round-grid">
       <${Field} label="Date and time" id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
@@ -5141,7 +5231,7 @@ function PfProfile() {
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${(p.roles || []).includes(c)} onClick=${() => pfSetProfile({ roles: onbToggle(p.roles || [], c) })}>${c}</${Chip}>`)}</div>
     </${PfRow}>
     <${PfRow} label="Locations" hint="None selected means anywhere." top=${true}>
-      <div class="chips">${onbLocChoices().map((o) => html`<${Chip} key=${o.id} on=${locs.includes(o.id)} onClick=${() => pfSetProfile({ locations: onbToggle(locs, o.id) })}>${o.label}</${Chip}>`)}</div>
+      <${OnbLocChecklist} idp="pf" value=${locs} onChange=${(v) => pfSetProfile({ locations: v })} />
     </${PfRow}>
     <${PfRow} label="Remote">
       <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
@@ -5622,7 +5712,7 @@ function PrepQuestionsCard({ questions, onPractice, title }) {
   const [open, setOpen] = useState(null);
   return html`<div class="card">
     <div class="card-head"><h3>${title || "Likely questions"}</h3><span class="prep-count num">${questions.length}</span><span class="spacer"></span>
-      <${Btn} size="sm" kind="primary" icon="play" onClick=${onPractice} id="prep-practice">Practice</${Btn}></div>
+      <${Btn} size="sm" icon="play" onClick=${onPractice} id="prep-practice">Practice</${Btn}></div>
     <ol class="prep-qlist prep-qlist-lg">
       ${questions.map((q, i) => html`<li key=${q.q} class=${open === i ? "open" : undefined}>
         <button type="button" class="prep-qbtn" aria-expanded=${open === i ? "true" : "false"} onClick=${() => setOpen(open === i ? null : i)}>
@@ -5672,8 +5762,8 @@ function PrepWorkspace({ a, r }) {
           <div class="prep-head-main">
             <${Logo} name=${a.company} size="lg" />
             <div class="prep-head-text">
-              <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2>${a.example && html`<${ExampleTag} />`}<${Badge} kind="accent">${ROUND[r.type]?.label || "Interview"}</${Badge}></div>
-              <span class="prep-role">${a.title}</span>
+              <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2></div>
+              <span class="prep-role">${a.title}<span class="prep-role-type"> · ${ROUND[r.type]?.label || "Interview"}</span></span>
             </div>
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
@@ -5909,12 +5999,12 @@ function stats_WeeklyChart({ weeks }) {
   </div>`;
 }
 
-function stats_Kpis({ st }) {
+function stats_Kpis({ st, saved }) {
   const small = st.applied < 10;
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications sent</span><span class="stat-value">${st.applied}</span><span class="stat-sub num">${st.thisWeek} this week · ${st.active} active</span></div>
+    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent · ${saved} saved · ${st.thisWeek} this week</span></div>
     <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep"> · </span>${smallTag}` : null}</span></div>
     <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
@@ -5967,7 +6057,7 @@ function stats_Outcomes({ applied }) {
 function stats_Stall({ obs, applied }) {
   const need = 5;
   return html`<section class="card" aria-labelledby="st-stall-h">
-    <div class="card-head"><h2 id="st-stall-h">Where you stall</h2></div>
+    <div class="card-head"><h2 id="st-stall-h">Patterns</h2></div>
     ${applied < need
       ? html`<div class="st-unlock">
           <strong>Insights unlock after ${need} applications</strong>
@@ -5977,7 +6067,7 @@ function stats_Stall({ obs, applied }) {
         </div>`
       : obs.length
         ? html`<div class="st-insights">${obs.map((o) => html`<div class="st-insight" key=${o.key}>
-            <span class=${cx("task-ico", o.tone)}><${Icon} name=${o.icon} /></span>
+            <span class="task-ico"><${Icon} name=${o.icon} /></span>
             <p>${o.text}</p>
           </div>`)}</div>`
         : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there's enough behind them.</span></div>`}
@@ -6013,7 +6103,7 @@ function stats_Method({ ghostDays, ex }) {
       <li>Rates are shares of applications sent. Under 10 applications, they're flagged as a small sample because one reply moves them a lot.</li>
       <li>Time to first reply is the median across applications that got a reply.</li>
       <li>Replies are counted in the week the first reply arrived, over the last 8 weeks.</li>
-      <li>Patterns under “Where you stall” need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
+      <li>Patterns need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
       <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It's a signal from listing data, not proof.</li>
       ${ex ? html`<li>Example applications are included. Turn off “Include examples” to see only your own.</li>` : null}
     </ul>
@@ -6040,7 +6130,7 @@ function stats_View() {
           Track the roles you apply to and the replies you get. Your response rate, reply times and where applications stall show up here.
         </${Empty}></div>`
       : html`
-        <${stats_Kpis} st=${st} />
+        <${stats_Kpis} st=${st} saved=${apps.filter((a) => a.stage === "saved").length} />
         <div class="st-grid st-grid-top">
           <section class="card" aria-labelledby="st-week-h">
             <div class="card-head"><h2 id="st-week-h">Applications per week</h2></div>

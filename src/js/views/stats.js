@@ -157,12 +157,12 @@ function stats_WeeklyChart({ weeks }) {
   </div>`;
 }
 
-function stats_Kpis({ st }) {
+function stats_Kpis({ st, saved }) {
   const small = st.applied < 10;
   const smallTag = small ? html`<span class="st-small-n" title="Fewer than 10 applications. Rates can swing a lot.">small sample</span>` : null;
   const d = st.medianReplyDays;
   return html`<section class="card stats-row st-kpis" aria-label="Key numbers">
-    <div class="stat"><span class="stat-label">Applications sent</span><span class="stat-value">${st.applied}</span><span class="stat-sub num">${st.thisWeek} this week · ${st.active} active</span></div>
+    <div class="stat"><span class="stat-label">Applications</span><span class="stat-value">${st.total}</span><span class="stat-sub num">${st.applied} sent · ${saved} saved · ${st.thisWeek} this week</span></div>
     <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num"><span class="st-nw">${st.replied} of ${st.applied} replied</span>${small ? html`<span class="st-sep"> · </span>${smallTag}` : null}</span></div>
     <div class="stat"><span class="stat-label">Interview rate</span><span class="stat-value">${fmt.pct(st.interviewRate)}</span><span class="stat-sub num">${st.interviewed} of ${st.applied} reached interviews</span></div>
     <div class="stat"><span class="stat-label">Time to first reply</span><span class="stat-value">${stats_days(d)}${d != null ? html`<span class="st-unit">days</span>` : null}</span><span class="stat-sub num">${st.replied ? `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}` : "No replies yet"}</span></div>
@@ -215,7 +215,7 @@ function stats_Outcomes({ applied }) {
 function stats_Stall({ obs, applied }) {
   const need = 5;
   return html`<section class="card" aria-labelledby="st-stall-h">
-    <div class="card-head"><h2 id="st-stall-h">Where you stall</h2></div>
+    <div class="card-head"><h2 id="st-stall-h">Patterns</h2></div>
     ${applied < need
       ? html`<div class="st-unlock">
           <strong>Insights unlock after ${need} applications</strong>
@@ -225,7 +225,7 @@ function stats_Stall({ obs, applied }) {
         </div>`
       : obs.length
         ? html`<div class="st-insights">${obs.map((o) => html`<div class="st-insight" key=${o.key}>
-            <span class=${cx("task-ico", o.tone)}><${Icon} name=${o.icon} /></span>
+            <span class="task-ico"><${Icon} name=${o.icon} /></span>
             <p>${o.text}</p>
           </div>`)}</div>`
         : html`<div class="st-unlock"><strong>No clear pattern yet</strong><span class="muted td-small">Keep logging replies, rounds and outcomes. Patterns show up here once there's enough behind them.</span></div>`}
@@ -261,7 +261,7 @@ function stats_Method({ ghostDays, ex }) {
       <li>Rates are shares of applications sent. Under 10 applications, they're flagged as a small sample because one reply moves them a lot.</li>
       <li>Time to first reply is the median across applications that got a reply.</li>
       <li>Replies are counted in the week the first reply arrived, over the last 8 weeks.</li>
-      <li>Patterns under “Where you stall” need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
+      <li>Patterns need at least 3 applications behind them. Silence only counts applications sent ${ghostDays}+ days ago (set in Settings).</li>
       <li>The ghost-job radar lists linked listings with a ghost score of 50 or more out of 100. It's a signal from listing data, not proof.</li>
       ${ex ? html`<li>Example applications are included. Turn off “Include examples” to see only your own.</li>` : null}
     </ul>
@@ -288,7 +288,7 @@ function stats_View() {
           Track the roles you apply to and the replies you get. Your response rate, reply times and where applications stall show up here.
         </${Empty}></div>`
       : html`
-        <${stats_Kpis} st=${st} />
+        <${stats_Kpis} st=${st} saved=${apps.filter((a) => a.stage === "saved").length} />
         <div class="st-grid st-grid-top">
           <section class="card" aria-labelledby="st-week-h">
             <div class="card-head"><h2 id="st-week-h">Applications per week</h2></div>
