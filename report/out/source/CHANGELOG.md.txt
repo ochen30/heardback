@@ -91,3 +91,32 @@ Design review 4 scored v6 at 8.6/10 (from 8.1). QA round 2: 2,280 automated chec
 - Unreadable saved data now shows a notice with a Restore action on launch (not only in Settings).
 - Imported dates are validated to a sane range.
 - Job data refreshed (8,245 open roles).
+
+### 04:00 PT — v8 published (usability test + design pass 5)
+A fresh-eyes usability test (an agent playing a stressed CS student doing 8 real tasks) and design review 5 (8.9/10). Fixed:
+- **Silence is counted from the applied date** (and the last reply), so old applications correctly go stale and get "Mark as ghosted?" prompts. Editing the applied date updates the drawer header and "last reply" everywhere.
+- **Marking something applied says "applied today" with a Change date action.**
+- **Logged interviews always show in Upcoming** (not only within 7 days), and Today never says "caught up" while a round is scheduled. After logging an invite email, a **"Confirm your interview"** task appears.
+- **Strong ghost signals hidden by default** in Find, with an honest "Hiding 230 with strong ghost signals · Show them".
+- Onboarding keeps your choices if you reload mid-way; Prep re-renders correctly on reload or deep link.
+- Mobile: the + button offers "Add an application" or "Log an email".
+- Typography: no line ever starts with a "·" separator; Insights outcomes sum to 100%; consistent "Mark as ghosted" wording; Fit highlight only on clean top matches.
+
+### 04:25 PT — v9 published (usability test 2: mobile, new grad)
+A second usability test played a graduating senior on a phone, looking for new-grad data roles and importing 6 applications from a spreadsheet. Fixed:
+- Apps at Screen or Interviews aren't nudged toward "ghosted" right after import; instead "What's next with X?" asks for the next round.
+- **CSV import preview:** "6 rows found. Check the stages." with an editable stage per row; common words map correctly (OA/assessment → Screen, Interviewing → Interviews).
+- "New for you" respects your level, roles and locations strictly (new-grad users never see internships).
+- **"Remote" means remote in the US**; Canada/UK remote roles appear under their own locations.
+- Prep opens your soonest round by default; imported reply dates no longer produce a fake "first reply in 0 days".
+- Phone: Find's count area is two clean lines with large tap targets; toasts wrap instead of cutting off.
+
+### 04:35 PT — accessibility
+- Automated axe-core scan (WCAG 2 A/AA) on every route in light and dark: fixed page language, progress bar names, an invalid ARIA attribute on job rows, chip-count contrast, and inline links that relied on color alone. Result: zero violations.
+
+### 04:45 PT — v10 published (design review 6: 9.0/10, accessibility)
+- Accessibility: zero axe-core WCAG 2 A/AA violations on every route and overlay, light and dark.
+- Silence respects interview rounds (an app with a round tomorrow is never "8 days silent"); rounds count as contact.
+- Imported applications never produce a fake "first reply in 0 days".
+- Share card opens on the shortest period with real activity.
+- Find says "Hiding N with strong ghost signals" consistently at every width; sort stays on the count row on tablets; Settings locations in two columns.

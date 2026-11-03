@@ -61,3 +61,6 @@ App renamed to **Heardback** at 08:50 UTC per user request. Repo to attach: oche
 
 ## Calendar
 - `addToCalendar(appId, roundId)`: Google Calendar connector (`create_event`, local ISO times, 45 min) when the viewer has it; otherwise an .ics file via the downloads capability. Result payload of create_event is not read (no write was run just to learn its shape).
+
+## Morning report artifact
+- URL: https://claude.ai/artifact/UbZ4zpWbMQZYFJsDEsA8uT (draft published 3:32 AM PT; republish from report/out/index.html with the same files map at wrap-up)

@@ -1,17 +1,68 @@
 {
-  "versions": 7,
-  "score": "8.6",
+  "versions": 10,
+  "score": "9.0",
   "checks": "2,288",
   "timeline": [
-    ["12:30 AM", "Setup and platform limits", "Verified what an Artifact page can and can't do, found that this environment blocks the job-board APIs, and found a reachable real data source. Renamed the app from Ghosted to Heardback."],
-    ["12:45 AM", "Foundations", "Design system (Geist, cool neutrals, one cobalt accent, full dark mode), app shell, command palette, local-first store, nudges engine, data pipeline with ghost signals, competitor scan."],
-    ["1:05 AM", "v1: every screen", "Four agents built Find, Pipeline, Today/Insights and Prep/Onboarding/Settings in parallel. First publish."],
-    ["1:10 AM", "v2: calendar and parsing", "Add to calendar (Google Calendar connector or .ics), email parser accuracy, core fixes."],
-    ["1:40 AM", "v3: design pass 1 + QA", "Design review 1 scored 6.3. Removed noise everywhere. QA found 32 bugs; fixed every crash and broken feature."],
-    ["2:10 AM", "v4: design pass 2", "Review 2 scored 7.4. Calmer layouts, tablet breakpoints, rounds as summaries. New: posting-taken-down detection, season-closing nudges, PDF resumes, new since your last visit."],
-    ["2:30 AM", "v5: new features", "Mock interview with Claude, bulk actions, command palette context actions, How we score listings."],
-    ["2:55 AM", "v6: design pass 3", "Review 3 scored 8.1. One vocabulary for signals, softer selection, simpler mock interview. Share-your-progress card."],
-    ["3:30 AM", "v7: design pass 4 + QA round 2", "Review 4 scored 8.6. Quieter fit and freshness, typography, raised dark overlays. QA round 2 (2,280 checks): no crash or broken-feature bugs left."]
+    [
+      "12:30 AM",
+      "Setup and platform limits",
+      "Verified what an Artifact page can and can't do, found that this environment blocks the job-board APIs, and found a reachable real data source. Renamed the app from Ghosted to Heardback."
+    ],
+    [
+      "12:45 AM",
+      "Foundations",
+      "Design system (Geist, cool neutrals, one cobalt accent, full dark mode), app shell, command palette, local-first store, nudges engine, data pipeline with ghost signals, competitor scan."
+    ],
+    [
+      "1:05 AM",
+      "v1: every screen",
+      "Four agents built Find, Pipeline, Today/Insights and Prep/Onboarding/Settings in parallel. First publish."
+    ],
+    [
+      "1:10 AM",
+      "v2: calendar and parsing",
+      "Add to calendar (Google Calendar connector or .ics), email parser accuracy, core fixes."
+    ],
+    [
+      "1:40 AM",
+      "v3: design pass 1 + QA",
+      "Design review 1 scored 6.3. Removed noise everywhere. QA found 32 bugs; fixed every crash and broken feature."
+    ],
+    [
+      "2:10 AM",
+      "v4: design pass 2",
+      "Review 2 scored 7.4. Calmer layouts, tablet breakpoints, rounds as summaries. New: posting-taken-down detection, season-closing nudges, PDF resumes, new since your last visit."
+    ],
+    [
+      "2:30 AM",
+      "v5: new features",
+      "Mock interview with Claude, bulk actions, command palette context actions, How we score listings."
+    ],
+    [
+      "2:55 AM",
+      "v6: design pass 3",
+      "Review 3 scored 8.1. One vocabulary for signals, softer selection, simpler mock interview. Share-your-progress card."
+    ],
+    [
+      "3:30 AM",
+      "v7: design pass 4 + QA round 2",
+      "Review 4 scored 8.6. Quieter fit and freshness, typography, raised dark overlays. QA round 2 (2,280 checks): no crash or broken-feature bugs left."
+    ],
+    [
+      "4:00 AM",
+      "v8: usability test 1",
+      "An agent played a stressed intern-hunting student through 8 real tasks. Fixed: silence counted from the applied date, change-date on apply, confirm-your-interview task, ghost signals hidden by default with an honest count, onboarding survives reloads, mobile quick add."
+    ],
+    [
+      "4:25 AM",
+      "v9: usability test 2 (phone, new grad)",
+      "CSV import preview with stage mapping, stage-aware nudges after interviews, strict level and location matching, US-only Remote, two-line mobile count bar, wrapping toasts."
+    ],
+    [
+      "4:45 AM",
+      "v10: accessibility + review 6",
+      "Design review 6 scored 9.0. Zero axe-core WCAG 2 A/AA violations on every route and overlay in both themes. Silence respects scheduled rounds; share card opens on a meaningful period."
+    ]
   ],
   "qa": "Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. Two full QA passes drove the real UI end to end (onboarding, search, saving, drag and drop, keyboard moves, email logging with 11 realistic emails, rounds, nudges, insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior): __CHECKS__ automated checks in the final suite. All crash and broken-feature bugs found were fixed. Remaining failures in the suite are tests written for earlier UI text, plus decorative separators that fall below contrast ratio by design.",
   "known": [
