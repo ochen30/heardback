@@ -102,20 +102,20 @@ capSubs.add(() => { if (caps.ready && pool.status === "idle") poolLoad(); });
 function PoolCompanyCard({ company }) {
   const p = usePool();
   const c = poolFor(company);
-  const head = html`<div class="card-head"><${Icon} name="reply" /><h3>Reply data from Heardback users</h3></div>`;
+  const head = html`<h3>Who replies here</h3>`;
   if (p.status === "unavailable" || p.status === "error") return null;
-  if (p.status !== "ready") return html`<div class="card">${head}<div class="card-body"><div class="skel" style="height:14px;width:60%"></div></div></div>`;
+  if (p.status !== "ready") return html`<section class="dsec">${head}<div class="skel" style="height:14px;width:60%"></div></section>`;
   if (!c || !c.enough) {
-    return html`<div class="card">${head}<div class="card-body stack-sm">
+    return html`<section class="dsec">${head}<div class="stack-sm">
       <p style="font-size:var(--fs-sm)"><strong>Not enough data yet.</strong> <span class="muted">We show reply rates once at least ${POOL_MIN_APPS} applications from ${POOL_MIN_PEOPLE} different people are shared${c ? `. So far: ${pluralize(c.n, "application")} from ${pluralize(c.people, "person", "people")}` : ""}.</span></p>
       <${PoolShareInline} />
-    </div></div>`;
+    </div></section>`;
   }
   const rows = [["Got any reply", fmt.pct(c.replyRate)], ["Reached interviews", fmt.pct(c.interviewRate)], ["Ghosted", fmt.pct(c.ghostRate)], ["Median days to first reply", c.medReply == null ? "—" : `${Math.round(c.medReply)} days`]];
-  return html`<div class="card">${head}<div class="card-body stack">
+  return html`<section class="dsec">${head}<div class="stack">
     <dl class="kv">${rows.map(([k, v]) => html`<dt>${k}</dt><dd class="num" style="font-weight:600">${v}</dd>`)}</dl>
-    <span class="hint">Based on ${pluralize(c.n, "application")} shared anonymously by ${pluralize(c.people, "person", "people")}. Small samples can mislead.</span>
-  </div></div>`;
+    <span class="hint">From ${pluralize(c.n, "application")} shared anonymously by ${pluralize(c.people, "person", "people")}.</span>
+  </div></section>`;
 }
 function PoolShareInline() {
   const p = usePool();

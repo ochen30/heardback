@@ -125,11 +125,21 @@ function useEscape(fn) {
 function useFocusTrap(ref, self) {
   useEffect(() => {
     const el = ref.current; if (!el) return;
+    const onTab = (e) => {
+      if (e.key !== "Tab") return;
+      const f = [...el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null || x === document.activeElement);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === el)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      else if (!el.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    };
+    el.addEventListener("keydown", onTab);
     const prev = document.activeElement;
-    if (self) { setTimeout(() => el.focus({ preventScroll: true }), 20); return () => { try { prev?.focus?.(); } catch {} }; }
+    if (self) { setTimeout(() => el.focus({ preventScroll: true }), 20); return () => { el.removeEventListener("keydown", onTab); try { prev?.focus?.(); } catch {} }; }
     const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el.querySelector("button");
     setTimeout(() => (first || el).focus?.(), 20);
-    return () => { try { prev?.focus?.(); } catch {} };
+    return () => { el.removeEventListener("keydown", onTab); try { prev?.focus?.(); } catch {} };
   }, []);
 }
 function Modal({ title, onClose, children, foot, size, label }) {

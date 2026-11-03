@@ -1,14 +1,33 @@
 // Interactions for the Today and Insights views. Run e.g.:
-//   ACTIONS=qa/actions-today.js node qa/shot.js today:openSnooze today:snoozeFirst today:dismissFirst today:goalUp stats:hoverChart stats:hideExamples
+//   ACTIONS=qa/actions-today.js node qa/shot.js today:openSnooze today:snoozeFirst today:dismissFirst today:editGoal stats:hoverChart stats:hideExamples
 const log = (...a) => console.log('[today]', ...a);
 const assert = (c, msg) => { if (!c) { console.log('[today] FAIL', msg); process.exitCode = 1; } else log('ok', msg); };
 const taskKeys = (page) => page.$$eval('.td-task', (els) => els.map((e) => e.dataset.key));
 
 module.exports = {
   async openSnooze(page) {
+    await page.hover('.td-task');
     await page.click('.td-task button[aria-haspopup="menu"]');
-    await page.waitForTimeout(200);
-    assert(await page.$('.td-menu [role="menuitem"]'), 'snooze menu opens');
+    await page.waitForSelector('.td-menu [role="menuitem"]', { timeout: 2000 }).catch(() => null);
+    const items = await page.$$eval('.td-menu [role="menuitem"]', (els) => els.map((e) => e.textContent.trim()));
+    assert(items.some((t) => /Snooze 1 day/.test(t)), 'snooze menu opens');
+    assert(items.some((t) => /Dismiss/.test(t)), 'menu offers Dismiss');
+    const focused = await page.evaluate(() => document.activeElement && document.activeElement.getAttribute('role'));
+    assert(focused === 'menuitem', 'first menu item takes focus');
+  },
+  async menuEsc(page) {
+    await page.click('.td-task button[aria-haspopup="menu"]');
+    await page.waitForTimeout(150);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    assert(!(await page.$('.td-menu')), 'Escape closes the menu');
+  },
+  async primaryCount(page) {
+    const n = await page.$$eval('.td-task .btn.primary', (els) => els.length);
+    assert(n === 1, `one primary button in Needs you (got ${n})`);
+    const rights = await page.$$eval('.td-task .td-act', (els) => els.map((e) => Math.round(e.getBoundingClientRect().right)));
+    const wide = page.viewportSize().width > 640;
+    if (wide) assert(new Set(rights).size === 1, `action buttons share a right edge (${rights.join(',')})`);
   },
   async snoozeFirst(page) {
     const before = await taskKeys(page);
@@ -33,32 +52,25 @@ module.exports = {
   },
   async dismissFirst(page) {
     const before = await taskKeys(page);
-    await page.click('.td-task .td-dismiss');
+    await page.click('.td-task button[aria-haspopup="menu"]');
+    await page.waitForTimeout(150);
+    await page.click('.td-menu .td-dismiss');
     await page.waitForTimeout(250);
     const after = await taskKeys(page);
     assert(after.length === before.length - 1 && !after.includes(before[0]), 'dismiss removes the task');
   },
   async dismissAll(page) {
-    for (let i = 0; i < 20; i++) { const b = await page.$('.td-task .td-dismiss'); if (!b) break; await b.click(); await page.waitForTimeout(80); }
+    for (let i = 0; i < 20; i++) {
+      const b = await page.$('.td-task button[aria-haspopup="menu"]'); if (!b) break;
+      await b.click(); await page.waitForTimeout(80); await page.click('.td-menu .td-dismiss'); await page.waitForTimeout(80);
+    }
     await page.waitForTimeout(300);
     assert(await page.$('.td-caught'), 'caught-up state shows when no tasks');
   },
-  async goalUp(page) {
-    const g0 = await page.evaluate(() => store.get().profile.weeklyGoal);
-    await page.click('button[aria-label="Raise weekly goal"]');
-    await page.click('button[aria-label="Raise weekly goal"]');
-    await page.waitForTimeout(150);
-    const g1 = await page.evaluate(() => store.get().profile.weeklyGoal);
-    assert(g1 === g0 + 2, `goal ${g0} -> ${g1}`);
-    await page.fill('#today-goal', '4');
-    await page.press('#today-goal', 'Enter');
-    await page.locator('#today-goal').blur();
-    await page.waitForTimeout(150);
-    const g2 = await page.evaluate(() => store.get().profile.weeklyGoal);
-    assert(g2 === 4, `typed goal -> ${g2}`);
-    await page.click('button[aria-label="Lower weekly goal"]');
-    await page.waitForTimeout(100);
-    assert((await page.evaluate(() => store.get().profile.weeklyGoal)) === 3, 'lower goal');
+  async editGoal(page) {
+    await page.click('#td-week-h ~ a:has-text("Edit goal")');
+    await page.waitForTimeout(300);
+    assert((await page.evaluate(() => location.hash)) === '#prefs', 'Edit goal goes to Settings');
   },
   async scrollSide(page) {
     await page.evaluate(() => { const a = document.querySelector('.td-page aside'); a && a.scrollIntoView(); });
@@ -83,6 +95,13 @@ module.exports = {
     await page.waitForTimeout(250);
     const show = await page.evaluate(() => store.get().settings.showExamples);
     assert(show === false, 'examples hidden via toggle');
+  },
+  async openMethod(page) {
+    await page.click('.st-method summary');
+    await page.waitForTimeout(150);
+    assert(await page.$eval('.st-method', (d) => d.open), '"How we calculate this" expands');
+    await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; w.scrollTop = w.scrollHeight; });
+    await page.waitForTimeout(200);
   },
   async scrollChart(page) {
     await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; const el = document.querySelector('.st-chart'); w.scrollTop = el.getBoundingClientRect().top + w.scrollTop - 120; });

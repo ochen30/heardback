@@ -1,0 +1,4 @@
+module.exports = {
+  badStage: async (page) => { await page.evaluate(() => { store.save = () => {}; flushers.clear(); window.removeEventListener('pagehide', flushAll); const s = JSON.parse(localStorage.getItem('heardback:v1')); s.apps.zz = { id: 'zz', company: 'Partial Co' }; s.apps.yy = { id: 'yy', company: 'Archived Inc', title: 'X', stage: 'archived', events: [null, { to: 'nope' }], rounds: [null] }; s.profile.locations = 'nyc'; s.profile.roles = null; localStorage.setItem('heardback:v1', JSON.stringify(s)); }); await page.reload(); await page.waitForTimeout(900); },
+  corrupt: async (page) => { await page.evaluate(() => { store.save = () => {}; window.removeEventListener('pagehide', flushAll); }); await page.evaluate(() => localStorage.setItem('heardback:v1', '{"v":1,"apps":{"a":')); await page.reload(); await page.waitForTimeout(900); },
+};

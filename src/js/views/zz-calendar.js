@@ -17,7 +17,7 @@ function cal_text(app, round) {
 }
 function cal_ics(app, round) {
   const { summary, description } = cal_text(app, round);
-  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Heardback//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
     `UID:${round.id}@heardback`, `DTSTAMP:${cal_utcStamp(now())}`, `DTSTART:${cal_utcStamp(round.at)}`, `DTEND:${cal_utcStamp(round.at + CAL_MIN * 60000)}`,
     `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(description)}`,

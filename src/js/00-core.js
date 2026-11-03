@@ -48,7 +48,13 @@ const fmt = {
 
 /* ---------- Safe storage ---------- */
 const storage = {
-  get(k, fallback) { try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } },
+  get(k, fallback) {
+    let v = null;
+    try { v = localStorage.getItem(k); } catch { return fallback; }
+    if (v == null) return fallback;
+    try { return JSON.parse(v); }
+    catch { try { localStorage.setItem(`${k}:corrupt:${Date.now()}`, v); } catch {} storage.corrupt = true; return fallback; }
+  },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
@@ -99,17 +105,59 @@ const defaultState = () => ({
   ui: { pipelineView: "board", findSort: "new" },
 });
 
+/* ---------- Validation: never let a bad record crash the app ---------- */
+const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+const strArr = (x) => (Array.isArray(x) ? x : typeof x === "string" && x ? [x] : []).filter((v) => typeof v === "string" && v.trim()).map((v) => v.trim()).slice(0, 200);
+const numOr = (x, d) => (typeof x === "number" && isFinite(x) ? x : typeof x === "string" && x.trim() && isFinite(+x) ? +x : d);
+const strOr = (x, d = "") => (typeof x === "string" ? x : x == null ? d : String(x));
+function cleanProfile(p) {
+  const d = defaultState().profile;
+  if (!isObj(p)) return d;
+  return {
+    ...d,
+    roles: strArr(p.roles), levels: strArr(p.levels).filter((l) => l === "intern" || l === "newgrad"), locations: strArr(p.locations), skills: strArr(p.skills),
+    remote: p.remote == null ? d.remote : !!p.remote, needsSponsor: !!p.needsSponsor, onboarded: !!p.onboarded,
+    resume: strOr(p.resume).slice(0, 60000), name: strOr(p.name).slice(0, 80), weeklyGoal: clamp(Math.round(numOr(p.weeklyGoal, d.weeklyGoal)), 1, 100),
+  };
+}
+function cleanSettings(x) {
+  const d = defaultState().settings;
+  if (!isObj(x)) return d;
+  return { ...d, ...x, theme: ["system", "light", "dark"].includes(x.theme) ? x.theme : "system", followUpDays: clamp(Math.round(numOr(x.followUpDays, 7)), 1, 60), ghostDays: clamp(Math.round(numOr(x.ghostDays, 21)), 2, 120), shareAnon: !!x.shareAnon, showExamples: x.showExamples !== false };
+}
+function cleanApp(a, id) {
+  if (!isObj(a)) return null;
+  const company = strOr(a.company).trim(); const title = strOr(a.title).trim();
+  if (!company && !title) return null;
+  const t = now();
+  const ts = (v) => { const n = numOr(v, null); return n && n > 0 ? n : null; };
+  const created = ts(a.createdAt) || t;
+  return {
+    id: strOr(a.id || id) || uid("a_"), company: company || "Unknown company", title, location: strOr(a.location), url: strOr(a.url), jobId: a.jobId ? strOr(a.jobId) : null,
+    stage: STAGE[a.stage] ? a.stage : "applied", createdAt: created, appliedAt: ts(a.appliedAt), lastActivityAt: ts(a.lastActivityAt) || created, lastReplyAt: ts(a.lastReplyAt), followedUpAt: ts(a.followedUpAt),
+    notes: strOr(a.notes), salary: strOr(a.salary), source: strOr(a.source || "manual"), example: !!a.example,
+    contacts: (Array.isArray(a.contacts) ? a.contacts : []).filter(isObj).map((c) => ({ name: strOr(c.name), role: strOr(c.role), email: strOr(c.email) })),
+    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
+    events: (Array.isArray(a.events) ? a.events : []).filter(isObj).map((e) => ({ ...e, id: strOr(e.id) || uid("e_"), at: ts(e.at) || created, kind: strOr(e.kind || "note"), text: strOr(e.text), from: STAGE[e.from] ? e.from : undefined, to: STAGE[e.to] ? e.to : undefined })),
+  };
+}
+function cleanApps(apps) {
+  const list = Array.isArray(apps) ? apps : isObj(apps) ? Object.entries(apps).map(([k, a]) => (isObj(a) ? { id: k, ...a } : a)) : [];
+  const out = {};
+  for (const a of list) { const c = cleanApp(a); if (c) out[c.id] = c; }
+  return out;
+}
 function loadState() {
   const s = storage.get(STORE_KEY, null);
   const d = defaultState();
-  if (!s || typeof s !== "object") return d;
+  if (!isObj(s)) return d;
   return {
-    ...d, ...s,
-    profile: { ...d.profile, ...(s.profile || {}) },
-    settings: { ...d.settings, ...(s.settings || {}) },
-    ui: { ...d.ui, ...(s.ui || {}) },
-    apps: s.apps || {},
-    dismissed: s.dismissed || {},
+    ...d, ...s, v: 1,
+    profile: cleanProfile(s.profile),
+    settings: cleanSettings(s.settings),
+    ui: isObj(s.ui) ? { ...d.ui, ...s.ui } : d.ui,
+    apps: cleanApps(s.apps),
+    dismissed: isObj(s.dismissed) ? s.dismissed : {},
   };
 }
 
@@ -124,10 +172,24 @@ const store = {
     this.state = next;
     this.subs.forEach((f) => f(next));
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => storage.set(STORE_KEY, this.state), 150);
+    this.saveTimer = setTimeout(() => this.save(), 150);
+  },
+  saveFailedAt: 0,
+  save() {
+    clearTimeout(this.saveTimer);
+    if (!storage.set(STORE_KEY, this.state) && now() - this.saveFailedAt > 60000) {
+      this.saveFailedAt = now();
+      toast("Couldn't save your changes on this device. Export a backup from Settings.", { ms: 9000 });
+    }
   },
   sub(f) { this.subs.add(f); return () => this.subs.delete(f); },
 };
+/* Pending edits (debounced inputs) register a flush so nothing is lost on close or reload */
+const flushers = new Set();
+function onFlush(fn) { flushers.add(fn); return () => flushers.delete(fn); }
+function flushAll() { flushers.forEach((f) => { try { f(); } catch {} }); store.save(); }
+window.addEventListener("pagehide", flushAll);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
 function useStore(sel = (s) => s) {
   const [v, setV] = useState(() => sel(store.get()));
   const selRef = useRef(sel); selRef.current = sel;
@@ -148,6 +210,7 @@ const Apps = {
     };
     if (!a.events.length) a.events = [{ id: uid("e_"), at: t, kind: "created", text: a.stage === "saved" ? "Saved" : `Added as ${STAGE[a.stage]?.label || a.stage}` }];
     if (a.stage !== "saved" && !a.appliedAt) a.appliedAt = fields.appliedAt || t;
+    if (["screen", "interview", "offer", "rejected"].includes(a.stage) && !a.lastReplyAt) a.lastReplyAt = t;
     store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: a } }));
     return a;
   },

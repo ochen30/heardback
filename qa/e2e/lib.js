@@ -18,7 +18,7 @@ function serve(dist) {
 const PROFILE = { roles: ['Software', 'Data & AI'], levels: ['intern', 'newgrad'], locations: ['sf bay area', 'new york', 'remote'], remote: true, needsSponsor: false, resume: '', skills: ['Python', 'Java', 'React', 'SQL', 'Machine Learning', 'AWS', 'Algorithms', 'Git'], onboarded: true, name: 'Alex Kim', weeklyGoal: 10 };
 
 async function open(o = {}) {
-  const dist = o.dist || path.join(root, 'dist');
+  const dist = o.dist || process.env.DIST || path.join(root, 'dist');
   const server = await serve(dist);
   const port = server.address().port;
   const W = o.W || 1440, H = o.H || (W < 600 ? 812 : 900);

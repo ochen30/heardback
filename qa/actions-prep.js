@@ -30,6 +30,13 @@ module.exports = {
     await page.getByRole('button', { name: 'Remove Java', exact: true }).click();
     await page.fill('#onb-res-add', 'Figma'); await page.press('#onb-res-add', 'Enter');
   },
+  async onbStep2Suggest(page) {
+    await step1(page); await page.click('#onb-next'); await wait(page);
+    await page.fill('#onb-res-text', RESUME); await wait(page);
+    await page.fill('#onb-res-add', 'ja'); await wait(page);
+    const n = await page.locator('.onb-sugg-btn').count();
+    console.log('suggestions for "ja":', n, await page.locator('.onb-sugg-btn').allTextContents());
+  },
   async onbStep2Empty(page) { await page.click('#onb-next'); await wait(page); },
   async onbStep3(page) {
     await step1(page); await page.click('#onb-next'); await wait(page);
@@ -84,6 +91,14 @@ module.exports = {
   async scrollDown(page) { await page.evaluate(() => document.getElementById('workspace').scrollTo(0, 99999)); await wait(page); },
   async scrollMid(page) { await page.evaluate(() => { const w = document.getElementById('workspace'); w.scrollTo(0, w.scrollHeight / 2 - 300); }); await wait(page); },
   async prefsResume(page) { await module.exports.withResume(page); await page.click('#pf-edit-resume'); await wait(page); },
+  async prefsCorrupt(page) { await page.evaluate(() => { storage.corrupt = true; store.set((s) => ({ ...s })); }); await page.evaluate(() => { location.hash = 'today'; }); await wait(page); await page.evaluate(() => { location.hash = 'prefs'; }); await wait(page); },
+  async prefsBadImport(page) {
+    const bad = JSON.stringify({ app: 'Heardback', profile: { roles: 'Software', skills: [null, 3, 'Go'], weeklyGoal: 'x' }, settings: { ghostDays: 'abc' }, apps: [null, { company: 'Acme', title: 'SWE', rounds: [null], events: 'x' }, 5] });
+    await page.setInputFiles('#pf-import', { name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(bad) }); await wait(page);
+    await page.click('.modal-foot button:has-text("Import and merge")'); await wait(page, 500);
+    console.log('after bad import', await page.evaluate(() => JSON.stringify({ roles: store.get().profile.roles, skills: store.get().profile.skills, goal: store.get().profile.weeklyGoal, ghost: store.get().settings.ghostDays, acme: Object.values(store.get().apps).filter((a) => a.company === 'Acme').length })));
+    await page.evaluate(() => { location.hash = 'pipeline'; }); await wait(page); await page.evaluate(() => { location.hash = 'prefs'; }); await wait(page);
+  },
   async prefsDelete(page) { await page.click('#pf-delete'); await wait(page); },
   async prefsScroll(page) { await module.exports.withResume(page); await module.exports.scrollMid(page); },
   async prefsBottom(page) { await module.exports.scrollDown(page); },

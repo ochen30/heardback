@@ -20,6 +20,10 @@ module.exports = {
     await p.click('.find-details summary'); await wait(p, 200);
     await p.evaluate(() => { document.querySelector('.find-details').scrollIntoView(); });
   },
+  async ghostTop(p) { await ready(p); await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.g >= 80 && x.nl > 6); openJob(j.id); }); await wait(p); },
+  async midGhost(p) { await ready(p); await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.g >= 25 && x.g < 50); openJob(j.id); }); await wait(p); },
+  async ghostList(p) { await ready(p); await p.click('text=Show all'); await wait(p, 200); await p.fill('#find-q', 'salesforce'); await wait(p, 500); },
+  async locMore(p) { await ready(p); await p.click('.find-aside .find-more-link'); await wait(p, 200); },
   async jobAI(p) {
     await ready(p); await fakeClaude(p);
     await p.click('.find-results .find-row'); await wait(p);
@@ -34,7 +38,7 @@ module.exports = {
   async companyAI(p) { await ready(p); await fakeClaude(p); await p.evaluate(() => { localStorage.removeItem('heardback:find:brief:Stripe'); openCompany('Stripe'); }); await wait(p); await p.click('text=Brief me on this company'); await wait(p); await p.evaluate(() => document.querySelector('#find-brief-h').scrollIntoView()); },
   async searchData(p) { await ready(p); await p.fill('#find-q', 'data scientist new york'); await wait(p, 500); },
   async searchNone(p) { await ready(p); await p.fill('#find-q', 'zzqx nothing'); await wait(p, 500); },
-  async filterRemote(p) { await ready(p); await p.click('text=Show all'); await wait(p, 200); await p.locator('.find-aside .chip', { hasText: 'Remote' }).first().click(); await wait(p, 300); },
+  async filterRemote(p) { await ready(p); await p.click('text=Show all'); await wait(p, 200); if (!(await p.$('.find-aside .find-opt:has-text("Remote")'))) await p.click('.find-aside .find-more-link'); await p.locator('.find-aside .find-opt', { hasText: 'Remote' }).first().click(); await wait(p, 300); },
   async sortFit(p) { await ready(p); await p.click('.find-sort button:has-text("Best fit")'); await wait(p); },
   async mobileFilters(p) { await ready(p); await p.click('.find-fbtn'); await wait(p); },
   async scrollMore(p) { await ready(p); await p.evaluate(() => { const w = document.querySelector('.workspace'); w.style.scrollBehavior = 'auto'; w.scrollTop = w.scrollHeight; }); await wait(p, 600); await p.evaluate(() => { const w = document.querySelector('.workspace'); w.scrollTop = w.scrollHeight; }); await wait(p, 600); },

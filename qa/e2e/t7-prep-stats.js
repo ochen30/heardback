@@ -15,7 +15,8 @@ const mobile = W < 700;
     const items = await page.locator('.prep-item').count();
     T.check('prep list has rounds', items >= 2, items);
     const values = await page.locator('#prep-select option').evaluateAll((os) => os.map((o) => o.value));
-    await page.selectOption('#prep-select', values[1]); await page.waitForTimeout(250);
+    const pick = async (v) => { if (mobile) return page.selectOption('#prep-select', v); const i = values.indexOf(v); if (v === 'practice') return page.click('#prep-practice-item'); return page.locator('.prep-item').nth(i).click(); };
+    await pick(values[1]); await page.waitForTimeout(250);
     const h2 = await page.locator('.prep-h2').first().innerText();
     T.check('select switches round', h2.length > 0, h2);
     T.check('prepFocus stored', (await page.evaluate(() => store.get().ui.prepFocus?.roundId)) === values[1].split('|')[1]);
@@ -28,8 +29,8 @@ const mobile = W < 700;
     await page.reload(); await page.waitForTimeout(900);
     T.check('prep notes persist after reload', (await page.inputValue(`#prep-notes-${rid}`).catch(() => '')) === 'Review graphs; ask about team');
     // switch round and back: notes still show
-    await page.selectOption('#prep-select', values[0]); await page.waitForTimeout(200);
-    await page.selectOption('#prep-select', values[1]); await page.waitForTimeout(200);
+    await pick(values[0]); await page.waitForTimeout(200);
+    await pick(values[1]); await page.waitForTimeout(200);
     T.check('notes reload when switching rounds', (await page.inputValue(`#prep-notes-${rid}`)) === 'Review graphs; ask about team');
     // practice timer
     await page.click('#prep-practice'); await page.waitForTimeout(200);
@@ -95,7 +96,7 @@ const mobile = W < 700;
     T.check('funnel numbers', funnel.join(',') === [mine.applied, mine.replied, mine.interviewed, mine.offers].join(','), `${funnel.join(',')} vs ${[mine.applied, mine.replied, mine.interviewed, mine.offers]}`);
     T.check('funnel monotonic (replied>=interviewed?)', mine.replied >= mine.interviewed, `${mine.replied} replied < ${mine.interviewed} interviewed`);
     const outs = await page.locator('.st-out-row').allInnerTexts();
-    const sum = outs.map((o) => +o.split('\n')[2]).reduce((a, b) => a + b, 0);
+    const sum = (await page.locator('.st-out-row .num').allInnerTexts()).map(Number).reduce((a, b) => a + b, 0);
     T.check('outcomes sum to applied', sum === mine.applied, `${sum} vs ${mine.applied}`);
     // weekly chart total vs applied in last 8 weeks
     const wk = await page.evaluate(() => { const st = computeStats(); return { sum: st.weeks.reduce((a, w) => a + w.applied, 0), first: st.weeks[0].start }; });

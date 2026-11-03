@@ -44,7 +44,7 @@ function Topbar({ route }) {
   const cycle = () => { const order = ["system", "light", "dark"]; const next = order[(order.indexOf(s) + 1) % 3]; store.set((st) => ({ ...st, settings: { ...st.settings, theme: next } })); toast(`Theme: ${next === "system" ? "match system" : next}`); };
   return html`<header class="topbar">
     <span class="show-sm" style="display:inline-flex"><${BrandMark} size=${24} /></span>
-    <h1 class="top-title">${TITLES[route]}</h1>
+    <div class="top-title" role="heading" aria-level="1">${TITLES[route]}</div>
     <div class="top-actions">
       <button type="button" class="search-trigger" onClick=${() => ui.set({ palette: true })} aria-label="Search and commands">
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
@@ -82,7 +82,7 @@ function Palette() {
   const s = useStore();
   const listRef = useRef(null);
   const inRef = useRef(null);
-  useEffect(() => { const t = setTimeout(() => inRef.current?.focus(), 30); return () => clearTimeout(t); }, []);
+  useLayoutEffect(() => { const prev = document.activeElement; inRef.current?.focus(); return () => { try { prev?.focus?.(); } catch {} }; }, []);
   const close = () => ui.set({ palette: false });
   useEscape(close);
   const items = useMemo(() => {
@@ -155,7 +155,7 @@ function useShortcuts() {
       if (typing(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
       if (!store.get().profile.onboarded) return;
       if (ui.state.palette || ui.state.modal) return;
-      const k = e.key;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (gPending && now() - gPending < 1200) {
         gPending = 0;
         const map = { t: "today", f: "find", p: "pipeline", c: "companies", i: "prep", s: "stats", ",": "prefs" };
@@ -185,6 +185,15 @@ function Celebrate() {
   return html`<div class="celebrate" aria-live="polite"><div class="celebrate-card"><div class="celebrate-ring"><${Icon} name="trophy" size=${26} /></div><strong style="font-size:var(--fs-lg)">Offer from ${celebrate.company}</strong><span class="muted" style="font-size:var(--fs-sm)">You heard back. Take a moment, then get it in writing.</span></div></div>`;
 }
 
+class Boundary extends preact.Component {
+  constructor() { super(); this.state = { err: null }; }
+  componentDidCatch(err) { this.setState({ err }); try { console.warn("Heardback view error:", err); } catch {} }
+  render() {
+    if (!this.state.err) return this.props.children;
+    const exportBackup = () => saveFile(`heardback-backup-${fmt.toDateInput(now())}.json`, JSON.stringify(store.get(), null, 2), "application/json");
+    return html`<div class="page"><${Empty} icon="alert" title="This screen hit a problem" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" icon="refresh" onClick=${() => this.setState({ err: null })}>Try again</${Btn}><${Btn} icon="download" onClick=${exportBackup}>Export a backup</${Btn}><${Btn} kind="ghost" onClick=${() => { this.setState({ err: null }); go("prefs"); }}>Open Settings</${Btn}></div>`}>Your data is safe in this browser. Try again, or export a backup first.</${Empty}></div>`;
+  }
+}
 function Placeholder({ name }) { return html`<div class="page"><${Empty} icon="info" title=${name}>This area is being built.</${Empty}></div>`; }
 
 function App() {
@@ -202,11 +211,11 @@ function App() {
     <${Rail} route=${route} />
     <div class="main">
       <${Topbar} route=${route} />
-      <main class="workspace" id="workspace">${View ? html`<${View} />` : html`<${Placeholder} name=${TITLES[route]} />`}</main>
+      <main class="workspace" id="workspace"><${Boundary} key=${route}>${View ? html`<${View} />` : html`<${Placeholder} name=${TITLES[route]} />`}</${Boundary}></main>
       <${BottomNav} route=${route} />
     </div>
-    ${DrawerC && html`<${DrawerC} key=${u.drawer.kind + u.drawer.id} id=${u.drawer.id} tab=${u.drawer.tab} />`}
-    ${ModalC && html`<${ModalC} ...${u.modal} />`}
+    ${DrawerC && html`<${Boundary} key=${"d" + u.drawer.kind + u.drawer.id}><${DrawerC} id=${u.drawer.id} tab=${u.drawer.tab} /></${Boundary}>`}
+    ${ModalC && html`<${Boundary} key=${"m" + u.modal.__kind}><${ModalC} ...${u.modal} /></${Boundary}>`}
     ${u.palette && html`<${Palette} />`}
     ${showOnboard && html`<${VIEWS.__onboarding} />`}
     <${Toasts} />

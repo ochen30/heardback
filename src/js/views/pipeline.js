@@ -3,12 +3,11 @@
 const PL_MAIN = ["saved", "applied", "screen", "interview", "offer"];
 const PL_CLOSED = ["rejected", "ghosted"];
 const PL_OUTCOMES = [{ id: "pending", label: "Pending" }, { id: "passed", label: "Passed" }, { id: "failed", label: "Didn't pass" }, { id: "cancelled", label: "Cancelled" }];
-const PL_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
 /* ---------- helpers ---------- */
 function plUi(patch) { store.set((s) => ({ ...s, ui: { ...s.ui, ...patch } })); }
-function plCollapsed(s) { return s.ui.pipelineCollapsed || { rejected: true, ghosted: true }; }
-function plSetCollapsed(stage, v) { const c = plCollapsed(store.get()); plUi({ pipelineCollapsed: { ...c, [stage]: v } }); }
+function plClosedOpen(s) { return !!s.ui.pipelineClosedOpen; }
+function plSetClosedOpen(v) { plUi({ pipelineClosedOpen: v }); }
 function plUpcoming(a, t = now()) {
   return (a.rounds || []).filter((r) => r.at && r.at > t && r.outcome !== "cancelled").sort((x, y) => x.at - y.at)[0] || null;
 }
@@ -16,8 +15,11 @@ function plWhen(ts) {
   const d0 = fmt.startOfDay(now()), d1 = fmt.startOfDay(ts);
   const diff = Math.round((d1 - d0) / DAY);
   const day = diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : diff > 1 && diff < 7 ? new Date(ts).toLocaleDateString(undefined, { weekday: "short" }) : fmt.date(ts);
-  return `${day} ${fmt.time(ts)}`;
+  return `${day} ${plTime(ts)}`;
 }
+/* "1 PM" on the hour, "1:30 PM" otherwise */
+function plTime(ts) { const d = new Date(ts); return d.getMinutes() ? fmt.time(ts) : d.toLocaleTimeString(undefined, { hour: "numeric" }); }
+function plLongWhen(ts) { return `${new Date(ts).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} at ${fmt.time(ts)}`; }
 function plStageAt(a, stage) {
   const ev = [...(a.events || [])].reverse().find((e) => e.kind === "stage" && e.to === stage);
   return ev ? ev.at : null;
@@ -52,7 +54,7 @@ function plStatus(a, st) {
   if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: fmt.dateTime(up.at) };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
-  if (a.stage === "rejected") return { icon: "x", text: `Closed ${fmt.ago(plStageAt(a, "rejected") || a.lastActivityAt)}` };
+  if (a.stage === "rejected") return { icon: "x", text: `Rejected ${fmt.ago(plStageAt(a, "rejected") || a.lastActivityAt)}` };
   if (a.stage === "ghosted") return { icon: "ghost", text: `Ghosted ${fmt.ago(plStageAt(a, "ghosted") || a.lastActivityAt)}` };
   const silent = Apps.daysSilent(a);
   if (silent >= st.followUpDays) return { icon: silent >= st.ghostDays ? "ghost" : "clock", tone: "wait", text: `Silent ${silent}d`, title: `No reply in ${silent} days` };
@@ -84,41 +86,69 @@ function plNextStep(a, st) {
   return { kind: "schedule", icon: "cal", short: "Add next round", title: "Add the next round when it's scheduled", sub: "Log the date, type and interviewers so Heardback can remind you to prep and send a thank-you." };
 }
 
-/* Email parsing on top of the shared rule-based parser (fixes listed in the pipeline report) */
-function plBody(raw) { return (raw || "").replace(/\r/g, "").split("\n").filter((l) => !/^\s*(from|to|cc|bcc|subject|date|sent|reply-to):/i.test(l)).join("\n"); }
+/* Interview time finder: month-name or US numeric dates, skips deadlines, honors a stated time zone */
+const PL_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const PL_TZ = { E: -5, C: -6, M: -7, P: -8 };
+function plUsDst(y, mon, d, h) {
+  /* US daylight time: 2nd Sunday of March 2:00 to 1st Sunday of November 2:00 (local) */
+  const nth = (m, n) => { const first = new Date(Date.UTC(y, m, 1)).getUTCDay(); return 1 + ((7 - first) % 7) + 7 * (n - 1); };
+  const t = Date.UTC(y, mon, d, h), start = Date.UTC(y, 2, nth(2, 2), 2), end = Date.UTC(y, 10, nth(10, 1), 2);
+  return t >= start && t < end;
+}
+function plTzOffset(tz, y, mon, d, h) {
+  const z = tz.toUpperCase();
+  if (z === "UTC" || z === "GMT") return 0;
+  const base = PL_TZ[z[0]];
+  if (base == null) return null;
+  if (z.length === 3) return base + (z[1] === "D" ? 1 : 0);
+  return base + (plUsDst(y, mon, d, h) ? 1 : 0);
+}
 function plFindTime(raw) {
-  const body = plBody(raw);
-  const re = /\b(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?/gi;
+  const body = (raw || "").replace(/\r/g, "").replace(/^(?:From|To|Cc|Bcc|Subject|Date|Sent|Reply-To):.*$/gim, "");
+  const re = /\b(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?|(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b)/gi;
   let m;
   while ((m = re.exec(body))) {
-    const mon = PL_MONTHS.indexOf(m[1].toLowerCase()); const day = +m[2];
-    if (mon < 0 || day < 1 || day > 31) continue;
-    const after = body.slice(m.index + m[0].length, m.index + m[0].length + 40);
-    const tm = after.match(/^[^\n]*?\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)/i);
-    let h = 10, min = 0;
-    if (tm) { h = +tm[1] % 12; min = +(tm[2] || 0); if (/p/i.test(tm[3])) h += 12; }
-    const yr = m[3] ? +m[3] : new Date().getFullYear();
-    let at = new Date(yr, mon, day, h, min).getTime();
-    if (!m[3] && at < now() - 30 * DAY) at = new Date(yr + 1, mon, day, h, min).getTime();
-    return at;
+    const before = body.slice(Math.max(0, m.index - 40), m.index);
+    if (/\b(?:by|before|deadline|due|until|no later than)\b[^.\n]{0,18}$/i.test(before)) continue;
+    const mon = m[1] ? PL_MONTHS.indexOf(m[1].toLowerCase()) : +m[4] - 1;
+    const day = m[1] ? +m[2] : +m[5];
+    if (mon < 0 || mon > 11 || day < 1 || day > 31) continue;
+    let yr = m[3] ? +m[3] : m[6] ? +m[6] : null;
+    if (yr && yr < 100) yr += 2000;
+    const after = body.slice(m.index + m[0].length, m.index + m[0].length + 48);
+    const tm = after.match(/^[^\n.]*?\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))?\s*\(?\b(ET|EST|EDT|CT|CST|CDT|MT|MST|MDT|PT|PST|PDT|UTC|GMT)?\b/i);
+    let h = 10, min = 0, tz = "";
+    if (tm) { h = +tm[1] % 12; min = +(tm[2] || 0); if (/p/i.test(tm[3])) h += 12; tz = tm[4] ? tm[4].toUpperCase() : ""; }
+    const y0 = yr || new Date(now()).getFullYear();
+    const at0 = (y) => {
+      const off = tz ? plTzOffset(tz, y, mon, day, h) : null;
+      return off == null ? new Date(y, mon, day, h, min).getTime() : Date.UTC(y, mon, day, h, min) - off * 3600000;
+    };
+    let at = at0(y0);
+    if (!yr && at < now() - 30 * DAY) at = at0(y0 + 1);
+    return { at, tz };
   }
   return null;
 }
+
+/* Email parsing: the shared rule-based parser, plus our time finder and interviewer names */
 function plParse(raw) {
   const p = parseEmail(raw);
-  const low = (raw || "").toLowerCase();
-  if (p.kind === "screen" && /technical interview|coding interview|onsite|on-site|final round|superday|system design|panel interview/.test(low)) {
-    p.kind = "interview";
-    p.roundType = /technical|coding|system design/.test(low) ? "technical" : /onsite|on-site|final|superday/.test(low) ? "onsite" : "other";
-  }
-  if (!p.company) {
-    const m = (raw || "").match(/thank you for (?:applying|your (?:application|interest)) (?:to|at|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| for | and )/i);
-    if (m && /^[A-Z]/.test(m[1])) p.company = m[1].trim();
-  }
-  p.interviewAt = p.kind === "interview" || p.kind === "screen" ? plFindTime(raw) : null;
-  const iv = (raw || "").match(/\bwith ([A-Z][a-z]+(?: [A-Z][a-z.]+)?(?:,? (?:and|&) [A-Z][a-z]+(?: [A-Z][a-z.]+)?)?)(?=[\s:.,])/);
+  const ft = p.kind === "interview" || p.kind === "screen" ? plFindTime(raw) : null;
+  p.interviewAt = ft ? ft.at : null;
+  p.tz = ft && ft.tz ? ft.tz : "";
+  const body = (raw || "").replace(/^(?:From|To|Cc|Bcc|Subject|Date|Sent|Reply-To):.*$/gim, "");
+  const iv = body.match(/\bwith ([A-Z][a-z]+(?: [A-Z][a-z.]+)?(?:,? (?:and|&) [A-Z][a-z]+(?: [A-Z][a-z.]+)?)?)(?=[\s:.,])/);
   p.interviewers = p.interviewAt && iv ? iv[1] : "";
   return p;
+}
+/* One-line summary of a pasted email: sender name and subject */
+function plEmailSummary(raw) {
+  const hdr = (n) => ((raw || "").match(new RegExp(`^${n}:\\s*(.+)$`, "im")) || [])[1] || "";
+  const from = hdr("From").replace(/\s*<[^>]*>\s*$/, "").replace(/^"|"$/g, "").trim();
+  const subj = hdr("Subject").trim();
+  const first = (raw || "").split("\n").map((l) => l.trim()).find((l) => l && !/^\w[\w-]*:/.test(l)) || "";
+  return [from && `From ${from}`, subj || first].filter(Boolean).join(" · ") || "Pasted email";
 }
 function plShouldMove(cur, to) {
   if (!to || to === cur) return false;
@@ -129,7 +159,7 @@ function plShouldMove(cur, to) {
 
 const PL_SAMPLES = {
   confirmation: { label: "Confirmation", text: "From: Northwind Labs Recruiting <no-reply@northwindlabs.example>\nSubject: Thank you for applying to Northwind Labs\nDate: Mon, 2 Nov 2026 09:14:00 -0800\n\nHi Alex,\n\nThank you for applying to Northwind Labs. We have received your application for the Software Engineer Intern, Summer 2027 position, and our team will review it soon.\n\nIf your background is a match, a recruiter will reach out within two weeks.\n\nNorthwind Labs Recruiting Team\n\n(Sample email for trying Heardback. Northwind Labs is a fictional company.)" },
-  interview: { label: "Interview", text: "From: Priya Shah <priya.shah@northwindlabs.example>\nSubject: Technical interview for Software Engineer Intern\nDate: Tue, 3 Nov 2026 11:02:00 -0800\n\nHi Alex,\n\nThanks for your time last week. We'd like to invite you to a technical interview for the Software Engineer Intern position at Northwind Labs.\n\nYour interview is scheduled for Thursday, Nov 5 at 2:00 pm PT over video. It will be 60 minutes with Priya Shah and Tom Lee: one coding problem and a short system design discussion.\n\nPlease reply to confirm this time works.\n\nBest,\nPriya Shah\nNorthwind Labs\n\n(Sample email for trying Heardback. Northwind Labs is a fictional company.)" },
+  interview: { label: "Interview", text: "From: Priya Shah <priya.shah@northwindlabs.example>\nSubject: Technical interview for Software Engineer Intern\nDate: Tue, 3 Nov 2026 11:02:00 -0800\n\nHi Alex,\n\nThanks for your time last week. We'd like to invite you to a technical interview for the Software Engineer Intern position at Northwind Labs.\n\nYour interview is scheduled for Thursday, Nov 5 at 2:00 pm over video. It will be 60 minutes with Priya Shah and Tom Lee: one coding problem and a short system design discussion.\n\nPlease reply to confirm this time works.\n\nBest,\nPriya Shah\nNorthwind Labs\n\n(Sample email for trying Heardback. Northwind Labs is a fictional company.)" },
   rejection: { label: "Rejection", text: "From: Quarry Analytics Careers <careers@quarryanalytics.example>\nSubject: Update on your application\nDate: Tue, 3 Nov 2026 08:40:00 -0800\n\nHi Alex,\n\nThank you for your application for the Data Science Intern role at Quarry Analytics, and for the time you put into it.\n\nAfter careful review, we have decided not to move forward with your application at this time. We'll keep your details on file for future openings.\n\nQuarry Analytics Talent Team\n\n(Sample email for trying Heardback. Quarry Analytics is a fictional company.)" },
   offer: { label: "Offer", text: "From: Fernhill Capital Talent <talent@fernhillcapital.example>\nSubject: Your offer from Fernhill Capital\nDate: Tue, 3 Nov 2026 16:20:00 -0500\n\nHi Alex,\n\nCongratulations. We are pleased to offer you a place in our summer program for the Quantitative Research Intern position at Fernhill Capital.\n\nYour offer letter with compensation details is attached. Please let us know your decision by Nov 17.\n\nWarm regards,\nFernhill Capital Talent Team\n\n(Sample email for trying Heardback. Fernhill Capital is a fictional company.)" },
 };
@@ -146,7 +176,7 @@ function PlText({ id, value, onSave, multiline, onStatus, delay = 450, cls, ...r
     const x = pending.current; pending.current = null; saveRef.current(x);
     if (!quiet) statusRef.current?.("saved");
   };
-  useEffect(() => () => flush(true), []);
+  useEffect(() => { const off = onFlush(() => flush(true)); return () => { off(); flush(true); }; }, []);
   useEffect(() => { if (pending.current == null && document.activeElement?.id !== id) setV(value || ""); }, [value]);
   const onInput = (e) => { const x = e.currentTarget.value; setV(x); pending.current = x; statusRef.current?.("saving"); clearTimeout(timer.current); timer.current = setTimeout(() => flush(), delay); };
   return multiline
@@ -168,7 +198,7 @@ VIEWS.pipeline = function PipelineView() {
   const examples = hasExamples(s) && s.settings.showExamples;
 
   if (!all.length) return html`<div class="page pl-page">
-    <div class="page-head"><div><h1>Pipeline</h1><p>Every application you send, the stage it's in, and what to do next.</p></div></div>
+    <div class="page-head"><div><h1>Pipeline</h1><p>Track applications and what to do next.</p></div></div>
     <${PlEmpty} />
   </div>`;
 
@@ -179,20 +209,18 @@ VIEWS.pipeline = function PipelineView() {
       <div class="pl-tools">
         <div class="input-icon pl-filter">
           <${Icon} name="filter" />
-          <input id="pl-filter" class="input" type="search" placeholder="Filter by company or role" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Escape" && q) { e.stopPropagation(); setQ(""); } }} aria-label="Filter applications by company or role" autocomplete="off" />
+          <input id="pl-filter" class="input" type="search" placeholder=${window.matchMedia("(max-width: 520px)").matches ? "Filter" : "Filter by company or role"} value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Escape" && q) { e.stopPropagation(); setQ(""); } }} aria-label="Filter applications by company or role" autocomplete="off" />
         </div>
         <${Seg} label="Layout" value=${view} onChange=${(v) => plUi({ pipelineView: v })} options=${[{ id: "board", label: "Board", icon: "board" }, { id: "table", label: "Table", icon: "list" }]} />
-        <${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")} cls="pl-add-btn">Add application</${Btn}>
       </div>
     </div>
-    ${examples && html`<div class="example-banner" role="note">
-      <${Icon} name="info" />
-      <span><b>You're looking at example applications.</b> They're labeled Example and don't count toward anything real.</span>
+    ${examples && html`<div class="example-banner pl-banner" role="note">
+      <span class="pl-banner-text"><b>Example data.</b><span class="hide-sm"> Clear it when you add your first application.</span></span>
       <span class="spacer"></span>
-      <${Btn} size="sm" onClick=${clearExamples}>Clear examples</${Btn}>
+      <${Btn} size="sm" kind="ghost" onClick=${clearExamples}>Clear examples</${Btn}>
     </div>`}
     ${n && !apps.length && html`<div class="callout"><${Icon} name="search" /><span>No applications match “${q}”. <button type="button" class="pl-linkbtn" onClick=${() => setQ("")}>Clear the filter</button></span></div>`}
-    ${view === "board" ? html`<${PlBoard} apps=${apps} settings=${s.settings} collapsed=${plCollapsed(s)} filtering=${!!n} />` : html`<${PlTable} apps=${apps} settings=${s.settings} sort=${s.ui.pipelineSort || { k: "activity", dir: -1 }} />`}
+    ${view === "board" ? html`<${PlBoard} apps=${apps} settings=${s.settings} closedOpen=${plClosedOpen(s)} hint=${!s.ui.pipelineHintDone} filtering=${!!n} />` : html`<${PlTable} apps=${apps} settings=${s.settings} sort=${s.ui.pipelineSort || { k: "activity", dir: -1 }} />`}
   </div>`;
 };
 
@@ -202,81 +230,110 @@ function PlEmpty() {
       ${["saved", "applied", "screen", "interview", "offer"].map((st, i) => html`<div class="pl-empty-col" key=${st}><span class=${cx("dot", st)}></span><i style=${`height:${[34, 54, 28, 18, 10][i]}px`}></i></div>`)}
     </div>
     <h2>Track every application in one place</h2>
-    <p class="muted">Add jobs as you apply, log replies by pasting the email, and Heardback tells you when to follow up, prep, or let one go.</p>
-    <div class="pl-empty-actions">
-      <button type="button" class="pl-empty-act" onClick=${() => go("find")}><span class="pl-empty-ico"><${Icon} name="find" /></span><span><b>Find jobs</b><span>Browse live internship and new-grad roles</span></span></button>
-      <button type="button" class="pl-empty-act" onClick=${() => openModal("add")}><span class="pl-empty-ico"><${Icon} name="plus" /></span><span><b>Add application</b><span>Log one you've already sent</span></span></button>
-      <button type="button" class="pl-empty-act" onClick=${() => openModal("paste")}><span class="pl-empty-ico"><${Icon} name="mail" /></span><span><b>Log an email</b><span>Turn a confirmation or invite into an entry</span></span></button>
+    <p class="muted">Add jobs as you apply, log replies from your emails, and Heardback tells you when to follow up, prep, or let one go.</p>
+    <div class="pl-empty-main">
+      <${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}>
     </div>
-    <${Btn} kind="ghost" size="sm" onClick=${loadExamples}>Load example pipeline</${Btn}>
+    <div class="pl-empty-links">
+      <button type="button" class="pl-linkbtn" onClick=${() => openModal("paste")}>Log an email</button>
+      <span class="pl-sep">·</span>
+      <button type="button" class="pl-linkbtn" onClick=${() => go("find")}>Find jobs</button>
+      <span class="pl-sep">·</span>
+      <button type="button" class="pl-linkbtn" onClick=${loadExamples}>Load an example pipeline</button>
+    </div>
   </div>`;
 }
 
 /* ---------- Board ---------- */
-function PlBoard({ apps, settings, collapsed, filtering }) {
+function PlBoard({ apps, settings, closedOpen, hint, filtering }) {
   const [drag, setDrag] = useState(null);
   const [over, setOver] = useState(null);
   const [menu, setMenu] = useState(null);
   const by = useMemo(() => { const m = {}; STAGES.forEach((x) => (m[x.id] = [])); apps.forEach((a) => (m[a.stage] || m.applied).push(a)); for (const k in m) m[k] = plSortInCol(m[k]); return m; }, [apps]);
+  const closedList = useMemo(() => plSortInCol([...by.rejected, ...by.ghosted]), [by]);
 
   const dropOn = (stage) => (e) => {
-    e.preventDefault();
+    e.preventDefault(); e.stopPropagation();
     const id = e.dataTransfer?.getData("text/plain") || drag;
     setOver(null); setDrag(null);
-    if (id && Apps.get(id) && Apps.get(id).stage !== stage) { if (collapsed[stage]) plSetCollapsed(stage, false); Apps.move(id, stage); }
+    if (id && Apps.get(id) && Apps.get(id).stage !== stage) { if (PL_CLOSED.includes(stage)) plSetClosedOpen(true); Apps.move(id, stage); }
   };
-  const dragOver = (stage) => (e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; if (over !== stage) setOver(stage); };
+  const dragOver = (stage) => (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; if (over !== stage) setOver(stage); };
   const dragLeave = (stage) => (e) => { if (!e.currentTarget.contains(e.relatedTarget) && over === stage) setOver(null); };
+  const dropProps = (stage) => ({ onDragOver: dragOver(stage), onDragLeave: dragLeave(stage), onDrop: dropOn(stage) });
 
-  const move = (a, to) => { if (!to || to === a.stage) return; if (collapsed[to]) plSetCollapsed(to, false); Apps.move(a.id, to); plFocusCard(a.id); };
+  const move = (a, to) => {
+    if (!to || to === a.stage) return;
+    if (PL_CLOSED.includes(to)) plSetClosedOpen(true);
+    Apps.move(a.id, to); plFocusCard(a.id);
+    if (hint) plUi({ pipelineHintDone: true });
+  };
   const onKey = (a) => (e) => {
     if (e.target !== e.currentTarget) return;
     const k = e.key;
     if (k === "Enter" || k === " ") { e.preventDefault(); openApp(a.id); }
     else if (k === "ArrowRight" || k === "]" || k === "ArrowLeft" || k === "[") {
       e.preventDefault();
-      const i = STAGE[a.stage].i + (k === "ArrowRight" || k === "]" ? 1 : -1);
-      if (i >= 0 && i < STAGES.length) move(a, STAGES[i].id);
+      /* Steps only within the main flow; closing an application is always explicit */
+      const j = PL_MAIN.indexOf(a.stage);
+      const to = j < 0 ? null : PL_MAIN[j + (k === "ArrowRight" || k === "]" ? 1 : -1)];
+      if (to) move(a, to);
     } else if (k === "ArrowDown" || k === "ArrowUp") {
       e.preventDefault();
       const cards = [...e.currentTarget.closest(".col-body").querySelectorAll(".app-card")];
       cards[cards.indexOf(e.currentTarget) + (k === "ArrowDown" ? 1 : -1)]?.focus();
     }
   };
+  const card = (a) => html`<${PlCard} key=${a.id} a=${a} settings=${settings} dragging=${drag === a.id}
+    onDragStart=${(e) => { e.dataTransfer.setData("text/plain", a.id); e.dataTransfer.effectAllowed = "move"; setDrag(a.id); }}
+    onDragEnd=${() => { setDrag(null); setOver(null); }}
+    onKeyDown=${onKey(a)}
+    onMenu=${(el) => setMenu({ id: a.id, el })} />`;
+  /* While dragging, the Closed area offers two targets: Rejected and Ghosted */
+  const closedTargets = html`<div class="pl-drop-pair">${PL_CLOSED.map((id) => html`<div key=${id} class=${cx("pl-drop", over === id && "on")} data-col=${id} ...${dropProps(id)}><span class=${cx("dot", id)}></span>${STAGE[id].label}</div>`)}</div>`;
 
   return html`<${Fragment}>
     <div class="board pl-board" role="list" aria-label="Pipeline board">
-      ${STAGES.map((st) => {
-        const list = by[st.id];
-        const closed = PL_CLOSED.includes(st.id);
-        if (closed && collapsed[st.id]) return html`<button type="button" role="listitem" key=${st.id} class=${cx("pl-rail", over === st.id && "drop")} onClick=${() => plSetCollapsed(st.id, false)} onDragOver=${dragOver(st.id)} onDragLeave=${dragLeave(st.id)} onDrop=${dropOn(st.id)} aria-label=${`Show ${st.label} column, ${pluralize(list.length, "application")}`} title=${`Show ${st.label}`} data-col=${st.id}>
-          <span class=${cx("dot", st.id)}></span><span class="pl-rail-count num">${list.length}</span><span class="pl-rail-label">${st.label}</span>
-        </button>`;
-        return html`<section role="listitem" key=${st.id} class=${cx("col pl-col", closed && "pl-col-closed", over === st.id && "drop")} data-col=${st.id} aria-label=${`${st.label}, ${pluralize(list.length, "application")}`} onDragOver=${dragOver(st.id)} onDragLeave=${dragLeave(st.id)} onDrop=${dropOn(st.id)}>
-          <header class="col-head">
-            <span class=${cx("dot", st.id)}></span><span>${st.label}</span><span class="count">${list.length}</span>
-            <span class="spacer"></span>
-            ${closed && html`<${Btn} kind="ghost" size="sm" icon="chevL" cls="pl-col-hide" aria-label=${`Collapse ${st.label} column`} title="Collapse" onClick=${() => plSetCollapsed(st.id, true)} />`}
-          </header>
+      ${PL_MAIN.map((sid) => {
+        const st = STAGE[sid], list = by[sid];
+        return html`<section role="listitem" key=${sid} class=${cx("col pl-col", over === sid && "drop")} data-col=${sid} aria-label=${`${st.label}, ${pluralize(list.length, "application")}`} ...${dropProps(sid)}>
+          <header class="col-head"><span class=${cx("dot", sid)}></span><span>${st.label}</span><span class="count">${list.length}</span></header>
           <div class="col-body">
-            ${list.map((a) => html`<${PlCard} key=${a.id} a=${a} settings=${settings} dragging=${drag === a.id}
-              onDragStart=${(e) => { e.dataTransfer.setData("text/plain", a.id); e.dataTransfer.effectAllowed = "move"; setDrag(a.id); }}
-              onDragEnd=${() => { setDrag(null); setOver(null); }}
-              onKeyDown=${onKey(a)}
-              onMenu=${(el) => setMenu({ id: a.id, el })} />`)}
-            ${!list.length && html`<div class="pl-col-empty">${drag ? "Drop here" : filtering ? "No matches" : st.id === "saved" ? "Jobs you save show up here" : closed ? "None" : "Nothing here yet"}</div>`}
+            ${list.map(card)}
+            ${!list.length && html`<div class=${cx("pl-col-empty", drag && "dz")}>${drag ? "Drop here" : filtering ? "No matches" : sid === "saved" ? "Jobs you save show up here" : "Nothing here yet"}</div>`}
           </div>
         </section>`;
       })}
+      ${closedOpen ? html`<section role="listitem" key="closed" class="col pl-col pl-col-closed" data-col="closed" aria-label=${`Closed, ${pluralize(closedList.length, "application")}`}>
+          <header class="col-head">
+            <span class="dot"></span><span>Closed</span><span class="count">${closedList.length}</span>
+            <span class="spacer"></span>
+            <${Btn} kind="ghost" size="sm" icon="chevR" cls="pl-col-hide" aria-label="Collapse the Closed column" title="Collapse" onClick=${() => plSetClosedOpen(false)} />
+          </header>
+          <div class="col-body">
+            ${drag ? closedTargets : null}
+            ${closedList.map(card)}
+            ${!closedList.length && !drag && html`<div class="pl-col-empty">${filtering ? "No matches" : "Rejected and ghosted applications land here"}</div>`}
+          </div>
+        </section>`
+        : drag ? html`<div role="listitem" key="closed" class="pl-rail dragging">${closedTargets}</div>`
+        : html`<button type="button" role="listitem" key="closed" class="pl-rail" data-col="closed" onClick=${() => plSetClosedOpen(true)} aria-label=${`Show closed applications: ${by.rejected.length} rejected, ${by.ghosted.length} ghosted`} title="Show closed applications">
+          <span class="pl-rail-count num">${closedList.length}</span><span class="pl-rail-label">Closed</span><${Icon} name="chevL" size=${14} />
+        </button>`}
     </div>
-    <p class="pl-tip hide-sm" id="pl-kbd-hint">Drag cards between columns, or focus a card and press <${Kbd}>←</${Kbd}> <${Kbd}>→</${Kbd}> to move it a stage, <${Kbd}>↑</${Kbd}> <${Kbd}>↓</${Kbd}> to switch cards, <${Kbd}>↵</${Kbd}> to open.</p>
+    <p class="sr" id="pl-kbd-hint">Press the left and right arrow keys to move a card to another stage, up and down to switch cards, Enter to open.</p>
+    ${hint && html`<div class="pl-tip hide-sm" role="note">
+      <${Icon} name="keyboard" size=${14} />
+      <span>Tip: drag cards between columns, or focus a card and press <${Kbd}>←</${Kbd}> <${Kbd}>→</${Kbd}> to move it.</span>
+      <button type="button" class="pl-tip-x" aria-label="Dismiss tip" title="Dismiss" onClick=${() => plUi({ pipelineHintDone: true })}><${Icon} name="x" size=${14} /></button>
+    </div>`}
     ${menu && Apps.get(menu.id) && html`<${PlMoveMenu} a=${Apps.get(menu.id)} anchor=${menu.el} onPick=${(to) => move(Apps.get(menu.id), to)} onClose=${() => setMenu(null)} />`}
   </${Fragment}>`;
 }
 
 function PlCard({ a, settings, dragging, onMenu, ...rest }) {
   const stt = plStatus(a, settings);
-  return html`<article class=${cx("app-card pl-card", dragging && "dragging")} tabindex="0" draggable="true" data-card=${a.id}
+  return html`<article class=${cx("app-card pl-card", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed")} tabindex="0" draggable="true" data-card=${a.id}
     aria-label=${`${a.title} at ${a.company}. ${STAGE[a.stage].label}. ${stt.text}.`} aria-describedby="pl-kbd-hint"
     onClick=${(e) => { if (!e.target.closest("button")) openApp(a.id); }} ...${rest}>
     <div class="pl-card-top">
@@ -285,9 +342,9 @@ function PlCard({ a, settings, dragging, onMenu, ...rest }) {
       <button type="button" class="pl-more" aria-label=${`Move ${a.company} to another stage`} aria-haspopup="menu" title="Move to…" onClick=${(e) => { e.stopPropagation(); onMenu(e.currentTarget); }}><${Icon} name="more" /></button>
     </div>
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
-    ${(a.location || a.example) && html`<div class="pl-card-loc"><span class="truncate">${a.location}</span>${a.example && html`<${ExampleTag} />`}</div>`}
+    ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} /><span>${stt.text}</span></span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} /><span class="truncate">${stt.text}</span></span>
     </div>
   </article>`;
 }
@@ -330,6 +387,7 @@ function PlMoveMenu({ a, anchor, onPick, onClose }) {
 }
 
 /* ---------- Table ---------- */
+const PL_DUE = ["follow", "ghost", "thanks", "outcome"];
 const PL_COLS = [
   { k: "company", label: "Company / role", v: (a) => `${a.company} ${a.title}`.toLowerCase() },
   { k: "stage", label: "Stage", v: (a) => STAGE[a.stage].i },
@@ -342,7 +400,15 @@ function PlTable({ apps, settings, sort }) {
   const col = PL_COLS.find((c) => c.k === sort.k) || PL_COLS[3];
   const rows = useMemo(() => [...apps].sort((x, y) => { const a = col.v(x), b = col.v(y); return (a < b ? -1 : a > b ? 1 : 0) * sort.dir; }), [apps, sort.k, sort.dir]);
   const setSort = (k) => plUi({ pipelineSort: { k, dir: sort.k === k ? -sort.dir : k === "company" || k === "stage" || k === "next" ? 1 : -1 } });
-  return html`<div class="card pl-table-card">
+  return html`<${Fragment}>
+  <div class="pl-msort">
+    <label for="pl-msort" class="pl-small muted">Sort by</label>
+    <select id="pl-msort" class="select" value=${`${col.k}:${sort.dir}`} onChange=${(e) => { const [k, d] = e.currentTarget.value.split(":"); plUi({ pipelineSort: { k, dir: +d } }); }}>
+      ${[["activity", -1, "Last activity"], ["next", 1, "Next step"], ["silent", -1, "Days silent"], ["stage", 1, "Stage"], ["applied", -1, "Applied, newest"], ["company", 1, "Company, A–Z"]].map(([k, d, l]) => html`<option key=${k} value=${`${k}:${d}`}>${l}</option>`)}
+      ${![["activity", -1], ["next", 1], ["silent", -1], ["stage", 1], ["applied", -1], ["company", 1]].some(([k, d]) => k === col.k && d === sort.dir) && html`<option value=${`${col.k}:${sort.dir}`}>${col.label}${sort.dir > 0 ? ", ascending" : ", descending"}</option>`}
+    </select>
+  </div>
+  <div class="card pl-table-card">
     <div class="table-wrap">
       <table class="table pl-table">
         <thead><tr>${PL_COLS.map((c) => html`<th key=${c.k} class=${cx(c.num && "pl-num")} aria-sort=${sort.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : "none"}>
@@ -352,12 +418,14 @@ function PlTable({ apps, settings, sort }) {
           ${rows.map((a) => {
             const ns = plNextStep(a, settings);
             const silent = ACTIVE_STAGES.includes(a.stage) ? Apps.daysSilent(a) : null;
+            const due = PL_DUE.includes(ns.kind);
+            const dot = due ? "pl-dot-due" : ns.kind === "upcoming" ? "pl-dot-up" : "pl-dot-idle";
             return html`<tr key=${a.id} tabindex="0" onClick=${(e) => { if (!e.target.closest("select")) openApp(a.id); }} onKeyDown=${(e) => { if (e.key === "Enter" && e.target === e.currentTarget) openApp(a.id); }}>
-              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", ns.tone)}>${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}</span></div>${a.example && html`<${ExampleTag} />`}</div></td>
+              <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}${silent != null && silent >= settings.followUpDays ? ` · ${silent}d silent` : ""}</span></div></div></td>
               <td><span class="pl-stage-sel"><span class=${cx("dot", a.stage)}></span><select id=${"pl-st-" + a.id} class="select" value=${a.stage} aria-label=${`Stage for ${a.company}`} onChange=${(e) => Apps.move(a.id, e.currentTarget.value)}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></span></td>
               <td class="num muted">${a.appliedAt ? fmt.date(a.appliedAt) : html`<span class="faint">—</span>`}</td>
               <td class="num muted">${fmt.ago(a.lastActivityAt)}</td>
-              <td><span class=${cx("pl-next", ns.tone)}>${ns.short}</span></td>
+              <td><span class=${cx("pl-next", due && "due")}><span class=${cx("dot", dot)}></span>${ns.short}</span></td>
               <td class="num pl-num">${silent == null ? html`<span class="faint">—</span>` : html`<span class=${cx(silent >= settings.followUpDays && "pl-warn")}>${silent}</span>`}</td>
             </tr>`;
           })}
@@ -365,10 +433,28 @@ function PlTable({ apps, settings, sort }) {
         </tbody>
       </table>
     </div>
-  </div>`;
+  </div>
+  </${Fragment}>`;
 }
 
 /* ---------- Application drawer ---------- */
+const PL_TABS = [{ id: "overview", label: "Overview" }, { id: "rounds", label: "Rounds" }, { id: "timeline", label: "Timeline" }, { id: "notes", label: "Notes" }];
+
+/* The one action that matches the current next step (shown as the drawer's primary button) */
+function plNextAction(a, ns, setTab) {
+  const draft = (mode, extra) => () => openModal("draft", { appId: a.id, mode, ...extra });
+  return {
+    upcoming: { label: "Prep for this round", icon: "prep", run: () => plPrep(a, ns.round) },
+    thanks: { label: "Draft thank-you", icon: "send", run: draft("thanks", { roundId: ns.round?.id }) },
+    outcome: { label: "Log outcome", icon: "flag", run: () => setTab("rounds") },
+    saved: { label: "Mark as applied", icon: "check", run: () => Apps.move(a.id, "applied") },
+    ghost: { label: "Mark as ghosted", icon: "ghost", run: () => Apps.move(a.id, "ghosted") },
+    follow: { label: "Draft follow-up", icon: "reply", run: draft("follow") },
+    schedule: { label: "Add round", icon: "plus", run: () => { Apps.addRound(a.id, { type: a.stage === "screen" ? "recruiter" : "technical" }); setTab("rounds"); } },
+    offer: { label: "Note the deadline", icon: "edit", run: () => setTab("notes") },
+  }[ns.kind] || null;
+}
+
 DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const a = useStore((s) => s.apps[id]);
   const settings = useStore((s) => s.settings);
@@ -380,6 +466,8 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   </${Drawer}>`;
   const hasCo = jobs.status === "ready" && (jobs.byCompany.has(a.company) || jobs.cstats[a.company]);
   const del = () => askConfirm({ title: `Delete ${a.company}?`, body: `This removes ${a.title || "this application"} with its rounds, notes and timeline from this device. You can undo right after.`, confirmLabel: "Delete application", danger: true, onConfirm: () => { closeDrawer(); Apps.remove(a.id); } });
+  const ns = plNextStep(a, settings);
+  const act = plNextAction(a, ns, setT);
   const head = html`<div class="pl-dhead">
     <${Logo} name=${a.company} size="lg" />
     <div class="pl-dhead-text">
@@ -392,20 +480,30 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
     </div>
   </div>`;
   const foot = html`
+    ${act && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
+    ${ns.kind === "wait" && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
     ${a.url && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}
-    <${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>
     <span class="spacer" style="flex:1"></span>
-    <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del}>Delete</${Btn}>`;
-  const rc = (a.rounds || []).length;
+    <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del} aria-label="Delete application" title="Delete application"><span class="hide-sm">Delete</span></${Btn}>`;
+  const counts = { rounds: (a.rounds || []).length, timeline: (a.events || []).length };
+  const onTabKey = (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault(); e.stopPropagation();
+    const i = PL_TABS.findIndex((x) => x.id === t);
+    const nx = PL_TABS[(i + (e.key === "ArrowRight" ? 1 : -1) + PL_TABS.length) % PL_TABS.length].id;
+    setT(nx); setTimeout(() => document.getElementById(`pl-tab-${nx}`)?.focus(), 0);
+  };
   return html`<${Drawer} onClose=${closeDrawer} label=${`${a.company}: ${a.title}`} head=${head} foot=${foot}>
     <${PlStepper} a=${a} />
-    <div class="pl-tabs">
-      <${Seg} label="Sections" value=${t} onChange=${setT} options=${[{ id: "overview", label: "Overview" }, { id: "rounds", label: rc ? `Rounds ${rc}` : "Rounds" }, { id: "timeline", label: "Timeline" }, { id: "notes", label: "Notes" }]} />
+    <div class="tabs pl-dtabs" role="tablist" aria-label="Sections" onKeyDown=${onTabKey}>
+      ${PL_TABS.map((x) => html`<button type="button" role="tab" key=${x.id} id=${`pl-tab-${x.id}`} aria-selected=${t === x.id ? "true" : "false"} aria-controls="pl-tabpanel" tabindex=${t === x.id ? "0" : "-1"} onClick=${() => setT(x.id)}>${x.label}${counts[x.id] ? html`<span class="count">${counts[x.id]}</span>` : null}</button>`)}
     </div>
-    ${t === "overview" && html`<${PlOverview} a=${a} settings=${settings} jobs=${jobs} setTab=${setT} />`}
-    ${t === "rounds" && html`<${PlRounds} a=${a} />`}
-    ${t === "timeline" && html`<${PlTimeline} a=${a} />`}
-    ${t === "notes" && html`<${PlNotes} a=${a} />`}
+    <div id="pl-tabpanel" role="tabpanel" aria-labelledby=${`pl-tab-${t}`} class="pl-tabpanel">
+      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} />`}
+      ${t === "rounds" && html`<${PlRounds} a=${a} />`}
+      ${t === "timeline" && html`<${PlTimeline} a=${a} />`}
+      ${t === "notes" && html`<${PlNotes} a=${a} />`}
+    </div>
   </${Drawer}>`;
 };
 
@@ -434,58 +532,79 @@ function PlStepper({ a }) {
   </div>`;
 }
 
-function PlOverview({ a, settings, jobs, setTab }) {
-  const ns = plNextStep(a, settings);
+/* Read-mode value that turns into an input on click; saves on blur or Enter, Escape cancels */
+function PlInline({ id, label, value, display, type = "text", placeholder, onSave, toInput = (v) => v || "", fromInput = (v) => v }) {
+  const [edit, setEdit] = useState(false);
+  const ref = useRef(null);
+  const done = useRef(false);
+  useEffect(() => { if (edit) { done.current = false; setTimeout(() => { ref.current?.focus(); if (type === "text" || type === "url") ref.current?.select?.(); }, 0); } }, [edit]);
+  const close = (save) => {
+    if (done.current) return; done.current = true;
+    if (save && ref.current) { const v = fromInput(ref.current.value); if (v !== value) onSave(v); }
+    setEdit(false);
+    setTimeout(() => document.getElementById(id + "-v")?.focus(), 0);
+  };
+  if (!edit) return html`<button type="button" id=${id + "-v"} class=${cx("pl-inline", !display && "is-empty")} onClick=${() => setEdit(true)} aria-label=${`${label}: ${display || "not set"}. Edit`}>
+    <span class="truncate">${display || placeholder}</span><${Icon} name="edit" size=${13} />
+  </button>`;
+  return html`<div class="pl-inline-wrap">
+    <input id=${id} ref=${ref} type=${type} class="input pl-inline-input" aria-label=${label} placeholder=${placeholder} value=${toInput(value)}
+      onBlur=${() => close(true)} onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); close(true); } }} />
+    <${PlEscape} onEscape=${() => close(false)} />
+  </div>`;
+}
+/* Registers on the shared Escape stack so Escape cancels the edit instead of closing the drawer */
+function PlEscape({ onEscape }) { useEscape(onEscape); return null; }
+
+function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : "")).replace(/\/$/, ""); } catch { return u; } }
+
+function PlOverview({ a, ns, settings, jobs, setTab }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${pluralize(fmt.days(a.lastReplyAt), "day")} · last reply ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply yet · applied ${pluralize(fmt.days(a.appliedAt), "day")} ago` : "Not applied yet";
-  const actions = {
-    upcoming: html`<${Btn} size="sm" kind="primary" icon="prep" onClick=${() => { plPrep(a, ns.round); }}>Prep for this round</${Btn}><${Btn} size="sm" onClick=${() => setTab("rounds")}>View rounds</${Btn}>`,
-    thanks: html`<${Btn} size="sm" kind="primary" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: ns.round?.id, mode: "thanks" })}>Draft thank-you</${Btn}><${Btn} size="sm" onClick=${() => setTab("rounds")}>Log outcome</${Btn}>`,
-    outcome: html`<${Btn} size="sm" kind="primary" onClick=${() => setTab("rounds")}>Log outcome</${Btn}>`,
-    saved: html`<${Btn} size="sm" kind="primary" icon="check" onClick=${() => Apps.move(a.id, "applied")}>Mark as applied</${Btn}>${a.url && html`<a class="btn sm" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}`,
-    ghost: html`<${Btn} size="sm" kind="primary" icon="ghost" onClick=${() => Apps.move(a.id, "ghosted")}>Mark as ghosted</${Btn}><${Btn} size="sm" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</${Btn}>`,
-    follow: html`<${Btn} size="sm" kind="primary" icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`,
-    schedule: html`<${Btn} size="sm" icon="plus" onClick=${() => { Apps.addRound(a.id, { type: a.stage === "screen" ? "recruiter" : "technical" }); setTab("rounds"); }}>Add round</${Btn}>`,
-    offer: html`<${Btn} size="sm" icon="edit" onClick=${() => setTab("notes")}>Note the deadline</${Btn}>`,
+  const replyTxt = a.lastReplyAt ? `${pluralize(fmt.days(a.lastReplyAt), "day")} · last reply ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
+  const secondary = {
+    upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
+    thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
+    ghost: html`<button type="button" class="pl-linkbtn" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</button>`,
   }[ns.kind];
   return html`<div class="pl-ov">
     <div class=${cx("pl-next-card", ns.tone)}>
       <span class="pl-next-ico"><${Icon} name=${ns.icon} /></span>
-      <div class="stack-sm" style="flex:1">
+      <div class="stack-sm" style="flex:1;min-width:0">
         <span class="pl-eyebrow">Next step</span>
         <strong>${ns.title}</strong>
         <span class="muted pl-small">${ns.sub}</span>
-        ${actions && html`<div class="row wrap pl-next-actions">${actions}</div>`}
+        ${secondary && html`<div class="pl-next-actions pl-small">${secondary}</div>`}
       </div>
     </div>
 
-    <section class="stack">
-      <h3 class="section-title">Details</h3>
+    <section class="dsec">
+      <h3>Details</h3>
       <div class="pl-kv">
-        <label for="pl-applied">Applied on</label>
-        <input id="pl-applied" type="date" class="input" value=${fmt.toDateInput(a.appliedAt)} onChange=${(e) => Apps.update(a.id, { appliedAt: plFromDate(e.currentTarget.value) })} />
-        <label for="pl-url">Posting link</label>
-        <div class="row pl-url-row">
-          <${PlText} id="pl-url" type="url" value=${a.url} placeholder="https://" onSave=${(v) => Apps.update(a.id, { url: v.trim() })} />
-          ${a.url && html`<a class="btn icon" href=${plHref(a.url)} target="_blank" rel="noopener" aria-label="Open posting in a new tab" title="Open posting"><${Icon} name="ext" /></a>`}
+        <span class="pl-kv-k">Applied</span>
+        <${PlInline} id="pl-applied" label="Applied on" type="date" value=${a.appliedAt} display=${a.appliedAt ? fmt.dateY(a.appliedAt) : ""} placeholder="Add date"
+          toInput=${(v) => fmt.toDateInput(v)} fromInput=${(v) => plFromDate(v)} onSave=${(v) => Apps.update(a.id, { appliedAt: v })} />
+        <span class="pl-kv-k">Posting</span>
+        <div class="pl-url-row">
+          <${PlInline} id="pl-url" label="Posting link" type="url" value=${a.url || ""} display=${a.url ? plHost(a.url) : ""} placeholder="Add link" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { url: v })} />
+          ${a.url && html`<a class="btn icon sm ghost" href=${plHref(a.url)} target="_blank" rel="noopener" aria-label="Open posting in a new tab" title="Open posting"><${Icon} name="ext" /></a>`}
         </div>
-        <label for="pl-loc">Location</label>
-        <${PlText} id="pl-loc" value=${a.location} placeholder="City, or Remote" onSave=${(v) => Apps.update(a.id, { location: v })} />
-        <label for="pl-salary">Salary</label>
-        <${PlText} id="pl-salary" value=${a.salary} placeholder="e.g. $45/hr or $120k base" onSave=${(v) => Apps.update(a.id, { salary: v })} />
-        <span class="pl-kv-k">Since last reply</span>
+        <span class="pl-kv-k">Location</span>
+        <${PlInline} id="pl-loc" label="Location" value=${a.location || ""} display=${a.location} placeholder="Add location" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { location: v })} />
+        <span class="pl-kv-k">Salary</span>
+        <${PlInline} id="pl-salary" label="Salary" value=${a.salary || ""} display=${a.salary} placeholder="Add salary" fromInput=${(v) => v.trim()} onSave=${(v) => Apps.update(a.id, { salary: v })} />
+        <span class="pl-kv-k">Last reply</span>
         <span class=${cx("pl-kv-v num", ACTIVE_STAGES.includes(a.stage) && silent >= settings.followUpDays && "pl-warn")}>${replyTxt}</span>
         ${a.followedUpAt && html`<span class="pl-kv-k">Followed up</span><span class="pl-kv-v num">${fmt.dateY(a.followedUpAt)}</span>`}
       </div>
     </section>
 
-    ${job && html`<section class="stack">
-      <h3 class="section-title">Posting</h3>
-      <div class="pl-job card">
-        <div class="stack-sm" style="flex:1;min-width:0">
+    ${job && html`<section class="dsec">
+      <h3>Listing</h3>
+      <div class="pl-job">
+        <div class="stack-sm" style="flex:1;min-width:0;gap:2px">
           <span class="truncate" style="font-weight:500">${job.t}</span>
-          <span class="row wrap pl-small muted"><${GhostScore} g=${job.g} /><span class="pl-sep">·</span><span>Posted ${fmt.ago(job.p)}</span></span>
+          <span class="row wrap pl-small muted" style="gap:6px"><${GhostScore} g=${job.g} /><span class="pl-sep">·</span><span>Posted ${fmt.ago(job.p)}</span></span>
         </div>
         <${Btn} size="sm" iconRight="chevR" onClick=${() => openJob(job.id)}>View listing</${Btn}>
       </div>
@@ -512,17 +631,17 @@ function PlContacts({ a }) {
   };
   const rm = (i) => { const c = a.contacts[i]; Apps.update(a.id, (x) => ({ contacts: x.contacts.filter((_, j) => j !== i) })); toast(`Removed ${c.name}`, { undo: () => Apps.update(a.id, (x) => { const n = [...x.contacts]; n.splice(i, 0, c); return { contacts: n }; }) }); };
   const contacts = a.contacts || [];
-  return html`<section class="stack">
-    <h3 class="section-title">Contacts <span class="count">${contacts.length || ""}</span></h3>
-    ${contacts.length ? html`<div class="list pl-contacts">${contacts.map((c, i) => html`<div class="pl-contact" key=${c.name + i}>
+  return html`<section class="dsec">
+    <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}</h3>
+    ${contacts.length > 0 && html`<div class="list pl-contacts">${contacts.map((c, i) => html`<div class="pl-contact" key=${c.name + i}>
       <span class="pl-avatar" aria-hidden="true">${initials(c.name)}</span>
       <div class="stack-sm" style="gap:0;flex:1;min-width:0"><span class="truncate" style="font-weight:500">${c.name}</span><span class="truncate muted pl-small">${[c.role, c.email].filter(Boolean).join(" · ") || "No role or email"}</span></div>
       ${c.email && html`<${Btn} kind="ghost" size="sm" icon="copy" aria-label=${`Copy ${c.name}'s email`} title="Copy email" onClick=${() => copyText(c.email, "Email copied")} />`}
       <${Btn} kind="ghost" size="sm" icon="x" aria-label=${`Remove ${c.name}`} title="Remove" onClick=${() => rm(i)} />
-    </div>`)}</div>` : html`<p class="muted pl-small">Recruiters and interviewers you talk to. Heardback uses the first name here in follow-up drafts.</p>`}
+    </div>`)}</div>`}
     <form class="pl-contact-form" onSubmit=${add}>
       <input id="pl-c-name" class="input" placeholder="Name" aria-label="Contact name" value=${f.name} onInput=${(e) => { setF({ ...f, name: e.currentTarget.value }); setErr(""); }} aria-invalid=${err ? "true" : undefined} />
-      <input id="pl-c-role" class="input" placeholder="Role (e.g. Recruiter)" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
+      <input id="pl-c-role" class="input" placeholder="Role" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
       <input id="pl-c-email" class="input" type="email" placeholder="Email" aria-label="Contact email" value=${f.email} onInput=${(e) => setF({ ...f, email: e.currentTarget.value })} />
       <button type="submit" class="btn"><${Icon} name="plus" />Add</button>
     </form>
@@ -538,8 +657,8 @@ function PlRounds({ a }) {
     setTimeout(() => { const el = document.getElementById(`pl-r-${r.id}-type`); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.focus(); }, 60);
   };
   return html`<div class="stack">
-    <div class="row"><span class="muted pl-small" style="flex:1">${rounds.length ? "Each round gets a prep reminder before it and a thank-you nudge after it." : ""}</span>${rounds.length > 0 && html`<${Btn} size="sm" icon="plus" onClick=${add}>Add round</${Btn}>`}</div>
-    ${!rounds.length && html`<div class="card"><${Empty} icon="cal" title="No rounds yet" action=${html`<${Btn} kind="primary" icon="plus" onClick=${add}>Add round</${Btn}>`}>Log each interview with its date, type and interviewers. Heardback reminds you to prep and to send a thank-you.</${Empty}></div>`}
+    ${rounds.length > 0 && html`<div class="row"><span class="spacer" style="flex:1"></span><${Btn} size="sm" icon="plus" onClick=${add}>Add round</${Btn}></div>`}
+    ${!rounds.length && html`<${Empty} icon="cal" title="No rounds yet" action=${html`<${Btn} icon="plus" onClick=${add}>Add round</${Btn}>`}>Log each interview with its date, type and interviewers.</${Empty}>`}
     ${rounds.map((r) => html`<${PlRound} key=${r.id} a=${a} r=${r} />`)}
   </div>`;
 }
@@ -548,30 +667,31 @@ function PlRound({ a, r }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
   const t = now();
-  const when = r.at ? (r.at > t ? html`<span class="badge info">${fmt.until(r.at)}</span>` : html`<span class="badge">Past</span>`) : html`<span class="badge outline">No date</span>`;
+  const when = r.at ? (r.at > t ? html`<span class="badge info">${fmt.until(r.at)}</span>` : null) : null;
   const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can't be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
   return html`<div class="round pl-round" data-round=${r.id}>
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
-      <input id=${pid + "-at"} type="datetime-local" class="input pl-round-at" aria-label="Date and time" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) })} />
+      <${PlInline} id=${pid + "-at"} label="Date and time" type="datetime-local" value=${r.at || null} display=${r.at ? `${plLongWhen(r.at)}` : ""} placeholder="Add date and time"
+        toInput=${(v) => fmt.toInput(v)} fromInput=${(v) => fmt.fromInput(v) || null} onSave=${(v) => upd({ at: v })} />
       ${when}
     </div>
     <div class="pl-round-out">
       <span class="label" id=${pid + "-out-l"}>Outcome</span>
       <div class="seg pl-outcome" role="group" aria-labelledby=${pid + "-out-l"}>${PL_OUTCOMES.map((o) => html`<button type="button" key=${o.id} class=${"o-" + o.id} aria-pressed=${r.outcome === o.id ? "true" : "false"} onClick=${() => upd({ outcome: o.id })}>${o.label}</button>`)}</div>
     </div>
-    <${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="Names and roles, e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}>
+    <${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}>
     <div class="pl-round-grid">
-      <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics to review, stories to tell, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
-      <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what went well, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
+      <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics, stories, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
+      <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
     </div>
     <div class="pl-round-foot">
       <label class="check" for=${pid + "-thx"}><input id=${pid + "-thx"} type="checkbox" checked=${!!r.thanked} onChange=${(e) => upd({ thanked: e.currentTarget.checked })} />Thank-you sent</label>
       <span class="spacer" style="flex:1"></span>
       <${Btn} kind="ghost" size="sm" icon="trash" aria-label="Delete round" title="Delete round" onClick=${del} />
       <${CalendarButton} appId=${a.id} round=${r} />
-      <${Btn} size="sm" icon="prep" onClick=${() => plPrep(a, r)}>Prep for this round</${Btn}>
-      <${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>
+      ${r.at && r.at > t ? html`<${Btn} size="sm" icon="prep" onClick=${() => plPrep(a, r)}>Prep</${Btn}>`
+        : html`<${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>`}
     </div>
   </div>`;
 }
@@ -624,20 +744,31 @@ function PlNotes({ a }) {
 MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${(p.mode || p.kind) === "thanks" ? "thanks" : "follow"} />`;
 MODALS.thanks = (p) => html`<${PlDraft} ...${p} kind="thanks" />`;
 MODALS.follow = (p) => html`<${PlDraft} ...${p} kind="follow" />`;
+/* Template text with a real greeting and a complete subject line */
+function plDraftText(a, r, thanks, profile) {
+  const first = (s) => plFirstName(s).split(/\s+/)[0] || "";
+  const who = first(thanks && r?.interviewers) || first(a.contacts?.[0]?.name);
+  const greet = `Hi ${who || `${a.company} team`},`;
+  let t = thanks ? thankYouTemplate(a, r ? { ...r, interviewers: "", reflection: "" } : r, profile) : followUpTemplate(a, profile);
+  t = t.replace(/^Hi [^\n]*,$/m, greet);
+  if (!thanks && a.title) t = t.replace(/^(Subject: Following up on my .+?)(?: application)?$/m, "$1 application");
+  if (thanks) t = t.replace(/^Subject: .*$/m, `Subject: Thank you for your time${a.title ? ` · ${a.title}` : ""}`);
+  return t;
+}
 function PlDraft({ appId, roundId, kind = "follow" }) {
   const a = Apps.get(appId);
   const profile = useStore((s) => s.profile);
   const c = useCaps();
   const r = a && roundId ? (a.rounds || []).find((x) => x.id === roundId) : null;
   const thanks = kind === "thanks";
-  const tpl = a ? (thanks ? thankYouTemplate(a, r ? { ...r, interviewers: plFirstName(r.interviewers), reflection: "" } : r, profile) : followUpTemplate(a, profile)) : "";
+  const tpl = a ? plDraftText(a, r, thanks, profile) : "";
   const [text, setText] = useState(tpl);
   const [busy, setBusy] = useState(false);
   const [ai, setAi] = useState(false);
   const [err, setErr] = useState("");
   const ctrl = useRef(null);
   const before = useRef(tpl);
-  useEffect(() => { setTimeout(() => { const t = document.getElementById("pl-draft"); if (t) { t.focus(); t.setSelectionRange(0, 0); t.scrollTop = 0; } }, 60); return () => ctrl.current?.abort(); }, []);
+  useEffect(() => () => ctrl.current?.abort(), []);
   if (!a) return html`<${Modal} title="Draft" onClose=${closeModal}><p class="muted">This application isn't here anymore.</p></${Modal}>`;
 
   const improve = async () => {
@@ -683,12 +814,11 @@ ${draft}
   return html`<${Modal} title=${title} onClose=${closeModal} size="lg" foot=${html`
     <${Btn} icon="copy" onClick=${() => copyText(text, "Draft copied")} disabled=${busy}>Copy</${Btn}>
     <${Btn} kind="primary" icon="check" onClick=${sent} disabled=${busy}>Mark as sent</${Btn}>`}>
-    <div class="callout"><${Icon} name="info" /><span>Copy this into your own email and send it from your inbox. Then mark it as sent so Heardback ${thanks ? "stops reminding you" : "restarts the reply clock"}.</span></div>
     <div class="field">
       <div class="row"><label for="pl-draft" style="flex:1" class="label">${thanks ? "Thank-you note" : "Follow-up email"}</label>
         ${ai && !busy && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude. Review before sending.</span>`}</div>
       <textarea id="pl-draft" class=${cx("textarea pl-draft", busy && "busy")} value=${text} readOnly=${busy} onInput=${(e) => setText(e.currentTarget.value)} aria-busy=${busy ? "true" : "false"}></textarea>
-      <span class="hint">${thanks && r && !r.reflection ? "Tip: add a line about how it went in the round's notes and the draft gets more specific." : "Edit freely. Specific beats polished."}</span>
+      <span class="hint">Send it from your inbox, then mark as sent.</span>
     </div>
     ${err && html`<div class="callout wait" role="alert"><${Icon} name="alert" /><span>${err} Your draft is unchanged.</span></div>`}
     ${c.sample && html`<div class="row wrap">
@@ -706,7 +836,6 @@ MODALS.add = function PlAdd({ job }) {
     stage: "applied", date: fmt.toDateInput(now()),
   }));
   const [errs, setErrs] = useState({});
-  useEffect(() => { setTimeout(() => document.getElementById(job ? "pl-add-stage" : "pl-add-co")?.focus(), 60); }, []);
   const set = (k) => (e) => { setF({ ...f, [k]: e.currentTarget.value }); if (errs[k]) setErrs({ ...errs, [k]: "" }); };
   const existing = job ? Apps.byJob(job.id) : null;
   const save = (open) => {
@@ -728,12 +857,12 @@ MODALS.add = function PlAdd({ job }) {
     <${Btn} kind="primary" onClick=${() => save(false)}>Add application<span class="hide-sm"><${Kbd}>↵</${Kbd}></span></${Btn}>`}>
     ${existing && html`<div class="callout info"><${Icon} name="info" /><span>This job is already in your pipeline as ${STAGE[existing.stage].label}. <button type="button" class="pl-linkbtn" onClick=${() => { closeModal(); openApp(existing.id); }}>Open it</button></span></div>`}
     <form id="pl-add-form" class="pl-form" onSubmit=${(e) => { e.preventDefault(); save(false); }} novalidate>
-      <div class="field"><label for="pl-add-co">Company</label><input id="pl-add-co" class="input" value=${f.company} onInput=${set("company")} placeholder="e.g. Northwind Labs" autofocus aria-invalid=${errs.company ? "true" : undefined} aria-describedby=${errs.company ? "pl-add-co-err" : undefined} autocomplete="off" />${errs.company && html`<span class="pl-err" id="pl-add-co-err">${errs.company}</span>`}</div>
+      <div class="field"><label for="pl-add-co">Company</label><input id="pl-add-co" class="input" value=${f.company} onInput=${set("company")} placeholder="e.g. Northwind Labs" aria-invalid=${errs.company ? "true" : undefined} aria-describedby=${errs.company ? "pl-add-co-err" : undefined} autocomplete="off" />${errs.company && html`<span class="pl-err" id="pl-add-co-err">${errs.company}</span>`}</div>
       <div class="field"><label for="pl-add-title">Role</label><input id="pl-add-title" class="input" value=${f.title} onInput=${set("title")} placeholder="e.g. Software Engineer Intern" aria-invalid=${errs.title ? "true" : undefined} aria-describedby=${errs.title ? "pl-add-title-err" : undefined} autocomplete="off" />${errs.title && html`<span class="pl-err" id="pl-add-title-err">${errs.title}</span>`}</div>
       <div class="field"><label for="pl-add-loc">Location <span class="faint">optional</span></label><input id="pl-add-loc" class="input" value=${f.location} onInput=${set("location")} placeholder="City, or Remote" /></div>
       <div class="field"><label for="pl-add-url">Posting link <span class="faint">optional</span></label><input id="pl-add-url" class="input" type="url" value=${f.url} onInput=${set("url")} placeholder="https://" /></div>
       <div class="field"><label for="pl-add-stage">Stage</label><select id="pl-add-stage" class="select" value=${f.stage} onChange=${set("stage")}>${STAGES.map((st) => html`<option key=${st.id} value=${st.id}>${st.label}</option>`)}</select></div>
-      <div class="field"><label for="pl-add-date">${f.stage === "saved" ? "Applied on" : "Applied on"}</label><input id="pl-add-date" class="input" type="date" value=${f.stage === "saved" ? "" : f.date} disabled=${f.stage === "saved"} onInput=${set("date")} />${f.stage === "saved" && html`<span class="hint">Set when you move it to Applied.</span>`}</div>
+      <div class="field"><label for="pl-add-date">Applied on</label><input id="pl-add-date" class="input" type="date" value=${f.stage === "saved" ? "" : f.date} disabled=${f.stage === "saved"} onInput=${set("date")} />${f.stage === "saved" && html`<span class="hint">Set when you move it to Applied.</span>`}</div>
       <button type="submit" class="sr" tabindex="-1">Add application</button>
     </form>
   </${Modal}>`;
@@ -749,16 +878,18 @@ MODALS.paste = function PlPaste() {
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [showRaw, setShowRaw] = useState(false);
   const ctrl = useRef(null);
-  useEffect(() => { setTimeout(() => document.getElementById("pl-p-raw")?.focus(), 60); return () => ctrl.current?.abort(); }, []);
+  useEffect(() => () => ctrl.current?.abort(), []);
   const apps = useStore((s) => s.apps);
-  const appList = useMemo(() => Object.values(apps).sort((x, y) => x.company.localeCompare(y.company)), [apps]);
+  const showEx = useStore((s) => s.settings.showExamples);
+  const appList = useMemo(() => Apps.list().sort((x, y) => x.company.localeCompare(y.company)), [apps, showEx]);
+  const visibleIds = new Set(appList.map((a) => a.id));
 
   const fill = (p, from) => {
     const m = matchApp(p.company, p.title);
-    setF({ kind: p.kind, company: p.company || "", title: p.title || "", at: p.at || now(), interviewAt: p.interviewAt || null, roundType: p.roundType || (p.kind === "screen" ? "recruiter" : "other"), interviewers: p.interviewers || "", next: p.next || "" });
-    setTarget(m ? m.id : "new"); setTouched(false); setSrc(from); setErr("");
-    setTimeout(() => document.getElementById("pl-p-preview")?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 40);
+    setF({ kind: p.kind, company: p.company || "", title: p.title || "", at: p.at || now(), interviewAt: p.interviewAt || null, roundType: p.roundType || (p.kind === "screen" ? "recruiter" : "other"), interviewers: p.interviewers || "", next: p.next || "", tz: p.tz || "" });
+    setTarget(m && visibleIds.has(m.id) ? m.id : "new"); setTouched(false); setSrc(from); setErr(""); setShowRaw(false);
   };
   const readRules = () => { if (!raw.trim()) { setErr("Paste an email first, or try one of the samples."); return; } fill(plParse(raw), "rules"); };
   const readAI = async () => {
@@ -791,20 +922,22 @@ ${raw.slice(0, 12000)}
     } finally { setBusy(false); ctrl.current = null; }
   };
   const sample = (k) => { setRaw(PL_SAMPLES[k].text); setF(null); setErr(""); fill(plParse(PL_SAMPLES[k].text), "rules"); };
-  const upd = (k) => (e) => { const v = e.currentTarget.value; setF((x) => { const n = { ...x, [k]: v }; if ((k === "company" || k === "title") && !touched) { const m = matchApp(k === "company" ? v : x.company, k === "title" ? v : x.title); setTarget(m ? m.id : "new"); } return n; }); };
+  const upd = (k) => (e) => { const v = e.currentTarget.value; setF((x) => { const n = { ...x, [k]: v }; if ((k === "company" || k === "title") && !touched) { const m = matchApp(k === "company" ? v : x.company, k === "title" ? v : x.title); setTarget(m && visibleIds.has(m.id) ? m.id : "new"); } return n; }); };
 
   const tApp = f && target !== "new" ? apps[target] : null;
   const k = f ? EMAIL_KINDS[f.kind] : null;
   const roundOn = f && (f.kind === "interview" || f.kind === "screen");
-  const willRound = roundOn && !!f.interviewAt;
+  const dupRound = roundOn && f.interviewAt && tApp ? (tApp.rounds || []).some((r) => r.type === (f.roundType || "other") && r.at && Math.abs(r.at - f.interviewAt) <= 30 * 60 * 1000) : false;
+  const willRound = roundOn && !!f.interviewAt && !dupRound;
   const plan = (() => {
     if (!f) return "";
-    const parts = [];
     const stage = k.stage;
-    if (tApp) parts.push(plShouldMove(tApp.stage, stage) ? `Move ${tApp.company} · ${tApp.title} from ${STAGE[tApp.stage].label} to ${STAGE[stage].label}` : `Add this email to the timeline of ${tApp.company} · ${tApp.title} (stays in ${STAGE[tApp.stage].label})`);
-    else parts.push(`Create a new application for ${f.company || "an unnamed company"}${f.title ? " · " + f.title : ""} in ${STAGE[stage || "applied"].label}`);
-    if (willRound) parts.push(`add a ${ROUND[f.roundType]?.label || "Interview"} round on ${fmt.dateTime(f.interviewAt)}`);
-    return parts.join(" and ") + ".";
+    const rt = ROUND[f.roundType]?.label || "Interview";
+    const round = willRound ? `adds a ${rt} round on ${plLongWhen(f.interviewAt)}` : "";
+    const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+    if (!tApp) return `Creates ${f.company || "a new application"}${f.title ? " · " + f.title : ""} in ${STAGE[stage || "applied"].label}${round ? " and " + round : ""}.`;
+    if (plShouldMove(tApp.stage, stage)) return `Moves ${tApp.company} to ${STAGE[stage].label}${round ? " and " + round : " and logs this email"}.`;
+    return `${round ? cap(round) + " and logs this email" : `Logs this email on ${tApp.company}`}.${dupRound ? " This round is already logged." : ""} Stage stays ${STAGE[tApp.stage].label}.`;
   })();
   const confirm = () => {
     if (!tApp && !f.company.trim()) { setErr("Add the company name so Heardback can create the application."); document.getElementById("pl-p-co")?.focus(); return; }
@@ -820,6 +953,7 @@ ${raw.slice(0, 12000)}
       if (stage === "offer") celebrate(a);
     }
     if (f.kind !== "confirmation" && f.kind !== "other") Apps.update(id, (x) => ({ lastReplyAt: Math.max(x.lastReplyAt || 0, at) }));
+    if (dupRound) done.push("round already logged");
     if (willRound) { Apps.addRound(id, { type: f.roundType || "other", at: f.interviewAt, interviewers: f.interviewers || "" }); done.push(`${ROUND[f.roundType]?.label || "Interview"} round added`); }
     Apps.addEvent(id, { kind: "email", text: `Logged email: ${k.label}` });
     const app = Apps.get(id);
@@ -828,16 +962,22 @@ ${raw.slice(0, 12000)}
   };
 
   return html`<${Modal} title="Log an email" onClose=${closeModal} size="lg" foot=${html`
-    <span class="pl-foot-note hide-sm">Read on this device. Nothing is sent anywhere${c.sample ? " unless you choose Claude" : ""}.</span>
+    <span class="pl-foot-note hide-sm">Read on this device.</span>
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" onClick=${closeModal}>Cancel</${Btn}>
     ${f ? html`<${Btn} kind="primary" icon="check" onClick=${confirm}>${tApp ? "Update application" : "Create application"}</${Btn}>` : html`<${Btn} kind="primary" onClick=${readRules} disabled=${busy}>Read email</${Btn}>`}`}>
-    <div class="field">
-      <div class="row"><label for="pl-p-raw" class="label" style="flex:1">Email</label>${raw && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => { setRaw(""); setF(null); setErr(""); document.getElementById("pl-p-raw")?.focus(); }}>Clear</button>`}</div>
+    ${f && !showRaw ? html`<div class="pl-raw-sum">
+      <${Icon} name="mail" size=${15} />
+      <span class="truncate">${plEmailSummary(raw)}</span>
+      <button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(true)} aria-expanded="false" aria-controls="pl-p-raw">Show</button>
+    </div>` : html`<div class="field">
+      <div class="row"><label for="pl-p-raw" class="label" style="flex:1">Email</label>
+        ${f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(false)} aria-expanded="true">Hide</button>`}
+        ${raw && !f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => { setRaw(""); setF(null); setErr(""); document.getElementById("pl-p-raw")?.focus(); }}>Clear</button>`}</div>
       <textarea id="pl-p-raw" class=${cx("textarea pl-raw", f && "short")} value=${raw} autofocus onInput=${(e) => { setRaw(e.currentTarget.value); setErr(""); }}
         placeholder=${"Paste the whole email here, including the From and Subject lines if you can.\n\nWorks with application confirmations, interview invites, rejections and offers."}></textarea>
-      <div class="pl-samples"><span class="hint">Try a sample:</span>${Object.entries(PL_SAMPLES).map(([key, x]) => html`<button type="button" key=${key} class="chip" id=${"pl-sample-" + key} onClick=${() => sample(key)}>${x.label}</button>`)}<span class="hint">Fictional companies.</span></div>
-    </div>
+      ${html`<div class="pl-samples"><span class="hint">Try a sample:</span>${Object.entries(PL_SAMPLES).map(([key, x]) => html`<button type="button" key=${key} class="chip" id=${"pl-sample-" + key} onClick=${() => sample(key)}>${x.label}</button>`)}</div>`}
+    </div>`}
     ${!f && c.sample && html`<div class="row wrap pl-ai-row">
       ${busy ? html`<span class="pl-thinking"><span class="pl-spin" aria-hidden="true"></span>Thinking…</span><${Btn} size="sm" icon="x" onClick=${() => ctrl.current?.abort()}>Stop</${Btn}>` : html`<${Btn} size="sm" icon="spark" onClick=${readAI}>Read with Claude instead</${Btn}>`}
       <span class="hint">${busy ? "" : "Better with unusual emails. Uses your Claude account."}</span>
@@ -846,18 +986,18 @@ ${raw.slice(0, 12000)}
     ${f && html`<div class="pl-preview card" id="pl-p-preview">
       <div class="pl-preview-head">
         <span class=${cx("badge", { confirmation: "accent", interview: "wait", screen: "info", rejection: "bad", offer: "ok", other: "" }[f.kind])}>${k.label}</span>
-        ${src === "ai" ? html`<span class="ai-label"><${Icon} name="spark" />Read by Claude. Check the fields.</span>` : html`<span class="hint">Detected on this device. Check the fields.</span>`}
+        ${src === "ai" ? html`<span class="ai-label"><${Icon} name="spark" />Read by Claude. Check the fields.</span>` : html`<span class="hint">Check the fields below.</span>`}
         <span class="spacer" style="flex:1"></span>
         ${c.sample && src !== "ai" && (busy ? html`<span class="pl-thinking"><span class="pl-spin" aria-hidden="true"></span>Thinking…</span><${Btn} size="sm" onClick=${() => ctrl.current?.abort()}>Stop</${Btn}>` : html`<${Btn} size="sm" icon="spark" onClick=${readAI}>Read with Claude</${Btn}>`)}
       </div>
-      <div class="pl-plan"><${Icon} name="arrowR" /><div><span class="pl-eyebrow">What happens when you confirm</span><p>${plan}</p></div></div>
+      <div class="pl-plan"><${Icon} name="arrowR" /><p>${plan}</p></div>
       <div class="pl-preview-grid">
         <div class="field"><label for="pl-p-kind">Type</label><select id="pl-p-kind" class="select" value=${f.kind} onChange=${upd("kind")}>${Object.entries(EMAIL_KINDS).map(([id, x]) => html`<option key=${id} value=${id}>${x.label}</option>`)}</select></div>
         <div class="field"><label for="pl-p-date">Email date</label><input id="pl-p-date" class="input" type="date" value=${fmt.toDateInput(f.at)} onChange=${(e) => setF({ ...f, at: plFromDate(e.currentTarget.value) || f.at })} /></div>
         <div class="field"><label for="pl-p-co">Company</label><input id="pl-p-co" class="input" value=${f.company} onInput=${upd("company")} placeholder="Not found. Type it in." /></div>
         <div class="field"><label for="pl-p-title">Role</label><input id="pl-p-title" class="input" value=${f.title} onInput=${upd("title")} placeholder="Not found. Type it in." /></div>
         ${roundOn && html`
-          <div class="field"><label for="pl-p-when">Interview time</label><input id="pl-p-when" class="input" type="datetime-local" value=${fmt.toInput(f.interviewAt)} onChange=${(e) => setF({ ...f, interviewAt: fmt.fromInput(e.currentTarget.value) })} />${!f.interviewAt && html`<span class="hint">No time found. Add one to create a round.</span>`}</div>
+          <div class="field"><label for="pl-p-when">Interview time</label><input id="pl-p-when" class="input" type="datetime-local" value=${fmt.toInput(f.interviewAt)} onChange=${(e) => setF({ ...f, interviewAt: fmt.fromInput(e.currentTarget.value), tz: "" })} />${!f.interviewAt ? html`<span class="hint">No time found. Add one to create a round.</span>` : f.tz ? html`<span class="hint">Converted from ${f.tz} to your time.</span>` : null}</div>
           <div class="field"><label for="pl-p-rt">Round type</label><select id="pl-p-rt" class="select" value=${f.roundType} onChange=${upd("roundType")}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select></div>
           <div class="field pl-span2"><label for="pl-p-who">Interviewers</label><input id="pl-p-who" class="input" value=${f.interviewers} onInput=${upd("interviewers")} placeholder="Optional" /></div>`}
         <div class="field pl-span2"><label for="pl-p-target">Apply to</label>

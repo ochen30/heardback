@@ -176,7 +176,7 @@ function PrepRoundItem({ a, r, on, onClick, past }) {
     <${Logo} name=${a.company} size="sm" />
     <span class="stack-sm prep-item-main">
       <span class="prep-item-title truncate">${a.company}</span>
-      <span class="prep-item-sub truncate">${ROUND[r.type]?.label || "Interview"}${a.example ? " · Example" : ""}</span>
+      <span class="prep-item-sub truncate">${ROUND[r.type]?.label || "Interview"}</span>
     </span>
     <span class=${cx("prep-when num", !past && r.at && r.at - now() < DAY && "soon")}>${r.at ? (past ? fmt.date(r.at) : fmt.until(r.at)) : "No date"}</span>
   </button>`;
@@ -196,7 +196,7 @@ function PrepTimer({ resetKey }) {
   return html`<div class="prep-timer">
     <span class=${cx("prep-clock num", left === 0 && "done", left > 0 && left <= 20 && "low")} role="timer" aria-live="off" aria-label=${`${mm} minutes ${ss} seconds left`}>${mm}:${ss}</span>
     <div class="row">
-      <${Btn} kind=${run ? "" : "primary"} icon=${run ? "clock" : "play"} onClick=${() => { if (left === 0) setLeft(LIMIT); setRun(!run); }} id="prep-timer-toggle">${run ? "Pause" : left < LIMIT && left > 0 ? "Resume" : "Start"}</${Btn}>
+      <${Btn} icon=${run ? "clock" : "play"} onClick=${() => { if (left === 0) setLeft(LIMIT); setRun(!run); }} id="prep-timer-toggle">${run ? "Pause" : left < LIMIT && left > 0 ? "Resume" : "Start"}</${Btn}>
       <${Btn} kind="ghost" icon="refresh" onClick=${() => { setRun(false); setLeft(LIMIT); }} disabled=${left === LIMIT && !run}>Reset</${Btn}>
     </div>
     <span class="hint">${left === 0 ? "Time. Land your answer in one sentence." : "Aim for about two minutes per answer."}</span>
@@ -208,17 +208,22 @@ function PrepAIStatus({ busy, onStop }) {
   return html`<div class="row prep-thinking" role="status"><span class="prep-dot"></span><span class="muted" style="font-size:var(--fs-sm)">Thinking…</span><${Btn} size="sm" kind="ghost" onClick=${onStop}>Stop</${Btn}></div>`;
 }
 
+/* Practice outlines are kept per question in store.ui.prepPractice, so they survive Exit and reloads. */
+function prepSetOutline(k, v) {
+  store.set((s) => { const m = { ...(s.ui.prepPractice || {}) }; if (v) m[k] = v; else delete m[k]; return { ...s, ui: { ...s.ui, prepPractice: m } }; });
+}
+
 function PrepPractice({ questions, ctx, onExit }) {
   const c = useCaps();
   const [i, setI] = useState(0);
-  const [notes, setNotes] = useState({});
+  const notes = useStore((s) => s.ui.prepPractice) || {};
   const [fb, setFb] = useState({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const ctl = useRef(null);
   useEffect(() => () => ctl.current?.abort(), []);
   const q = questions[i];
-  const outline = notes[i] || "";
+  const outline = notes[q.q] || "";
   const feedback = async () => {
     ctl.current?.abort();
     const ac = new AbortController(); ctl.current = ac;
@@ -234,15 +239,15 @@ function PrepPractice({ questions, ctx, onExit }) {
   const goTo = (n) => { stop(); setErr(""); setI(n); };
   return html`<div class="card prep-practice">
     <div class="card-head">
-      <${Icon} name="play" /><h3>Practice</h3><span class="faint num prep-count">${i + 1} of ${questions.length}</span>
-      <span class="spacer"></span><${Btn} size="sm" kind="ghost" icon="x" onClick=${onExit} id="prep-exit">Exit<span class="hide-sm">${"\u00a0practice"}</span></${Btn}>
+      <h3>Practice</h3><span class="prep-count num">${i + 1} of ${questions.length}</span>
+      <span class="spacer"></span><${Btn} size="sm" kind="ghost" icon="x" onClick=${onExit} id="prep-exit"><span class="hide-sm">Exit practice</span><span class="show-sm">Exit</span></${Btn}>
     </div>
     <div class="card-body prep-practice-body">
       <div class="stack prep-q-col">
         <p class="prep-q-big">${q.q}</p>
-        ${q.t && html`<p class="prep-tip"><span class="faint">What a good answer shows:</span> ${q.t}</p>`}
+        ${q.t && html`<div class="prep-tip-block"><span class="prep-tip-label">What a good answer shows</span><p class="prep-tip">${q.t}</p></div>`}
         <${Field} label="Your answer outline" id="prep-outline" hint="Bullet the key points. Notes stay in this browser.">
-          <textarea id="prep-outline" class="textarea" rows="5" placeholder="Situation, what you did, the result…" value=${outline} onInput=${(e) => { const v = e.currentTarget.value; setNotes((n) => ({ ...n, [i]: v })); }}></textarea>
+          <textarea id="prep-outline" class="textarea" rows="5" placeholder="Situation, what you did, the result…" value=${outline} onInput=${(e) => prepSetOutline(q.q, e.currentTarget.value)}></textarea>
         </${Field}>
         ${c.sample && html`<div class="stack-sm">
           <div class="row wrap">
@@ -269,13 +274,13 @@ function PrepNotes({ a, r }) {
   const [state, setState] = useState("idle");
   const tm = useRef(null), pending = useRef(null);
   const flush = () => { if (pending.current != null) { Apps.updateRound(a.id, r.id, { prep: pending.current }); pending.current = null; setState("saved"); } };
-  useEffect(() => () => { clearTimeout(tm.current); flush(); }, []);
+  useEffect(() => { const off = onFlush(() => { clearTimeout(tm.current); flush(); }); return () => { off(); clearTimeout(tm.current); flush(); }; }, []);
   const onInput = (e) => {
     const x = e.currentTarget.value; setV(x); pending.current = x; setState("typing");
     clearTimeout(tm.current); tm.current = setTimeout(flush, 600);
   };
   return html`<div class="card prep-notes-card">
-    <div class="card-head"><${Icon} name="edit" /><h3>Prep notes</h3><span class="spacer"></span>
+    <div class="card-head"><h3>Prep notes</h3><span class="spacer"></span>
       <span class="hint prep-saved" aria-live="polite">${state === "saved" ? html`<${Icon} name="check" size=${12} />Saved` : state === "typing" ? "Saving…" : "Saved to this round"}</span></div>
     <div class="card-body prep-notes-body">
       <textarea id=${"prep-notes-" + r.id} class="textarea" rows="6" aria-label="Prep notes" placeholder="Topics to review, stories to tell, things to ask, logistics…" value=${v} onInput=${onInput} onBlur=${() => { clearTimeout(tm.current); flush(); }}></textarea>
@@ -304,7 +309,7 @@ function PrepTailored({ ctx, skills }) {
     if (ctl.current === ac) setBusy(false);
   };
   return html`<div class="card">
-    <div class="card-head"><${Icon} name="spark" /><h3>Tailored questions</h3><span class="spacer"></span>
+    <div class="card-head"><h3>Tailored questions</h3><span class="spacer"></span>
       ${!busy && html`<${Btn} size="sm" icon="spark" onClick=${run} id="prep-tailor">${qs ? "Generate again" : "Tailor questions to this role"}</${Btn}>`}
       <${PrepAIStatus} busy=${busy} onStop=${() => { ctl.current?.abort(); setBusy(false); }} /></div>
     <div class="card-body stack">
@@ -319,7 +324,7 @@ function PrepTailored({ ctx, skills }) {
 function PrepTalking({ resume }) {
   const pts = useMemo(() => prepTalkingPoints(resume), [resume]);
   return html`<div class="card">
-    <div class="card-head"><${Icon} name="doc" /><h3>Your talking points</h3><span class="spacer"></span>${resume && html`<${Btn} size="sm" kind="ghost" icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}>`}</div>
+    <div class="card-head"><h3>Your talking points</h3><span class="spacer"></span>${resume && html`<${Btn} size="sm" kind="ghost" icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}>`}</div>
     <div class="card-body">
       ${!resume ? html`<div class="prep-cta"><p class="muted">Add your resume and we'll pull out the lines with real results, ready to turn into stories.</p><${Btn} icon="doc" onClick=${() => openModal("resume")} id="prep-add-resume">Add your resume</${Btn}></div>`
         : !pts.length ? html`<div class="prep-cta"><p class="muted">We couldn't find lines with numbers or action verbs. Lines like "Built X that cut Y by 30%" make the best stories.</p><${Btn} icon="edit" onClick=${() => openModal("resume")}>Edit resume</${Btn}></div>`
@@ -340,24 +345,24 @@ function PrepTalking({ resume }) {
 function PrepQuestionsCard({ questions, onPractice, title }) {
   const [open, setOpen] = useState(null);
   return html`<div class="card">
-    <div class="card-head"><${Icon} name="msg" /><h3>${title || "Likely questions"}</h3><span class="faint num" style="font-size:var(--fs-sm)">${questions.length}</span><span class="spacer"></span>
+    <div class="card-head"><h3>${title || "Likely questions"}</h3><span class="prep-count num">${questions.length}</span><span class="spacer"></span>
       <${Btn} size="sm" kind="primary" icon="play" onClick=${onPractice} id="prep-practice">Practice</${Btn}></div>
     <ol class="prep-qlist prep-qlist-lg">
-      ${questions.map((q, i) => html`<li key=${q.q}>
+      ${questions.map((q, i) => html`<li key=${q.q} class=${open === i ? "open" : undefined}>
         <button type="button" class="prep-qbtn" aria-expanded=${open === i ? "true" : "false"} onClick=${() => setOpen(open === i ? null : i)}>
           <span class="prep-qn num">${i + 1}</span><span class="prep-qtext">${q.q}</span><${Icon} name="chevD" cls="prep-chev" />
         </button>
-        ${open === i && html`<p class="prep-tip prep-tip-in"><span class="faint">What a good answer shows:</span> ${q.t}</p>`}
+        ${open === i && html`<div class="prep-tip-in"><span class="prep-tip-label">What a good answer shows</span><p class="prep-tip">${q.t}</p></div>`}
       </li>`)}
     </ol>
-    <div class="prep-card-foot hint">Common questions for this round type and role. Not from the company.</div>
+    <div class="prep-card-foot hint">Commonly asked in this kind of round. Not from the company.</div>
   </div>`;
 }
 
 function PrepAskCard({ type }) {
   const list = PREP_ASK[type] || PREP_ASK.other;
   return html`<div class="card">
-    <div class="card-head"><${Icon} name="reply" /><h3>Questions to ask them</h3></div>
+    <div class="card-head"><h3>Questions to ask them</h3></div>
     <ul class="prep-ask">${list.map((x) => html`<li key=${x}>${x}</li>`)}</ul>
   </div>`;
 }
@@ -379,7 +384,7 @@ function PrepWorkspace({ a, r }) {
       ? html`<div class="card prep-head">
           <div class="prep-head-main">
             <div class="prep-head-ico"><${Icon} name="play" size=${20} /></div>
-            <div class="stack-sm" style="gap:2px;min-width:0"><h2 class="prep-h2">Practice without an interview</h2><span class="muted" style="font-size:var(--fs-sm)">Warm up with common questions. Pick a round type and role.</span></div>
+            <div class="prep-head-text"><h2 class="prep-h2">Practice without an interview</h2><span class="prep-role">Warm up with common questions. Pick a round type and role.</span></div>
           </div>
           <div class="prep-pick">
             <${Seg} label="Round type" value=${pType} options=${PREP_PRACTICE_TYPES} onChange=${setPType} />
@@ -390,13 +395,14 @@ function PrepWorkspace({ a, r }) {
       : html`<div class="card prep-head">
           <div class="prep-head-main">
             <${Logo} name=${a.company} size="lg" />
-            <div class="stack-sm" style="gap:2px;min-width:0">
-              <div class="row wrap" style="gap:8px"><h2 class="prep-h2">${a.company}</h2>${a.example && html`<${ExampleTag} />`}<${Badge} kind="accent">${ROUND[r.type]?.label || "Interview"}</${Badge}></div>
-              <span class="muted truncate" style="font-size:var(--fs-sm)">${a.title}</span>
+            <div class="prep-head-text">
+              <div class="prep-head-title"><h2 class="prep-h2">${a.company}</h2>${a.example && html`<${ExampleTag} />`}<${Badge} kind="accent">${ROUND[r.type]?.label || "Interview"}</${Badge}></div>
+              <span class="prep-role">${a.title}</span>
             </div>
-            <span class="spacer"></span>
-            <${CalendarButton} appId=${a.id} round=${r} />
-            <${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openApp(a.id, "rounds")} cls="hide-sm">Open application</${Btn}>
+            <div class="prep-head-actions">
+              <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
+              <${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openApp(a.id, "rounds")} cls="hide-sm">Open application</${Btn}>
+            </div>
           </div>
           <dl class="prep-facts">
             <div><dt>When</dt><dd class="num">${r.at ? html`${fmt.dateTime(r.at)} <span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>· ${fmt.until(r.at)}</span>` : html`<span class="faint">No date yet</span>`}</dd></div>
@@ -431,8 +437,8 @@ VIEWS.prep = function PrepView() {
   if (!all.length && !sel?.practice) {
     return html`<div class="page">
       <div class="page-head"><div><h1>Interview prep</h1><p>Likely questions, talking points from your resume, and timed practice for every round.</p></div></div>
-      <div class="card"><${Empty} icon="prep" title="No interviews on your calendar yet" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" icon="plus" onClick=${() => go("pipeline")}>Add a round</${Btn}><${Btn} icon="play" onClick=${() => { setAnyway(true); prepSetFocus({ practice: true }); }} id="prep-anyway">Practice anyway</${Btn}></div>`}>
-        When you add an interview round to an application, it shows up here with questions to expect and a place for notes. Open an application in Pipeline and add a round.
+      <div class="card"><${Empty} icon="prep" title="No interviews on your calendar yet" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" onClick=${() => go("pipeline")} id="prep-open-pipeline">Open Pipeline</${Btn}><${Btn} icon="play" onClick=${() => { setAnyway(true); prepSetFocus({ practice: true }); }} id="prep-anyway">Practice anyway</${Btn}></div>`}>
+        Add an interview round to an application and it shows up here with likely questions and a place for notes.
       </${Empty}></div>
     </div>`;
   }

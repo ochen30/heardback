@@ -24,6 +24,16 @@ function onbCleanSkill(raw) {
   return known || t;
 }
 
+function onbSuggest(raw, skills) {
+  const q = (raw || "").trim().toLowerCase();
+  if (!q) return [];
+  const have = new Set(skills.map((x) => x.toLowerCase()));
+  return ONB_SKILL_NAMES
+    .filter((n) => !have.has(n.toLowerCase()) && n.toLowerCase().includes(q) && n.toLowerCase() !== q)
+    .sort((a, b) => (a.toLowerCase().startsWith(q) ? 0 : 1) - (b.toLowerCase().startsWith(q) ? 0 : 1) || a.length - b.length)
+    .slice(0, 6);
+}
+
 function OnbResumeEditor({ value, onChange, idp = "res" }) {
   const [add, setAdd] = useState("");
   const [fileNote, setFileNote] = useState(null);
@@ -31,8 +41,8 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
   const detected = extractSkills(value.text);
   const setText = (text) => onChange({ ...value, text });
   const remove = (s) => onChange(detected.includes(s) ? { ...value, removed: [...value.removed, s] } : { ...value, added: value.added.filter((x) => x !== s) });
-  const addSkill = () => {
-    const s = onbCleanSkill(add);
+  const addSkill = (name) => {
+    const s = onbCleanSkill(typeof name === "string" ? name : add);
     if (!s) return;
     setAdd("");
     if (skills.some((x) => x.toLowerCase() === s.toLowerCase())) return;
@@ -53,6 +63,10 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
     }
   };
   const words = (value.text.trim().match(/\S+/g) || []).length;
+  const sugg = onbSuggest(add, skills);
+  const suggRef = useRef(null);
+  const hasSugg = sugg.length > 0;
+  useEffect(() => { if (hasSugg) suggRef.current?.scrollIntoView?.({ block: "nearest" }); }, [hasSugg]);
   return html`<div class="stack onb-resume">
     <div class="onb-resume-head">
       <label class="label" for=${idp + "-text"}>Resume text</label>
@@ -67,10 +81,13 @@ function OnbResumeEditor({ value, onChange, idp = "res" }) {
       <span class="hint">${value.text ? "Found in your resume. Remove any that don't fit and add ones we missed." : "We'll pick these up from your resume. You can also add them by hand."}</span>
       ${skills.length ? html`<div class="chips">${skills.map((s) => html`<button type="button" key=${s} class="chip onb-skill" aria-pressed="true" aria-label=${"Remove " + s} title=${"Remove " + s} onClick=${() => remove(s)}>${s}<${Icon} name="x" size=${12} /></button>`)}</div>` : null}
       <form class="row onb-add" onSubmit=${(e) => { e.preventDefault(); addSkill(); }}>
-        <input id=${idp + "-add"} class="input" list=${idp + "-skill-list"} placeholder="Add a skill, e.g. SQL" value=${add} onInput=${(e) => setAdd(e.currentTarget.value)} aria-label="Add a skill" autocomplete="off" />
-        <datalist id=${idp + "-skill-list"}>${ONB_SKILL_NAMES.filter((n) => !skills.includes(n)).map((n) => html`<option key=${n} value=${n} />`)}</datalist>
-        <${Btn} type="submit" icon="plus" disabled=${!add.trim()}>Add</${Btn}>
+        <input id=${idp + "-add"} class="input" placeholder="Add a skill, e.g. SQL" value=${add} onInput=${(e) => setAdd(e.currentTarget.value)} aria-label="Add a skill" autocomplete="off" />
+        <${Btn} type="submit" disabled=${!add.trim()}>Add</${Btn}>
       </form>
+      ${sugg.length > 0 && html`<div class="onb-sugg" ref=${suggRef} role="group" aria-label="Suggested skills">
+        <span class="hint">Suggestions</span>
+        ${sugg.map((n) => html`<button type="button" key=${n} class="onb-sugg-btn" onClick=${() => addSkill(n)} aria-label=${"Add " + n}><${Icon} name="plus" size=${12} />${n}</button>`)}
+      </div>`}
     </div>
     <p class="onb-privacy"><${Icon} name="shield" /><span>Your resume stays in this browser. It's only sent to Claude when you click an AI action.</span></p>
   </div>`;
@@ -145,8 +162,8 @@ function OnbStepTargets({ d, set }) {
         <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I'll need visa sponsorship" />
       </div>
     </${OnbGroup}>
-    <${OnbGroup} id="onb-g-name" title="First name" hint="Optional. Only used to greet you.">
-      <input id="onb-name" class="input onb-name" autocomplete="given-name" placeholder="e.g. Sam" value=${d.name} maxlength="40" onInput=${(e) => set({ name: e.currentTarget.value })} aria-labelledby="onb-g-name" />
+    <${OnbGroup} id="onb-g-name" title="Name" hint="Optional. Only used to greet you.">
+      <input id="onb-name" class="input onb-name" autocomplete="name" placeholder="e.g. Sam Lee" value=${d.name} maxlength="40" onInput=${(e) => set({ name: e.currentTarget.value })} aria-labelledby="onb-g-name" />
     </${OnbGroup}>
   </div>`;
 }
@@ -176,14 +193,14 @@ function OnbStepMatches({ d, examples, setExamples }) {
                     <span class="job-title truncate">${j.t}</span>
                     <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
                   </div>
-                  <div class="job-side"><${Fresh} ts=${j.p} /><${GhostScore} g=${j.g} compact=${true} />${f && html`<span class=${cx("fit", f.score >= 75 && "hi")} title="Fit score: how well the listing matches your targets">${f.score}</span>`}</div>
+                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 85 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
-            <div class="onb-source"><span class="hint">Live listings from the SimplifyJobs community lists on GitHub${onbGenTs(J.meta) ? `, refreshed ${fmt.ago(onbGenTs(J.meta))}` : ""}. Every listing links to the employer's own page. Fit is scored out of 100 from your targets and skills; the bars show ghost-job signals.</span></div>`}
+            <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
     </div>
     <label class="check onb-ex" for="onb-examples">
       <input id="onb-examples" type="checkbox" checked=${examples} onChange=${(e) => setExamples(e.currentTarget.checked)} />
-      <span class="stack-sm" style="gap:0"><span>Load example pipeline to explore</span><span class="hint">10 fictional applications, clearly labeled Example. Remove them any time in Settings.</span></span>
+      <span class="stack-sm" style="gap:0"><span>Add example applications to explore</span><span class="hint">10 fictional applications. Clear them any time in Settings.</span></span>
     </label>
   </div>`;
 }
@@ -224,7 +241,7 @@ VIEWS.__onboarding = function Onboarding() {
         <span class="spacer"></span>
         <button type="button" class="onb-link" onClick=${skip}>Skip setup</button>
       </header>
-      <p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>
+      ${step === 0 && html`<p class="onb-value">Find real roles, skip ghost listings, and track every reply.</p>`}
       <div class="onb-progress">
         <span class="onb-step-label num">Step ${step + 1} of 3</span>
         <div class="onboard-steps" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow=${step + 1} aria-label="Setup progress">${[0, 1, 2].map((i) => html`<i key=${i} class=${i <= step ? "on" : ""}></i>`)}</div>
@@ -237,7 +254,7 @@ VIEWS.__onboarding = function Onboarding() {
       ${step === 1 && html`<div class="card onb-card onb-card-pad"><${OnbResumeEditor} value=${res} onChange=${setRes} idp="onb-res" /></div>`}
       ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} />`}
       <footer class="onb-foot">
-        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<span class="hint onb-time">Takes about a minute</span>`}
+        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<span></span>`}
         <span class="spacer"></span>
         ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
         ${step < 2

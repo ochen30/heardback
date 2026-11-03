@@ -20,7 +20,7 @@ function today_undismiss(key, prev) {
 
 /* Rounds in the next 7 days (anything starting less than an hour ago still counts as upcoming). */
 function today_upcoming(apps) {
-  const t = now(), end = fmt.startOfDay(t) + 8 * DAY;
+  const t = now(), end = fmt.startOfDay(t) + 7 * DAY;
   const items = [];
   for (const a of apps) for (const r of a.rounds || []) {
     if (r.at && r.at >= t - 3600000 && r.at < end && r.outcome !== "cancelled") items.push({ a, r });
@@ -86,17 +86,25 @@ function today_Menu({ anchor, items, onClose, label }) {
     };
   }, [anchor, onClose]);
   return html`<div class="menu td-menu" role="menu" aria-label=${label} ref=${ref} style=${pos ? `left:${pos.left}px;top:${pos.top}px` : "visibility:hidden;left:0;top:0"}>
-    ${items.map((it) => it.sep ? html`<div class="td-menu-sep" key=${it.key} role="separator"></div>` : html`<button type="button" role="menuitem" key=${it.key} onClick=${() => { onClose(); it.run(); }}>
+    ${items.map((it) => it.sep ? html`<div class="td-menu-sep" key=${it.key} role="separator"></div>` : html`<button type="button" role="menuitem" class=${it.cls} key=${it.key} onClick=${() => { onClose(); it.run(); }}>
       ${it.icon && html`<${Icon} name=${it.icon} />`}<span style="flex:1">${it.label}</span>${it.hint && html`<span class="faint td-menu-hint">${it.hint}</span>`}
     </button>`)}
   </div>`;
 }
 
-const TODAY_SNOOZE = [{ d: 1, label: "1 day" }, { d: 3, label: "3 days" }, { d: 7, label: "1 week" }];
+const TODAY_SNOOZE = [{ d: 1, label: "Snooze 1 day" }, { d: 3, label: "Snooze 3 days" }, { d: 7, label: "Snooze 1 week" }];
 
-function today_TaskRow({ tk }) {
+/* Display copy for a task. Core builds the text; Today trims it to one plain line and matches the verb to the task. */
+function today_taskCopy(tk) {
+  const a = tk.app;
+  if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark ghosted" };
+  if (tk.kind === "apply") return { sub: tk.sub, action: "Apply" };
+  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it's fresh.`, action: "Log outcome" };
+  return { sub: tk.sub, action: tk.action };
+}
+
+function today_TaskRow({ tk, first }) {
   const [menu, setMenu] = useState(null);
-  const btnRef = useRef(null);
   const close = useCallback(() => setMenu(null), []);
   const snooze = (d) => {
     const prev = store.get().dismissed[tk.key];
@@ -109,24 +117,30 @@ function today_TaskRow({ tk }) {
     toast("Dismissed", { undo: () => today_undismiss(tk.key, prev) });
   };
   const a = tk.app;
-  const primary = tk.kind === "apply" && a.url
-    ? html`<a class="btn sm primary" href=${a.url} target="_blank" rel="noopener">Open listing<${Icon} name="ext" /></a>`
-    : html`<${Btn} kind="primary" size="sm" onClick=${() => today_runTask(tk)}>${tk.action}</${Btn}>`;
+  const copy = today_taskCopy(tk);
+  const cls = cx("btn sm td-act", first && "primary");
+  let primary;
+  if (tk.kind === "apply" && a.url) primary = html`<a class=${cls} href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
+  else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") primary = html`<button type="button" class=${cls} onClick=${() => openJob(a.jobId)}>Apply</button>`;
+  else primary = html`<button type="button" class=${cls} onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
   const safeKey = tk.key.replace(/[^a-z0-9]/gi, "-");
   return html`<div class="task td-task" data-key=${tk.key}>
     <span class=${cx("task-ico", tk.tone)}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${tk.title}</button>
-      <div class="task-sub">${tk.sub}${a.example ? html` <${ExampleTag} />` : null}</div>
+      <div class="task-sub">${copy.sub}</div>
     </div>
     <div class="task-actions td-task-actions">
       ${primary}
-      <${Btn} size="sm" kind="ghost" iconRight="chevD" id=${"snooze-" + safeKey} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
-        onClick=${(e) => setMenu(menu ? null : e.currentTarget)}>Snooze</${Btn}>
-      <${Btn} size="sm" kind="ghost" icon="x" aria-label=${"Dismiss: " + tk.title} title="Dismiss" cls="td-dismiss" onClick=${dismiss} />
+      <button type="button" class="btn sm ghost icon td-more" id=${"more-" + safeKey} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
+        aria-label=${"More options: " + tk.title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
     </div>
-    ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Snooze for"
-      items=${TODAY_SNOOZE.map((o) => ({ key: o.d, icon: "clock", label: o.label, hint: fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => snooze(o.d) }))} />`}
+    ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Task options"
+      items=${[
+        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => snooze(o.d) })),
+        { key: "sep", sep: true },
+        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", run: dismiss },
+      ]} />`}
   </div>`;
 }
 
@@ -134,27 +148,28 @@ function today_NeedsYou({ tasks, fresh }) {
   const [all, setAll] = useState(false);
   const shown = all ? tasks : tasks.slice(0, 5);
   return html`<section class="card" aria-labelledby="td-needs-h">
-    <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}<span class="spacer"></span>
-      ${tasks.length ? html`<span class="hint hide-sm">Most urgent first</span>` : null}</div>
+    <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}</div>
     ${tasks.length
-      ? html`<div class="list">${shown.map((tk) => html`<${today_TaskRow} key=${tk.key} tk=${tk} />`)}</div>
+      ? html`<div class="list">${shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} first=${i === 0} />`)}</div>
         ${tasks.length > 5 && html`<div class="td-card-foot"><${Btn} size="sm" kind="ghost" iconRight=${all ? undefined : "chevD"} onClick=${() => setAll(!all)}>${all ? "Show fewer" : `Show ${tasks.length - 5} more`}</${Btn}></div>`}`
       : html`<div class="td-caught">
           <span class="td-caught-ico"><${Icon} name="check" size=${18} /></span>
           <div class="stack-sm td-grow">
             <strong>${fresh ? "Nothing to do yet" : "You're all caught up"}</strong>
             <span class="muted td-small">${fresh
-              ? "Replies to send, interviews to prep and follow-ups show up here once you track applications. Start with 3 roles posted in the last 24 hours."
-              : "Nothing needs a reply, prep or follow-up right now. A good next step: find 3 new roles posted in the last 24 hours."}</span>
+              ? "Follow-ups, interview prep and thank-you notes show up here once you track applications."
+              : "Nothing needs a reply, prep or follow-up right now."}</span>
           </div>
-          <${Btn} size="sm" icon="find" onClick=${() => go("find")}>Find new roles</${Btn}>
+          ${fresh
+            ? html`<${Btn} size="sm" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}>`
+            : html`<${Btn} size="sm" icon="find" onClick=${() => go("find")}>Find new roles</${Btn}>`}
         </div>`}
   </section>`;
 }
 
 function today_Upcoming({ up }) {
   return html`<section class="card" aria-labelledby="td-up-h">
-    <div class="card-head"><h2 id="td-up-h">Upcoming</h2>${up.items.length ? html`<span class="td-count num">${up.items.length}</span>` : null}<span class="spacer"></span><span class="hint">Next 7 days</span></div>
+    <div class="card-head"><h2 id="td-up-h">Upcoming</h2>${up.items.length ? html`<span class="td-count num">${up.items.length}</span>` : null}</div>
     ${up.items.length
       ? html`<div class="td-up">${up.groups.map((g) => html`<div class="td-up-day" key=${g.day}>
           <div class=${cx("td-up-label", g.label === "Today" && "is-today")}>${g.label}</div>
@@ -165,7 +180,7 @@ function today_Upcoming({ up }) {
               <span class="td-up-title truncate"><b>${a.company}</b><span class="faint"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
               <span class="td-up-sub truncate">${r.interviewers ? `With ${r.interviewers}` : a.title}</span>
             </span>
-            ${a.example ? html`<${ExampleTag} />` : html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>`}
+            ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}
             <${Icon} name="chevR" cls="faint" />
           </button>`)}</div>
         </div>`)}</div>`
@@ -201,7 +216,6 @@ function today_matches(jobs, profile, apps) {
 
 function today_NewForYou({ jobs, m }) {
   const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
-    ${m && m.recentCount ? html`<span class="hint num hide-sm">${m.recentCount} ${m.recentCount === 1 ? "match" : "matches"} in the last 3 days</span>` : null}
     <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
   let body;
   if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn't load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
@@ -214,9 +228,9 @@ function today_NewForYou({ jobs, m }) {
         <span class="job-title truncate">${j.t}</span>
         <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
       </div>
-      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 75 && "hi")} title="Fit with your preferences">${f.score}% fit</span></div>
+      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 85 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
-    <div class="td-card-foot faint td-small">Listings from the SimplifyJobs community lists. Each links to the employer's own page.</div>`;
+    <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer's own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
 }
 
@@ -229,33 +243,28 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
     return { d, n, future: d > today, isToday: d === today, label: new Date(d).toLocaleDateString(undefined, { weekday: "short" }) };
   });
   const max = Math.max(1, ...days.map((x) => x.n));
-  const setGoal = (v) => { const g = clamp(Math.round(+v || 1), 1, 99); store.set((s) => ({ ...s, profile: { ...s.profile, weeklyGoal: g } })); };
   const left = Math.max(0, goal - thisWeek);
+  const editGoal = html`<a href="#prefs" class="td-link td-link-quiet" onClick=${(e) => { e.preventDefault(); go("prefs"); }}>Edit goal</a>`;
   return html`<section class="card" aria-labelledby="td-week-h">
-    <div class="card-head"><h2 id="td-week-h">This week</h2><span class="spacer"></span><span class="hint">${fmt.date(ws)} – ${fmt.date(ws + 6 * DAY)}</span></div>
-    <div class="card-body stack" style="gap:14px">
-      <div>
-        <div class="td-week-num"><span class="td-big">${thisWeek}</span><span class="muted"> of ${goal} applications</span></div>
-        <div style="margin-top:8px"><${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} /></div>
-        <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached. Anything more is a bonus." : `${left} more to reach your goal`}</div>
-      </div>
-      <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
-        ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
-          <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
-          <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
-          <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
-        </div>`)}
-      </div>
-      <div class="td-goal">
-        <label for="today-goal" class="td-small muted">Weekly goal</label>
-        <span class="spacer"></span>
-        <div class="td-stepper">
-          <button type="button" class="btn sm icon" aria-label="Lower weekly goal" onClick=${() => setGoal(goal - 1)} disabled=${goal <= 1}>−</button>
-          <input id="today-goal" class="input num" type="number" inputmode="numeric" min="1" max="99" value=${goal} onChange=${(e) => setGoal(e.currentTarget.value)} />
-          <button type="button" class="btn sm icon" aria-label="Raise weekly goal" onClick=${() => setGoal(goal + 1)} disabled=${goal >= 99}><${Icon} name="plus" size=${14} /></button>
-        </div>
-      </div>
-    </div>
+    <div class="card-head"><h2 id="td-week-h">This week</h2><span class="spacer"></span>${editGoal}</div>
+    ${thisWeek === 0
+      ? html`<div class="card-body td-week-zero">
+          <p>No applications yet this week<span class="faint"> · goal ${goal}</span></p>
+        </div>`
+      : html`<div class="card-body stack" style="gap:16px">
+          <div>
+            <div class="td-week-num"><span class="td-big num">${thisWeek}</span><span class="muted"> of ${goal} applications</span></div>
+            <div style="margin-top:10px"><${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} /></div>
+            <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
+          </div>
+          <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
+            ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
+              <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
+              <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
+              <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
+            </div>`)}
+          </div>
+        </div>`}
   </section>`;
 }
 
@@ -289,33 +298,17 @@ function today_Response({ st }) {
     ${st.applied
       ? html`<div class="td-resp">
           <div class="stat"><span class="stat-label">Response rate</span><span class="stat-value">${fmt.pct(st.responseRate)}</span><span class="stat-sub num">${st.replied} of ${st.applied} replied</span></div>
-          <div class="stat"><span class="stat-label">First reply</span><span class="stat-value">${days == null ? "—" : `${days < 10 && days % 1 ? days.toFixed(1) : Math.round(days)}d`}</span><span class="stat-sub num">${days == null ? "No replies yet" : `median, n=${st.replied}`}</span></div>
+          <div class="stat"><span class="stat-label">First reply</span><span class="stat-value">${days == null ? "—" : html`${days < 10 && days % 1 ? days.toFixed(1) : Math.round(days)}<span class="td-unit">days</span>`}</span><span class="stat-sub num">${days == null ? "No replies yet" : `median of ${pluralize(st.replyN ?? st.replied, "reply", "replies")}`}</span></div>
         </div>
-        ${small ? html`<div class="td-card-foot faint td-small">Based on ${pluralize(st.applied, "application")}. Rates settle after 10 or more.</div>` : null}`
+        ${small ? html`<div class="td-card-foot faint td-small">Small sample. Rates settle after about 10 applications.</div>` : null}`
       : html`<div class="td-mini-empty"><span class="muted td-small">Once you apply to a few roles, your reply rate and typical wait show up here.</span></div>`}
   </section>`;
 }
 
-function today_Quick() {
-  const rows = [
-    { id: "paste", icon: "mail", label: "Log an email", sub: "Log a reply or invite", k: "E", run: () => openModal("paste") },
-    { id: "add", icon: "plus", label: "Add application", sub: "Track a role you applied to", k: "N", run: () => openModal("add") },
-    { id: "find", icon: "find", label: "Find jobs", sub: "Search fresh listings", k: "/", run: () => go("find") },
-  ];
-  return html`<section class="card" aria-labelledby="td-quick-h">
-    <div class="card-head"><h2 id="td-quick-h">Quick actions</h2></div>
-    <div class="list">${rows.map((r) => html`<button type="button" class="td-quick" key=${r.id} onClick=${r.run}>
-      <span class="task-ico"><${Icon} name=${r.icon} /></span>
-      <span class="stack-sm" style="gap:0;flex:1;min-width:0"><span class="td-quick-label">${r.label}</span><span class="hint">${r.sub}</span></span>
-      <span class="kbd hide-sm">${r.k}</span>
-    </button>`)}</div>
-  </section>`;
-}
-
 function today_ExampleBanner() {
-  return html`<div class="example-banner">
+  return html`<div class="example-banner td-banner">
     <${Icon} name="info" />
-    <span><b>You're looking at example applications.</b> They show how Heardback tracks replies, interviews and follow-ups. Clear them when you're ready to add your own.</span>
+    <span class="td-banner-text"><b>Example data.</b><span class="td-banner-more"> Clear it when you add your first application.</span></span>
     <span class="spacer"></span>
     <${Btn} size="sm" onClick=${() => clearExamples()}>Clear examples</${Btn}>
   </div>`;
@@ -332,10 +325,12 @@ function today_View() {
   const name = today_firstName(s.profile.name);
   const goal = s.profile.weeklyGoal || 10;
   const parts = [];
-  parts.push(tasks.length ? `${tasks.length} ${tasks.length === 1 ? "thing needs" : "things need"} you today` : "Nothing needs you right now");
-  if (up.items.length) parts.push(pluralize(up.items.length, "interview") + " this week");
-  else if (apps.length) parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
-  else parts.push("Start by finding a few roles worth applying to");
+  if (!apps.length) parts.push("Start with a few roles worth applying to.");
+  else {
+    parts.push(tasks.length ? `${tasks.length} ${tasks.length === 1 ? "thing needs" : "things need"} you today` : "Nothing needs you right now");
+    if (up.items.length) parts.push(pluralize(up.items.length, "interview") + " this week");
+    else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
+  }
   return html`<div class="page td-page">
     <header class="greeting td-head">
       <div style="min-width:0">
@@ -349,14 +344,13 @@ function today_View() {
     <div class="split">
       <div class="stack td-col">
         <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} />
-        <${today_Upcoming} up=${up} />
+        ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
         <${today_NewForYou} jobs=${jobs} m=${m} />
       </div>
       <aside class="stack td-col" aria-label="Your week">
         <${today_ThisWeek} apps=${apps} goal=${goal} thisWeek=${st.thisWeek} />
-        <${today_Pipeline} apps=${apps} />
-        <${today_Response} st=${st} />
-        <${today_Quick} />
+        ${apps.length ? html`<${today_Pipeline} apps=${apps} />` : null}
+        ${apps.length ? html`<${today_Response} st=${st} />` : null}
       </aside>
     </div>
   </div>`;

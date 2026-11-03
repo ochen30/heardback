@@ -155,6 +155,20 @@ function find_season(cs) {
 const find_daysText = (d) => (d == null ? null : `~${Math.max(1, Math.round(d))} ${Math.round(d) === 1 ? "day" : "days"}`);
 const find_typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
+/* ---------- shared bits ---------- */
+const find_fitHi = (score) => score >= 85;
+function find_FitPill({ fit, sponsor }) {
+  if (!fit) return null;
+  return html`<span class=${cx("fit", find_fitHi(fit.score) && "hi")} title=${`Fit ${fit.score} out of 100, from role, level, location${sponsor ? ", visa" : ""} and skills`}>Fit ${fit.score}</span>`;
+}
+/* Row-level stale-listing hint: nothing when the risk is low. */
+function find_GhostHint({ g }) {
+  const lv = ghostLevel(g || 0);
+  if (lv === "low") return null;
+  const label = lv === "high" ? "Strong signals" : "Some signals";
+  return html`<span class=${cx("gscore", lv)} title=${`${lv === "high" ? "Several" : "A few"} stale-listing signals (${g}/100). Not proof either way. Open the listing to see why.`}><span class="gbars" aria-hidden="true"><i></i><i></i><i></i></span>${label}</span>`;
+}
+
 /* ---------- shared row ---------- */
 function find_Row({ job, app, profile, i, sel, onSelect, inCompany }) {
   const fit = profile ? find_fit(job, profile) : null;
@@ -168,9 +182,9 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany }) {
       <div class="find-row-meta" title=${metaT}>${metaT}</div>
     </div>
     <div class="find-side">
-      <span class="find-c-fit">${fit && html`<span class=${cx("fit", fit.score >= 75 && "hi")} title=${`Fit ${fit.score}/100 from role, level, location${profile.needsSponsor ? ", visa" : ""} and skills`}>Fit ${fit.score}</span>`}</span>
+      <span class="find-c-ghost"><${find_GhostHint} g=${job.g} /></span>
+      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} /></span>
       <span class="find-c-fresh"><${Fresh} ts=${job.p} /></span>
-      <span class="find-c-ghost"><${GhostScore} g=${job.g} compact /></span>
       <span class="find-c-act" onClick=${(e) => e.stopPropagation()}>
         ${app && !saved
           ? html`<button type="button" class="find-stage" onClick=${() => openApp(app.id)} title="Open in pipeline"><${StageBadge} stage=${app.stage} /></button>`
@@ -181,9 +195,36 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany }) {
 }
 
 /* ---------- filter controls (sidebar and mobile modal) ---------- */
-function find_FilterControls({ px, f, counts, profile }) {
+const FIND_LOC_TOP = 6;
+/* Stable location order: by listing count across the whole dataset, so rows don't jump as other filters change. */
+const find_locOrdC = { jobs: null, ord: null };
+function find_locOrder(jobs) {
+  if (!jobs) return LOC_OPTIONS.map((o, i) => i);
+  if (find_locOrdC.jobs !== jobs) {
+    const c = new Array(LOC_OPTIONS.length).fill(0);
+    for (const m of find_locMasks(jobs).values()) for (let i = 0; i < c.length; i++) if (m & (1 << i)) c[i]++;
+    find_locOrdC.jobs = jobs; find_locOrdC.ord = c.map((n, i) => [n, i]).sort((a, b) => b[0] - a[0]).map((x) => x[1]);
+  }
+  return find_locOrdC.ord;
+}
+function find_CheckRow({ id, type = "checkbox", name, checked, onChange, label, n }) {
+  return html`<label class="find-opt" for=${id}>
+    <input id=${id} type=${type} name=${name} checked=${checked} onChange=${onChange} />
+    <span class="find-opt-l">${label}</span>
+    ${n != null && html`<span class="find-opt-n">${fmt.num(n)}</span>`}
+  </label>`;
+}
+function find_FilterControls({ px, f, counts, jobs }) {
+  const [moreLocs, setMoreLocs] = useState(false);
   const n = (x) => html`<span class="find-chip-n">${fmt.num(x || 0)}</span>`;
   const roles = CATS.concat(counts.cRole.Other ? ["Other"] : []);
+  // Locations by count; the top few always show, plus anything selected.
+  // Sorted by the current count. Location counts ignore the location filter itself, so ticking a box never reorders the list.
+  const locs = find_locOrder(jobs).map((i) => ({ ...LOC_OPTIONS[i], n: counts.cLoc[i] || 0 })).sort((a, b) => b.n - a.n);
+  const top = locs.slice(0, FIND_LOC_TOP);
+  const rest = locs.slice(FIND_LOC_TOP);
+  const shownLocs = moreLocs ? locs : top.concat(rest.filter((o) => f.locs.includes(o.id)));
+  const hidden = locs.length - shownLocs.length;
   return html`<div class="find-fgroups">
     <div class="filter-group" role="group" aria-labelledby=${px + "-lv"}>
       <h4 id=${px + "-lv"}>Level</h4>
@@ -194,23 +235,23 @@ function find_FilterControls({ px, f, counts, profile }) {
       <div class="chips">${roles.map((r) => html`<${Chip} key=${r} on=${f.roles.includes(r)} onClick=${() => find_setFilters({ roles: find_toggle(f.roles, r) })}>${r}${n(counts.cRole[r])}</${Chip}>`)}</div>
     </div>
     <div class="filter-group" role="group" aria-labelledby=${px + "-loc"}>
-      <h4 id=${px + "-loc"}>Location</h4>
-      <div class="chips">${LOC_OPTIONS.map((o, i) => html`<${Chip} key=${o.id} on=${f.locs.includes(o.id)} onClick=${() => find_setFilters({ locs: find_toggle(f.locs, o.id) })}>${o.label}${n(counts.cLoc[i])}</${Chip}>`)}</div>
+      <h4 id=${px + "-loc"}>Location${f.locs.length > 0 && html` <button type="button" class="find-link find-h-clear" onClick=${() => find_setFilters({ locs: [] })}>Clear</button>`}</h4>
+      <div class="find-opts">${shownLocs.map((o) => html`<${find_CheckRow} key=${o.id} id=${`${px}-loc-${o.id.replace(/\W+/g, "-")}`} checked=${f.locs.includes(o.id)} onChange=${() => find_setFilters({ locs: find_toggle(f.locs, o.id) })} label=${o.label} n=${o.n} />`)}</div>
+      ${(hidden > 0 || moreLocs) && html`<button type="button" class="find-link find-more-link" aria-expanded=${moreLocs ? "true" : "false"} onClick=${() => setMoreLocs(!moreLocs)}>${moreLocs ? "Show fewer" : `Show ${hidden} more`}</button>`}
     </div>
     <div class="filter-group">
       <h4>Posted</h4>
       <${Seg} label="Posted within" value=${f.posted === "since" ? "" : f.posted} options=${FIND_POSTED} onChange=${(v) => find_setFilters({ posted: v })} />
       ${visit.since && html`<div class="chips"><${Chip} on=${f.posted === "since"} icon="bolt" onClick=${() => find_setFilters({ posted: f.posted === "since" ? "any" : "since" })}>New since your last visit</${Chip}></div>`}
     </div>
-    <div class="filter-group" role="group" aria-labelledby=${px + "-visa"}>
+    <div class="filter-group" role="radiogroup" aria-labelledby=${px + "-visa"}>
       <h4 id=${px + "-visa"}>Visa</h4>
-      <div class="chips">${FIND_VISA.map((v) => html`<${Chip} key=${v.id} on=${f.visa === v.id} onClick=${() => find_setFilters({ visa: v.id })}>${v.label}</${Chip}>`)}</div>
-      ${f.visa === "yes" && html`<span class="hint">Very few listings state sponsorship either way, so this filter hides most jobs.</span>`}
+      <div class="find-opts">${FIND_VISA.map((v) => html`<${find_CheckRow} key=${v.id} type="radio" name=${px + "-visa"} id=${`${px}-visa-${v.id}`} checked=${f.visa === v.id} onChange=${() => find_setFilters({ visa: v.id })} label=${v.label} />`)}</div>
+      ${f.visa === "yes" && html`<span class="hint">Few listings say either way, so this hides most jobs.</span>`}
     </div>
     <div class="filter-group">
-      <h4>Ghost jobs</h4>
-      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong ghost signals" />
-      <span class="hint">Hides listings with several warning signs (score 50 or more).</span>
+      <h4>Listing signals</h4>
+      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong stale signals" />
     </div>
     ${find_activeCount(f) > 0 && html`<div><${Btn} kind="ghost" size="sm" icon="x" onClick=${find_clearAll}>Clear filters</${Btn}></div>`}
   </div>`;
@@ -225,7 +266,7 @@ MODALS.findFilters = () => {
     <${Btn} kind="ghost" onClick=${find_clearAll} disabled=${!find_activeCount(f)}>Clear filters</${Btn}>
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="primary" onClick=${closeModal}>Show ${fmt.num(counts.res.length)} ${counts.res.length === 1 ? "match" : "matches"}</${Btn}>`}>
-    <${find_FilterControls} px="find-m" f=${f} counts=${counts} profile=${s.profile} />
+    <${find_FilterControls} px="find-m" f=${f} counts=${counts} jobs=${jobs.jobs} />
   </${Modal}>`;
 };
 
@@ -330,7 +371,7 @@ VIEWS.find = function FindView() {
     ${head}
     <div class="find-layout">
       <aside class="filters find-aside" aria-label="Filters">
-        <${find_FilterControls} px="find-f" f=${f} counts=${counts} profile=${profile} />
+        <${find_FilterControls} px="find-f" f=${f} counts=${counts} jobs=${jobs.jobs} />
       </aside>
       <div class="stack find-main">
         <div class="find-toolbar">
@@ -397,9 +438,11 @@ function find_Thinking({ onStop, text }) {
 const find_hasResume = (p) => (p.resume || "").trim().length >= 40;
 const find_jobBrief = (job) => `Title: ${job.t}\nCompany: ${job.co}\nLevel: ${FIND_LV[job.lvl]}${job.term ? ` (${job.term})` : ""}\nCategory: ${job.cat}\nLocations: ${(job.l || []).slice(0, 6).join("; ") || "not listed"}${job.nl > 6 ? ` and ${job.nl - 6} more` : ""}\nDegrees listed: ${(job.deg || []).join(", ") || "not stated"}`;
 
-function find_WhyYou({ job, profile }) {
+const FIND_AI_NOTE = "Drafted by Claude · review before using.";
+function find_WhyYou({ job, profile, onOut }) {
   const [st, run, stop] = find_useAI();
   const [jd, setJd] = useState("");
+  useEffect(() => { onOut && onOut(!!st.out); }, [st.out]);
   if (!find_hasResume(profile)) return null;
   const go = () => run(async (signal) => {
     const prompt = `You help a student or new grad decide whether a job is worth applying to.
@@ -416,10 +459,10 @@ Return JSON: {"why": [2-4 strings: reasons this resume fits], "whyNot": [2-4 str
     return askClaudeJSON(prompt, { signal, modelTier: "quick" });
   });
   const o = st.out;
-  return html`<div class="stack-sm">
+  return html`<div class="stack">
     <div class="field">
-      <label for="find-jd">Paste the job description for a sharper read <span class="faint">(optional)</span></label>
-      <textarea id="find-jd" class="textarea find-jd" placeholder="Claude can't open the listing, so it only sees the title, level and location unless you paste the description here." value=${jd} onInput=${(e) => setJd(e.currentTarget.value)}></textarea>
+      <label for="find-jd">Job description <span class="faint">(optional)</span></label>
+      <textarea id="find-jd" class="textarea find-jd" placeholder="Paste the job description for a sharper read." value=${jd} onInput=${(e) => setJd(e.currentTarget.value)}></textarea>
     </div>
     ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : html`<div><${Btn} icon="spark" onClick=${go}>${o ? "Ask again" : "Why you, why not you"}</${Btn}></div>`}
     ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err} The fit check above works without Claude.</span></div>`}
@@ -429,13 +472,13 @@ Return JSON: {"why": [2-4 strings: reasons this resume fits], "whyNot": [2-4 str
         <div><div class="find-yn-h bad"><${Icon} name="x" size=${14} />Why not you (yet)</div><ul class="reason-list">${(o.whyNot || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
       </div>
       ${o.note && html`<p class="hint">${o.note}</p>`}
-      <span class="ai-label"><${Icon} name="spark" />Drafted by Claude from your resume${jd.trim() ? " and the pasted description" : " and the listing title only"}. Review before relying on it.</span>
     </div>`}
   </div>`;
 }
 
-function find_Tailor({ job, profile }) {
+function find_Tailor({ job, profile, onOut }) {
   const [st, run, stop] = find_useAI();
+  useEffect(() => { onOut && onOut(!!(st.out?.bullets || []).length); }, [st.out]);
   const go = () => run(async (signal) => {
     const prompt = `Rewrite lines from a candidate's EXISTING resume so they fit this role better.
 Rules: only rework lines that are already in the resume. Never invent experience, employers, numbers, tools or results. If a line has no metric, do not add one. Keep each rewritten bullet under 30 words, start with a strong verb, and keep it truthful to the original.
@@ -451,24 +494,45 @@ Return JSON: {"bullets": [3-5 items of {"from": "the original resume line, quote
     return askClaudeJSON(prompt, { signal, modelTier: "default" });
   });
   const bl = st.out?.bullets || [];
-  return html`<div class="stack-sm">
+  return html`<div class="stack">
     ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : html`<div><${Btn} icon="doc" onClick=${go}>${st.out ? "Suggest again" : "Tailor my resume"}</${Btn}></div>`}
     ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err}</span></div>`}
-    ${bl.length > 0 && html`<div class="stack-sm">
+    ${bl.length > 0 && html`<div class="find-bullets">
       ${bl.map((b, i) => html`<div class="find-bullet" key=${i}>
         <div class="find-bullet-from"><span class="faint">From</span> ${b.from}</div>
-        <div class="row" style="align-items:flex-start"><div class="find-bullet-to">${b.to}</div><${Btn} kind="ghost" size="sm" icon="copy" aria-label="Copy bullet" onClick=${() => copyText(b.to, "Bullet copied")} /></div>
+        <div class="find-bullet-row"><div class="find-bullet-to">${b.to}</div><${Btn} kind="ghost" size="sm" icon="copy" aria-label="Copy bullet" title="Copy" onClick=${() => copyText(b.to, "Bullet copied")} /></div>
         ${b.why && html`<div class="hint">${b.why}</div>`}
       </div>`)}
-      <span class="ai-label"><${Icon} name="spark" />Drafted by Claude. Review before sending. Keep only what's true.</span>
     </div>`}
   </div>`;
+}
+
+function find_AskClaude({ job, profile }) {
+  const [a, setA] = useState(false);
+  const [b, setB] = useState(false);
+  return html`<section class="dsec" aria-labelledby="find-ai-h">
+    <h3 id="find-ai-h">Ask Claude<span class="spacer"></span><span class="ai-label find-h-meta"><${Icon} name="spark" />Uses your Claude account</span></h3>
+    ${find_hasResume(profile)
+      ? html`<${find_WhyYou} job=${job} profile=${profile} onOut=${setA} /><${find_Tailor} job=${job} profile=${profile} onOut=${setB} />
+        ${(a || b) && html`<span class="ai-label"><${Icon} name="spark" />${FIND_AI_NOTE}</span>`}`
+      : html`<p class="muted find-small">Add your resume and Claude can weigh your fit or suggest stronger bullets from what's already there. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button></p>`}
+  </section>`;
 }
 
 /* ---------- DRAWERS.job ---------- */
 function find_FitRow({ p }) {
   const ico = p.ok === true ? html`<span class="find-fit-ico ok"><${Icon} name="check" size=${14} /></span>` : p.ok === false ? html`<span class="find-fit-ico bad"><${Icon} name="x" size=${14} /></span>` : html`<span class="find-fit-ico none" aria-hidden="true">–</span>`;
   return html`<li>${ico}<span class="find-fit-k">${p.k}</span><span class="muted">${p.text}</span></li>`;
+}
+function find_postedText(ts) {
+  const d = fmt.days(ts);
+  return d <= 0 ? "Today" : d === 1 ? "Yesterday" : `${d} days ago`;
+}
+function find_ghostLine(job) {
+  const lv = ghostLevel(job.g);
+  const nr = (job.gr || []).length;
+  if (lv === "low") return nr ? `Looks active · ${pluralize(nr, "minor signal")}` : "Looks active · no stale-listing signals";
+  return `${lv === "high" ? "Several stale-listing signals" : "A stale-listing signal or two"} · worth a quick check`;
 }
 
 DRAWERS.job = ({ id }) => {
@@ -489,114 +553,100 @@ DRAWERS.job = ({ id }) => {
   const app = byJob.get(job.id);
   const fit = fitScore(job, profile);
   const cs = jobs.cstats[job.co];
-  const days = fmt.days(job.p);
+  const coOpen = (jobs.byCompany.get(job.co) || []).length;
   const locs = job.l || [];
-  const showLocs = allLocs ? locs : locs.slice(0, 6);
+  const showLocs = allLocs ? locs : locs.slice(0, 5);
   const hiddenMore = (job.nl || locs.length) - locs.length;
   const lv = ghostLevel(job.g);
+  const season = find_season(cs);
+  const deg = (job.deg || []).map((d) => FIND_DEG[d] || d).join(", ");
 
   const head = html`<div class="find-dhead">
     <${Logo} name=${job.co} size="lg" />
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${job.t}</h2>
-      <div class="row wrap find-dsub"><a class="find-link find-co" role="button" tabindex="0" onClick=${() => openCompany(job.co)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCompany(job.co); } }}>${job.co}</a><span class="sep">·</span><${Fresh} ts=${job.p} />${app && html`<${StageBadge} stage=${app.stage} />`}</div>
+      <div class="row wrap find-dsub"><button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button><span class="sep">·</span><span class="muted">Posted ${find_postedText(job.p).toLowerCase()}</span>${app && html`<${StageBadge} stage=${app.stage} />`}</div>
     </div>
   </div>`;
 
   const saved = app && app.stage === "saved";
   const foot = html`
-    <a class="btn primary find-apply" href=${job.url} target="_blank" rel="noopener" onClick=${() => setClicked(true)}>Apply on company site<${Icon} name="ext" /></a>
-    ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} aria-pressed=${saved ? "true" : "false"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
-    ${(!app || saved) && html`<${Btn} icon="check" onClick=${() => find_markApplied(job, app)}>Mark as applied</${Btn}>`}
-    ${app && html`<${Btn} kind="ghost" iconRight="arrowR" onClick=${() => openApp(app.id)}>Open in pipeline</${Btn}>`}`;
+    <a class="btn primary find-apply" href=${job.url} target="_blank" rel="noopener" aria-label=${`Apply on ${job.co}'s site (opens in a new tab)`} onClick=${() => setClicked(true)}><span>Apply<span class="hide-sm"> on company site</span></span><${Icon} name="ext" /></a>
+    ${(!app || saved) && html`<${Btn} icon=${saved ? "bookmarkOn" : "bookmark"} cls=${cx(saved && "find-save on")} aria-pressed=${saved ? "true" : "false"} onClick=${() => find_toggleSave(job, app)}>${saved ? "Saved" : "Save"}</${Btn}>`}
+    ${(!app || saved) && html`<${Btn} kind="ghost" icon="check" onClick=${() => find_markApplied(job, app)}>Mark as applied</${Btn}>`}
+    ${app && !saved && html`<${Btn} iconRight="arrowR" onClick=${() => openApp(app.id)}>Open in pipeline</${Btn}>`}`;
 
   return html`<${Drawer} onClose=${closeDrawer} label=${`${job.t} at ${job.co}`} head=${head} foot=${foot}>
-    ${clicked && (!app || saved) && html`<div class="callout info"><${Icon} name="info" /><div class="row wrap" style="flex:1"><span style="flex:1; min-width:160px">Did you submit the application? Log it so Heardback can remind you to follow up.</span><${Btn} size="sm" kind="primary" onClick=${() => { find_markApplied(job, app); setClicked(false); }}>Mark as applied</${Btn}></div></div>`}
+    ${clicked && (!app || saved) && html`<div class="callout info find-applied-q"><${Icon} name="info" /><div class="row wrap" style="flex:1"><span style="flex:1; min-width:160px">Did you apply? Log it and Heardback will remind you to follow up.</span><${Btn} size="sm" onClick=${() => { find_markApplied(job, app); setClicked(false); }}>Mark as applied</${Btn}></div></div>`}
 
-    <section class="stack-sm" aria-label="Key facts">
+    <section class="dsec" aria-label="Key facts">
       <dl class="kv find-kv">
-        <dt>Level</dt><dd>${FIND_LV[job.lvl]}</dd>
-        <dt>Term</dt><dd>${job.term || html`<span class="faint">Not stated</span>`}</dd>
-        <dt>Category</dt><dd>${job.cat}</dd>
-        <dt>${locs.length > 1 ? `Locations (${job.nl || locs.length})` : "Location"}</dt>
-        <dd>${locs.length ? html`<div class="find-locs">${showLocs.map((l) => html`<span key=${l}>${l}</span>`)}</div>
-          ${locs.length > 6 && html`<button type="button" class="find-link" onClick=${() => setAllLocs(!allLocs)}>${allLocs ? "Show fewer" : `Show all ${locs.length}`}</button>`}
-          ${hiddenMore > 0 && (allLocs || locs.length <= 6) && html`<div class="hint">Plus ${hiddenMore} more on the employer's page.</div>`}` : html`<span class="faint">Not listed</span>`}</dd>
-        <dt>Remote</dt><dd>${job.r ? "Remote option listed" : html`<span class="muted">No remote option listed</span>`}</dd>
-        ${job.sp && html`<dt>Visa sponsorship</dt><dd>${find_visaText(job.sp)}</dd>`}
-        <dt>Degrees</dt><dd>${(job.deg || []).length ? job.deg.map((d) => FIND_DEG[d] || d).join(", ") : html`<span class="faint">Not stated</span>`}</dd>
-        <dt>Posted</dt><dd><span class="num">${fmt.dateY(job.p)}</span> <span class="muted">· ${days <= 0 ? "today" : `${pluralize(days, "day")} ago`}</span><div class="hint">Date the listing was added to the source list.</div></dd>
+        <dt>Level</dt><dd>${FIND_LV[job.lvl]}${job.term ? html` <span class="muted">· ${job.term}</span>` : null}</dd>
+        <dt>Role</dt><dd>${job.cat}</dd>
+        ${locs.length > 0 && html`<dt>${locs.length > 1 ? "Locations" : "Location"}</dt>
+          <dd><div class="find-locs">${showLocs.map((l) => html`<span key=${l}>${l}</span>`)}</div>
+          ${locs.length > 5 && html`<button type="button" class="find-link find-small" onClick=${() => setAllLocs(!allLocs)}>${allLocs ? "Show fewer" : `Show all ${job.nl || locs.length}`}</button>`}
+          ${hiddenMore > 0 && (allLocs || locs.length <= 5) && html`<div class="hint">Plus ${hiddenMore} more on the employer's page.</div>`}</dd>`}
+        ${job.r ? html`<dt>Remote</dt><dd>Remote option listed</dd>` : null}
+        ${job.sp && html`<dt>Visa</dt><dd>${find_visaText(job.sp)}</dd>`}
+        ${deg && html`<dt>Degrees</dt><dd>${deg}</dd>`}
+        <dt>Posted</dt><dd><span title=${fmt.dateY(job.p)}>${find_postedText(job.p)}</span> <span class="muted num">· ${fmt.date(job.p)}</span></dd>
         <dt>Applies via</dt><dd>${find_atsName(job)}</dd>
       </dl>
     </section>
 
-    <section class="card" aria-labelledby="find-gh-h">
-      <div class="card-head"><h3 id="find-gh-h">Ghost-job check</h3></div>
-      <div class="card-body stack">
-        <div class="find-gbig-row">
-          <div class=${cx("find-gbig", lv)}><span class="num">${job.g}</span><span class="find-gbig-of">/100</span></div>
-          <div class="stack-sm" style="gap:2px">
-            <strong>${ghostLabel(job.g)}</strong>
-            <span class="muted find-small">${job.g >= 50 ? "Several warning signs. Worth a quick check before you invest time." : job.g >= 25 ? "A warning sign or two. Not unusual for big employers." : "Nothing in the listing data suggests this role is stale."}</span>
-          </div>
-        </div>
-        ${(job.gr || []).length
-          ? html`<ul class="reason-list">${job.gr.map((r, i) => html`<li key=${i}><${Icon} name="flag" size=${14} cls="find-r-ico" />${r}</li>`)}</ul>`
-          : html`<p class="muted find-small">No warning signs found in the listing data.</p>`}
-        ${job.dup ? html`<p class="muted find-small"><${Icon} name="layers" size=${14} /> The same title and location is listed ${pluralize(job.dup, "more time")} right now. We show it once.</p>` : null}
-        <p class="hint">Signals we can see in the listing data. Not proof either way.</p>
-        <details class="find-details">
-          <summary>How this works</summary>
+    <section class="dsec" aria-labelledby="find-gh-h">
+      <h3 id="find-gh-h">Listing check</h3>
+      <div class=${cx("find-gline", lv)}><span class=${cx("gscore", lv)} aria-hidden="true"><span class="gbars"><i></i><i></i><i></i></span></span><span>${find_ghostLine(job)}</span></div>
+      ${lv !== "low" && (job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${r}</li>`)}</ul>`}
+      ${job.dup ? html`<p class="muted find-small">Listed ${pluralize(job.dup, "more time")} with the same title and locations. Shown once here.</p>` : null}
+      <details class="find-details">
+        <summary>How this works</summary>
+        <div class="find-details-body">
+          <p>Heardback scores signals it can see in public listing data. ${job.g}/100 here${lv === "low" && (job.gr || []).length ? `: ${job.gr.join("; ")}` : ""}. A high score means several signals, not that the job isn't real.</p>
           <ul class="find-rubric">
-            <li><b>Age.</b> Days since it was first listed. 30 or more adds points, with more at 60, 90 and 150 days.</li>
-            <li><b>Reposts.</b> The company posted and closed the same title before. Several open at once is often volume hiring, so that alone adds nothing.</li>
+            <li><b>Age.</b> 30 or more days since first listed adds points, more at 60, 90 and 150.</li>
+            <li><b>Reposts.</b> The same title was posted and closed before.</li>
             <li><b>Location count.</b> Listed in 8 or more cities at once.</li>
             <li><b>Talent-pool wording.</b> Titles like "talent community" or "general application".</li>
             <li><b>Company tempo.</b> Much older than this company's usual time to close a listing.</li>
           </ul>
-          <p class="hint">Points add up to a score capped at 100. 50 or more means several signals, not a verdict. Dates are when the community list first added a listing (the data starts Mar 9, 2026), which can be later than the employer's own posting.</p>
-        </details>
-      </div>
+          <p class="hint">Dates are when the community list first added a listing (data starts Mar 9, 2026), which can be later than the employer's own posting.</p>
+        </div>
+      </details>
     </section>
 
-    <section class="card" aria-labelledby="find-fit-h">
-      <div class="card-head"><h3 id="find-fit-h">Your fit</h3><span class="spacer"></span>${fit && html`<span class=${cx("fit", fit.score >= 75 && "hi")}>Fit ${fit.score}</span>`}</div>
-      <div class="card-body stack">
-        ${fit
-          ? html`<ul class="find-fit-list">${fit.parts.map((p) => html`<${find_FitRow} key=${p.k} p=${p} />`)}</ul>
-            ${(profile.skills || []).length > 0 && fit.expected.length > 0 && html`<div class="stack-sm">
-              <span class="hint">Skills this kind of role usually asks for, compared with your resume</span>
-              <div class="chips">${fit.matched.map((x) => html`<span class="badge ok" key=${"m" + x}><${Icon} name="check" size=${12} />${x}</span>`)}${fit.missing.map((x) => html`<span class="badge outline" key=${"x" + x}>${x}</span>`)}</div>
-            </div>`}`
-          : html`<p class="muted find-small">Set target roles and locations to see how this job fits.</p><div><${Btn} onClick=${() => { closeDrawer(); go("prefs"); }}>Set preferences</${Btn}></div>`}
-        ${!(profile.skills || []).length && html`<div class="callout"><${Icon} name="doc" /><div class="row wrap" style="flex:1"><span style="flex:1;min-width:160px">Add your resume to compare your skills with this role.</span><${Btn} size="sm" onClick=${() => openModal("resume")}>Add your resume</${Btn}></div></div>`}
-        <p class="hint">Based on the listing's title, level and location. Listings here don't include full descriptions.</p>
-      </div>
+    <section class="dsec" aria-labelledby="find-fit-h">
+      <h3 id="find-fit-h">Your fit<span class="spacer"></span><${find_FitPill} fit=${fit} sponsor=${profile.needsSponsor} /></h3>
+      ${fit
+        ? html`<ul class="find-fit-list">${fit.parts.map((p) => html`<${find_FitRow} key=${p.k} p=${p} />`)}</ul>
+          ${(profile.skills || []).length > 0 && fit.expected.length > 0 && html`<div class="stack-sm">
+            <span class="hint">Skills this kind of role usually asks for</span>
+            <div class="chips">${fit.matched.map((x) => html`<span class="badge ok" key=${"m" + x}><${Icon} name="check" size=${12} />${x}</span>`)}${fit.missing.map((x) => html`<span class="badge outline" key=${"x" + x}>${x}</span>`)}</div>
+          </div>`}
+          <p class="hint">From the listing's title, level and location${!(profile.skills || []).length ? html`. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button> to compare skills.` : "."}</p>`
+        : html`<p class="muted find-small">Set target roles and locations to see how this job fits. <button type="button" class="find-link" onClick=${() => { closeDrawer(); go("prefs"); }}>Set preferences</button></p>`}
     </section>
 
-    ${capsNow.sample && html`<section class="card" aria-labelledby="find-ai-h">
-      <div class="card-head"><h3 id="find-ai-h">Ask Claude</h3><span class="spacer"></span><span class="ai-label"><${Icon} name="spark" />Uses your Claude account</span></div>
-      <div class="card-body stack">
-        ${find_hasResume(profile)
-          ? html`<${find_WhyYou} job=${job} profile=${profile} /><div class="divider"></div><${find_Tailor} job=${job} profile=${profile} />`
-          : html`<div class="callout"><${Icon} name="doc" /><div class="row wrap" style="flex:1"><span style="flex:1;min-width:160px">Claude needs your resume text to judge fit or suggest bullets. It only rewrites what's already there.</span><${Btn} size="sm" onClick=${() => openModal("resume")}>Add your resume</${Btn}></div></div>`}
-      </div>
-    </section>`}
+    ${capsNow.sample && html`<${find_AskClaude} job=${job} profile=${profile} />`}
 
-    <section class="card" aria-labelledby="find-co-h">
-      <div class="card-head"><${Logo} name=${job.co} size="sm" /><h3 id="find-co-h" class="truncate">${job.co}</h3><span class="spacer"></span><${Btn} size="sm" iconRight="chevR" onClick=${() => openCompany(job.co)}>View company</${Btn}></div>
+    <section class="dsec" aria-labelledby="find-co-h">
+      <h3 id="find-co-h"><span class="truncate">${job.co}</span><span class="spacer"></span><button type="button" class="find-link find-h-meta" onClick=${() => openCompany(job.co)}>View company</button></h3>
       ${cs ? html`<div class="find-mini">
-        <div class="stat"><span class="stat-label">Open roles</span><span class="find-mini-v num">${fmt.num(cs.open)}</span></div>
-        <div class="stat"><span class="stat-label">Listing stays open</span><span class="find-mini-v num">${find_daysText(cs.medOpenDays) || html`<span class="faint">Not enough data</span>`}</span>${cs.medOpenDays != null && html`<span class="stat-sub">typical, n=${cs.closedTimed}</span>`}</div>
-        <div class="stat"><span class="stat-label">Reposted titles</span><span class="find-mini-v num">${fmt.pct(cs.repostShare)}</span><span class="stat-sub">of open roles</span></div>
+        <div class="find-mini-s"><span class="find-mini-v num">${fmt.num(coOpen || cs.open)}</span><span class="stat-label">open roles</span></div>
+        ${cs.medOpenDays != null
+          ? html`<div class="find-mini-s" title=${cs.closedTimed ? `Median from ${pluralize(cs.closedTimed, "closed listing")}` : ""}><span class="find-mini-v num">${find_daysText(cs.medOpenDays)}</span><span class="stat-label">typical time open</span></div>`
+          : html`<div class="find-mini-s"><span class="find-mini-v num">${cs.new30 != null ? fmt.num(cs.new30) : "–"}</span><span class="stat-label">new in last 30 days</span></div>`}
+        <div class="find-mini-s"><span class="find-mini-v num">${fmt.pct(cs.repostShare)}</span><span class="stat-label">reposted titles</span></div>
       </div>
-      ${find_season(cs) && html`<div class="find-season-line"><span><span class="muted">${find_season(cs).term} hiring: </span><span class="num">${find_season(cs).line}</span></span>${find_season(cs).read && html` <span class=${cx("badge", find_season(cs).tone)}>${find_season(cs).read}</span>`}</div>`}` : html`<div class="card-body"><p class="muted find-small">No company stats for this listing yet.</p></div>`}
+      ${season && html`<p class="find-small find-season-line"><span class="muted">${season.term} hiring:</span> <span class="num">${fmt.num(season.open)} of ${fmt.num(season.posted)} postings still open</span>${season.read && html` <span class=${cx("badge", season.tone)}>${season.read}</span>`}</p>`}` : html`<p class="muted find-small">No company history for this listing yet.</p>`}
     </section>
   </${Drawer}>`;
 };
 
 /* ---------- Companies ---------- */
 const CO_SORTS = [{ id: "open", label: "Most open roles" }, { id: "hiring", label: "Still hiring" }, { id: "fast", label: "Fastest to close" }, { id: "ghost", label: "Most likely real" }, { id: "az", label: "A–Z" }];
+const find_openN = (jobsState, name, c) => (jobsState.byCompany.get(name) || []).length || c.open || 0;
 const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.season.posted : null);
 const find_ghostShareC = { jobs: null, m: null };
 function find_ghostShare(jobsState) {
@@ -625,26 +675,27 @@ VIEWS.companies = function CompaniesView() {
   const list = useMemo(() => {
     if (!ready) return [];
     const words = norm(q).split(" ").filter(Boolean);
-    let arr = Object.entries(jobs.cstats).map(([name, c]) => ({ name, c, k: norm(name) }));
+    let arr = Object.entries(jobs.cstats).map(([name, c]) => ({ name, c, k: norm(name), open: find_openN(jobs, name, c) }));
     if (words.length) arr = arr.filter((x) => words.every((w) => x.k.includes(w)));
     const by = {
-      open: (a, b) => b.c.open - a.c.open || a.name.localeCompare(b.name),
+      open: (a, b) => b.open - a.open || a.name.localeCompare(b.name),
       hiring: (a, b) => (find_stillShare(b.c) ?? -1) - (find_stillShare(a.c) ?? -1) || (b.c.season?.open || 0) - (a.c.season?.open || 0),
-      fast: (a, b) => (a.c.medOpenDays ?? 1e9) - (b.c.medOpenDays ?? 1e9) || b.c.open - a.c.open,
-      ghost: (a, b) => (gs.get(a.name) ?? 0) - (gs.get(b.name) ?? 0) || a.c.avgGhost - b.c.avgGhost || b.c.open - a.c.open,
+      fast: (a, b) => (a.c.medOpenDays ?? 1e9) - (b.c.medOpenDays ?? 1e9) || b.open - a.open,
+      ghost: (a, b) => (gs.get(a.name) ?? 0) - (gs.get(b.name) ?? 0) || a.c.avgGhost - b.c.avgGhost || b.open - a.open,
       az: (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
     }[sort];
     return arr.sort(by);
   }, [ready, jobs.cstats, q, sort]);
   useEffect(() => setShown(50), [q, sort]);
 
-  const head = html`<div class="page-head"><div><h1>Companies</h1><p>${ready ? html`<span class="num">${fmt.num(Object.keys(jobs.cstats).length)}</span> companies with open internship or new-grad roles. Stats come from public listing history.` : "Companies hiring interns and new grads, with how long their listings usually stay open."}</p></div></div>`;
+  const head = html`<div class="page-head"><div><h1>Companies</h1><p>${ready ? html`<span class="num">${fmt.num(Object.keys(jobs.cstats).length)}</span> companies with open internship or new-grad roles, and how their listings usually behave.` : "Companies hiring interns and new grads, with how long their listings usually stay open."}</p></div></div>`;
   if (!ready) {
     return html`<div class="page">${head}${jobs.status === "error"
       ? html`<div class="card"><${Empty} icon="alert" title="Couldn't load company data" action=${html`<${Btn} kind="primary" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}>`}>The listings file didn't load (${jobs.error || "unknown error"}). Check your connection and try again.</${Empty}></div>`
       : html`<div class="card"><${Skeleton} rows=${10} /></div>`}</div>`;
   }
   const rows = list.slice(0, shown);
+  const anyApps = list.some((x) => appsBy.get(x.k));
   const lifetime = (c) => find_daysText(c.medOpenDays) || html`<span class="faint">Not enough data</span>`;
   return html`<div class="page">
     ${head}
@@ -657,19 +708,19 @@ VIEWS.companies = function CompaniesView() {
     <div class="card hide-sm">
       <table class="table find-cotable">
         <thead><tr>
-          <th>Company</th><th class="r">Open roles</th><th>Intern / new grad</th><th class="r" title="Median days a closed listing stayed open">Typical listing lifetime</th><th class="r" title="Share of this season's internship postings still open">Still hiring</th><th class="r" title="Share of open roles with strong ghost signals">Ghost signals</th><th class="r">Your apps</th>
+          <th>Company</th><th class="r">Open roles</th><th>Intern / new grad</th><th class="r" title="Median days a closed listing stayed open"><span class="find-th-help">Typical time open<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this season's internship postings still open"><span class="find-th-help">Still hiring<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this company's open roles with several stale-listing signals (score 50 or more). Grey under 20%, amber from 20%, red from 50%. Signals, not proof."><span class="find-th-help">Stale signals<${Icon} name="info" size=${12} /></span></th>${anyApps && html`<th class="r">Your apps</th>`}
         </tr></thead>
         <tbody>${rows.map((x) => {
           const n = appsBy.get(x.k) || 0;
           const g = gs.get(x.name) ?? 0;
           return html`<tr key=${x.name} tabindex="0" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
             <td><div class="row"><${Logo} name=${x.name} size="sm" /><span class="truncate find-coname">${x.name}</span></div></td>
-            <td class="r num">${fmt.num(x.c.open)}</td>
+            <td class="r num">${fmt.num(x.open)}</td>
             <td><div class="find-split" title=${`${x.c.intern} internships · ${x.c.newgrad} new grad`}><span class="find-split-bar"><i style=${`width:${x.c.open ? (x.c.intern / x.c.open) * 100 : 0}%`}></i></span><span class="num muted">${x.c.intern} / ${x.c.newgrad}</span></div></td>
             <td class="r num">${lifetime(x.c)}</td>
             <td class="r num">${find_stillShare(x.c) != null ? html`<span title=${`${x.c.season.open} of ${x.c.season.posted} ${x.c.season.term} postings open`}>${fmt.pct(find_stillShare(x.c))}</span>` : html`<span class="faint">–</span>`}</td>
             <td class="r num"><span class=${cx("find-gshare", g >= 0.5 ? "high" : g >= 0.2 ? "mid" : "")}>${fmt.pct(g)}</span></td>
-            <td class="r num">${n ? html`<span class="badge accent">${n}</span>` : html`<span class="faint">–</span>`}</td>
+            ${anyApps && html`<td class="r num">${n ? html`<span class="badge accent" title=${pluralize(n, "application")}>${n}</span>` : null}</td>`}
           </tr>`;
         })}</tbody>
       </table>
@@ -678,7 +729,7 @@ VIEWS.companies = function CompaniesView() {
       const n = appsBy.get(x.k) || 0;
       return html`<button type="button" class="find-corow" key=${x.name} onClick=${() => openCompany(x.name)}>
         <${Logo} name=${x.name} />
-        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta">${pluralize(x.c.open, "open role")} · ${x.c.medOpenDays != null ? `${find_daysText(x.c.medOpenDays)} open` : "lifetime n/a"} · ${fmt.pct(gs.get(x.name) ?? 0)} with ghost signals</span></div>
+        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta">${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (gs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(gs.get(x.name))} with stale signals` : ""].filter(Boolean).join(" · ")}</span></div>
         ${n ? html`<span class="badge accent">${n}</span>` : html`<${Icon} name="chevR" cls="faint" />`}
       </button>`;
     })}</div></div>
@@ -686,17 +737,26 @@ VIEWS.companies = function CompaniesView() {
       ${shown < list.length && html`<${Btn} onClick=${() => setShown((n) => n + 50)}>Show ${Math.min(50, list.length - shown)} more</${Btn}>`}
       <span class="faint num">Showing ${fmt.num(Math.min(shown, list.length))} of ${fmt.num(list.length)}</span>
     </div>`}
-    <p class="footer-note">Lifetime is the median days a closed listing stayed open, from closed listings that stayed up at least a day. Still hiring is the share of this season's internship postings that are still open. Ghost signals is the share of open roles scoring 50 or more.</p>
+    <p class="footer-note">From public listing history (SimplifyJobs). Hover a column heading to see how it's calculated.</p>
   </div>`;
 };
 
 /* ---------- DRAWERS.company ---------- */
-function find_Stat({ label, value, sub, n }) {
-  return html`<div class="find-stat">
+function find_Stat({ label, value, sub, title }) {
+  return html`<div class="find-stat" title=${title || null}>
     <span class="stat-label">${label}</span>
     <span class="find-stat-v num">${value}</span>
-    <span class="stat-sub">${sub}${n != null && html` <span class="find-n">n=${fmt.num(n)}</span>`}</span>
+    ${sub && html`<span class="stat-sub">${sub}</span>`}
   </div>`;
+}
+function find_BriefText({ text }) {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const bullets = lines.filter((l) => /^[-•*]\s+/.test(l));
+  if (bullets.length >= 2 && bullets.length >= lines.length - 1) {
+    const intro = lines.filter((l) => !/^[-•*]\s+/.test(l));
+    return html`<div class="find-brief">${intro.map((l, i) => html`<p key=${"p" + i}>${l}</p>`)}<ul class="reason-list find-reasons">${bullets.map((l, i) => html`<li key=${i}>${l.replace(/^[-•*]\s+/, "")}</li>`)}</ul></div>`;
+  }
+  return html`<div class="find-brief find-brief-pre">${text}</div>`;
 }
 function find_Brief({ name, cs }) {
   const key = `heardback:find:brief:${name}`;
@@ -715,14 +775,12 @@ For context, public listing data currently shows ${cs?.open || 0} open roles${ca
     if (out) storage.set(key, { at: now(), text: out });
     return out;
   });
-  return html`<section class="card" aria-labelledby="find-brief-h">
-    <div class="card-head"><h3 id="find-brief-h">Company overview</h3><span class="spacer"></span>${!st.busy && html`<${Btn} size="sm" icon="spark" onClick=${go}>${text ? "Refresh" : "Brief me on this company"}</${Btn}>`}</div>
-    <div class="card-body stack-sm">
-      ${st.busy && html`<${find_Thinking} onStop=${stop} text=${st.partial ? "Writing…" : "Thinking…"} />`}
-      ${text ? html`<div class="ai-box">${text}</div>` : !st.busy && html`<p class="muted find-small">Claude can write a quick overview from its general knowledge.</p>`}
-      ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err}</span></div>`}
-      ${text && html`<span class="ai-label"><${Icon} name="spark" />AI-generated from Claude's general knowledge. May be out of date. Verify before relying on it.${fresh && !st.out && !st.busy ? ` Saved ${fmt.ago(fresh.at)}.` : ""}</span>`}
-    </div>
+  return html`<section class="dsec" aria-labelledby="find-brief-h">
+    <h3 id="find-brief-h">Company overview<span class="spacer"></span>${!st.busy && text && html`<${Btn} kind="ghost" size="sm" icon="refresh" onClick=${go}>Refresh</${Btn}>`}</h3>
+    ${st.busy && html`<${find_Thinking} onStop=${stop} text=${st.partial ? "Writing…" : "Thinking…"} />`}
+    ${text ? html`<${find_BriefText} text=${text} />` : !st.busy && html`<div class="row wrap find-brief-cta"><${Btn} icon="spark" onClick=${go}>Brief me on this company</${Btn}><span class="hint">From Claude's general knowledge.</span></div>`}
+    ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err}</span></div>`}
+    ${text && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude from general knowledge · may be out of date · verify before relying on it.${fresh && !st.out && !st.busy ? ` Saved ${fmt.ago(fresh.at)}.` : ""}</span>`}
   </section>`;
 }
 
@@ -737,13 +795,14 @@ DRAWERS.company = ({ id }) => {
   const open = jobs.byCompany.get(name) || [];
   const myApps = Apps.list(s).filter((a) => norm(a.company) === norm(name)).sort((a, b) => b.lastActivityAt - a.lastActivityAt);
   const loading = jobs.status !== "ready" && jobs.status !== "error";
+  const nOpen = cs ? find_openN(jobs, name, cs) : open.length;
 
   const head = html`<div class="find-dhead">
     <${Logo} name=${name} size="lg" />
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${name}</h2>
       <div class="row wrap find-dsub find-dsub-co">
-        ${cs ? html`<span class="muted">${pluralize(cs.open, "open role")}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
+        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
         ${cs?.site && html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>`}
       </div>
     </div>
@@ -751,54 +810,53 @@ DRAWERS.company = ({ id }) => {
 
   const roles = allRoles ? open : open.slice(0, 8);
   const season = find_season(cs);
+  const nClosed = cs?.closedTimed || 0;
+  const fromClosed = nClosed ? `From ${pluralize(nClosed, "closed listing")}` : "";
   return html`<${Drawer} onClose=${closeDrawer} label=${name} head=${head}>
     ${loading && html`<${Skeleton} rows=${4} />`}
-    ${cs && html`<section aria-labelledby="find-cs-h" class="stack-sm">
-      <h3 id="find-cs-h" class="section-title">From public listing history</h3>
+    ${cs && html`<section class="dsec" aria-labelledby="find-cs-h">
+      <h3 id="find-cs-h">Listing history</h3>
       <div class="find-stats">
-        <${find_Stat} label="Open roles" value=${fmt.num(cs.open)} sub=${`${cs.intern} internship · ${cs.newgrad} new grad`} />
-        <${find_Stat} label="Listed since" value=${cs.first ? fmt.date(cs.first * 1000, { month: "short", year: "numeric" }) : "—"} sub="Earliest listing in the dataset, which starts Mar 2026." n=${cs.seen} />
-        <${find_Stat} label="Typical time open" value=${find_daysText(cs.medOpenDays) || html`<span class="faint find-nd">Not enough data</span>`} sub=${cs.medOpenDays != null ? "Median for closed listings." : "Needs 5+ closed listings with dates."} n=${cs.closedTimed} />
-        <${find_Stat} label="Closed within 14 days" value=${cs.fastClose != null ? fmt.pct(cs.fastClose) : html`<span class="faint find-nd">Not enough data</span>`} sub="Share of closed listings." n=${cs.closedTimed} />
-        <${find_Stat} label="Repost share" value=${fmt.pct(cs.repostShare)} sub="Open roles whose title was listed before." n=${cs.open} />
-        <${find_Stat} label="New in last 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "—"} sub="Postings added, open or closed." />
+        <${find_Stat} label="Open roles" value=${fmt.num(nOpen)} sub=${`${fmt.num(cs.intern)} internship · ${fmt.num(cs.newgrad)} new grad`} />
+        <${find_Stat} label="Typical time open" value=${find_daysText(cs.medOpenDays) || html`<span class="faint find-nd">Not enough data</span>`} sub=${cs.medOpenDays != null ? fromClosed : ""} title=${cs.medOpenDays != null ? `Median days a closed listing stayed open. ${fromClosed}.` : "Needs at least 5 closed listings with dates."} />
+        <${find_Stat} label="Closed within 14 days" value=${cs.fastClose != null ? fmt.pct(cs.fastClose) : html`<span class="faint find-nd">Not enough data</span>`} title=${cs.fastClose != null ? `Share of closed listings that came down within two weeks. ${fromClosed}.` : ""} />
+        <${find_Stat} label="Reposted titles" value=${fmt.pct(cs.repostShare)} title="Share of open roles whose title this company listed before." />
+        <${find_Stat} label="New in last 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
+        <${find_Stat} label="First seen" value=${cs.first ? fmt.date(cs.first * 1000, { month: "short", year: "numeric" }) : "–"} title="Earliest listing in the dataset, which starts Mar 2026." />
       </div>
-      <p class="hint">Closed-listing dates are only counted when a listing stayed up at least a day, and still-open listings aren't in the sample, so typical times lean short.</p>
+      <details class="find-details">
+        <summary>How these are calculated</summary>
+        <div class="find-details-body"><p>From public SimplifyJobs listing history. Times open use closed listings that stayed up at least a day; listings still open aren't counted, so typical times may run short. The data starts in March 2026.</p></div>
+      </details>
     </section>`}
 
-    ${season && html`<section class="card" aria-labelledby="find-season-h">
-      <div class="card-head"><h3 id="find-season-h">${season.term} hiring</h3><span class="spacer"></span>${season.read && html`<span class=${cx("badge", season.tone)}>${season.read}</span>`}</div>
-      <div class="card-body stack-sm">
-        <div class="find-season-nums">
-          <span><strong class="num">${fmt.num(season.posted)}</strong> <span class="muted">internship postings this season</span></span>
-          <span><strong class="num">${fmt.num(season.open)}</strong> <span class="muted">still open</span></span>
-          ${season.lastNew && html`<span><span class="muted">last new posting</span> <strong class="num">${fmt.ago(season.lastNew * 1000)}</strong></span>`}
-        </div>
-        <${Meter} value=${season.open} max=${season.posted} />
-        <p class="hint">${season.read === "Still adding roles" ? `${name} added a ${season.term} posting in the last week.` : season.read ? `Only ${fmt.pct(season.share)} of this season's postings are still open and nothing new has been added in three weeks.` : `${fmt.pct(season.share)} of this season's postings are still open.`}</p>
+    ${season && html`<section class="dsec" aria-labelledby="find-season-h">
+      <h3 id="find-season-h">${season.term} hiring<span class="spacer"></span>${season.read && html`<span class=${cx("badge", season.tone)}>${season.read}</span>`}</h3>
+      <div class="find-season-nums">
+        <span><strong class="num">${fmt.num(season.open)}</strong> <span class="muted">of</span> <strong class="num">${fmt.num(season.posted)}</strong> <span class="muted">internship postings still open</span></span>
+        ${season.lastNew && html`<span class="muted">Last new posting <span class="num">${fmt.ago(season.lastNew * 1000)}</span></span>`}
       </div>
+      <${Meter} value=${season.open} max=${season.posted} />
     </section>`}
 
     ${typeof PoolCompanyCard === "function" ? html`<${PoolCompanyCard} company=${name} />` : null}
 
-    <section class="stack-sm" aria-labelledby="find-my-h">
-      <h3 id="find-my-h" class="section-title">Your applications here <span class="count">${myApps.length}</span></h3>
-      ${myApps.length
-        ? html`<div class="card"><div class="list">${myApps.map((a) => html`<button type="button" class="find-applink" key=${a.id} onClick=${() => openApp(a.id)}>
-            <div class="find-row-main"><span class="find-row-title">${a.title || "Untitled role"}</span><span class="find-row-meta">${a.appliedAt ? `Applied ${fmt.date(a.appliedAt)}` : `Saved ${fmt.date(a.createdAt)}`}${a.location ? ` · ${a.location}` : ""}</span></div>
-            ${a.example && html`<${ExampleTag} />`}<${StageBadge} stage=${a.stage} />
-          </button>`)}</div></div>`
-        : html`<p class="muted find-small">You haven't saved or applied to anything at ${name} yet.</p>`}
-    </section>
+    ${myApps.length > 0 && html`<section class="dsec" aria-labelledby="find-my-h">
+      <h3 id="find-my-h">Your applications <span class="count">${myApps.length}</span></h3>
+      <div class="list find-dlist">${myApps.map((a) => html`<button type="button" class="find-applink" key=${a.id} onClick=${() => openApp(a.id)}>
+          <div class="find-row-main"><span class="find-row-title">${a.title || "Untitled role"}</span><span class="find-row-meta">${a.appliedAt ? `Applied ${fmt.date(a.appliedAt)}` : `Saved ${fmt.date(a.createdAt)}`}${a.location ? ` · ${a.location}` : ""}</span></div>
+          <${StageBadge} stage=${a.stage} /><${Icon} name="chevR" cls="faint" />
+        </button>`)}</div>
+    </section>`}
 
     ${capsNow.sample && html`<${find_Brief} name=${name} cs=${cs} />`}
 
-    <section class="stack-sm" aria-labelledby="find-open-h">
-      <h3 id="find-open-h" class="section-title">Open roles <span class="count">${open.length}</span></h3>
+    ${(open.length > 0 || !loading) && html`<section class="dsec" aria-labelledby="find-open-h">
+      <h3 id="find-open-h">Open roles <span class="count">${fmt.num(open.length)}</span></h3>
       ${open.length
-        ? html`<div class="card find-results find-results-tight"><div class="list" role="list">${roles.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${s.profile} i=${i} inCompany />`)}</div></div>
-          ${open.length > 8 && html`<div><${Btn} size="sm" onClick=${() => setAllRoles(!allRoles)}>${allRoles ? "Show fewer" : `Show all ${open.length}`}</${Btn}></div>`}`
-        : !loading && html`<p class="muted find-small">No open internship or new-grad listings right now.</p>`}
-    </section>
+        ? html`<div class="find-dlist find-results-tight"><div class="list" role="list">${roles.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${s.profile} i=${i} inCompany />`)}</div></div>
+          ${open.length > 8 && html`<div><${Btn} size="sm" onClick=${() => setAllRoles(!allRoles)}>${allRoles ? "Show fewer" : `Show all ${fmt.num(open.length)}`}</${Btn}></div>`}`
+        : html`<p class="muted find-small">No open internship or new-grad listings right now.</p>`}
+    </section>`}
   </${Drawer}>`;
 };

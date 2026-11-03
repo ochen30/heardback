@@ -160,6 +160,7 @@ const EMAIL_KINDS = {
   offer: { label: "Offer", stage: "offer" },
   other: { label: "Update", stage: null },
 };
+function hb_time(t) { const m = (t || "").replace(/\s+/g, "").match(/(\d{1,2})(?::(\d{2}))?(am|pm)/i); return m ? `${m[1]}:${m[2] || "00"} ${m[3]}` : "10:00 am"; }
 function parseEmail(raw) {
   const text = (raw || "").replace(/\r/g, "");
   const low = text.toLowerCase();
@@ -167,11 +168,17 @@ function parseEmail(raw) {
   const from = hdr("From"), subject = hdr("Subject"), dateH = hdr("Date");
   let kind = "other";
   const has = (...ps) => ps.some((p) => low.includes(p));
-  if (has("pleased to offer", "extend an offer", "offer letter", "excited to offer", "formal offer", "offer of employment")) kind = "offer";
-  else if (has("unfortunately", "not to move forward", "not be moving forward", "decided to pursue other", "move forward with other", "regret to inform", "position has been filled", "not selected", "will not be proceeding", "other candidates whose", "decided not to proceed")) kind = "rejection";
-  else if (has("phone screen", "recruiter call", "initial call", "quick chat", "intro call", "screening call") && !has("technical interview", "onsite", "on-site", "superday", "final round", "panel interview", "coding interview", "system design", "hackerrank", "codesignal", "case interview", "virtual onsite")) kind = "screen";
-  else if (has("interview", "schedule a time", "your availability", "calendly", "next round", "onsite", "superday", "technical assessment", "coding challenge", "hackerrank", "codesignal", "phone screen", "recruiter call")) kind = "interview";
-  else if (has("thank you for applying", "received your application", "application has been received", "we have received your", "thanks for applying", "application was submitted", "successfully submitted", "thank you for your application", "thank you for your interest")) kind = "confirmation";
+  const offer = has("pleased to offer", "extend an offer", "extend you an offer", "offer letter", "excited to offer", "formal offer", "offer of employment", "offer you the position", "offer you a position", "offer you the role", "verbal offer") || (has("congratulations") && has("offer"));
+  const reject = has("not to move forward", "not be moving forward", "won't be moving forward", "will not be moving forward", "decided to pursue other", "move forward with other", "other candidates", "regret to inform", "position has been filled", "not been selected", "not selected", "will not be proceeding", "decided not to proceed", "unable to offer", "not be able to offer", "no longer under consideration", "not moving forward");
+  const strongInterview = has("invite you", "like to invite", "your availability", "calendly", "would like to schedule", "please select a time", "book a time", "pick a time", "next round", "onsite", "on-site", "superday", "coding challenge", "hackerrank", "codesignal", "codility", "online assessment", "technical assessment", "would you be available", "are you available", "schedule a call", "schedule a time");
+  const screen = has("phone screen", "recruiter call", "initial call", "quick chat", "intro call", "screening call", "phone interview") && !has("technical interview", "onsite", "on-site", "superday", "final round", "panel interview", "coding interview", "system design", "hackerrank", "codesignal", "case interview", "virtual onsite");
+  const confirm = has("thank you for applying", "thanks for applying", "received your application", "application has been received", "we have received your", "application was submitted", "successfully submitted", "thank you for your application", "application received", "thanks for your application");
+  const interest = has("thank you for your interest", "thanks for your interest");
+  if (offer) kind = "offer";
+  else if (reject) kind = "rejection";
+  else if (strongInterview || screen) kind = screen && !has("technical interview", "onsite", "superday") ? "screen" : "interview";
+  else if (confirm || interest) kind = "confirmation";
+  else if (has("interview")) kind = "interview";
 
   // company
   let company = "";
@@ -180,6 +187,7 @@ function parseEmail(raw) {
     /(?:position|role|opportunity|job) (?:at|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
     /(?:join|joining) (?:the )?([A-Z][\w&.'\- ]{1,40}?) (?:team|family)/,
     /interest in (?:joining )?([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
+    /invited by ([A-Z][\w&.'\- ]{1,40}?) to /,
     /^(?:the )?([A-Z][\w&.'\- ]{1,30}?) (?:Recruiting|Talent|Careers|Hiring) Team/m,
     /\b(?:at|with|from) ([A-Z][\w&.'\-]+(?: [A-Z][\w&.'\-]+){0,3})[.!]/,
   ];
@@ -187,7 +195,7 @@ function parseEmail(raw) {
   if (!company && from) {
     const nm = from.match(/^"?([^"<@]+?)"?\s*</);
     const dom = from.match(/@([a-z0-9-]+)\./i);
-    if (nm && !/no-?reply|notifications|recruit|talent|careers|hiring|workday|greenhouse|lever|ashby/i.test(nm[1])) company = nm[1].replace(/\s+(Recruiting|Careers|Talent).*$/i, "").trim();
+    if (nm && !/no-?reply|notifications|recruit|talent|careers|hiring|workday|greenhouse|lever|ashby|hackerrank|codesignal|codility|karat|hirevue|smartrecruiters|icims|jobvite|taleo/i.test(nm[1])) company = nm[1].replace(/\s+(Recruiting Coordination|Recruiting|Careers|Talent Acquisition|Talent|Interviews|University|Early Careers|HR|People)\b.*$/i, "").trim();
     else if (dom && !/gmail|outlook|yahoo|greenhouse|lever|myworkday|workday|ashbyhq|icims|smartrecruiters|hire|jobvite|taleo/i.test(dom[1])) company = dom[1][0].toUpperCase() + dom[1].slice(1);
   }
   if (!company && subject) { const m = subject.match(/(?:at|from|with)\s+([A-Z][\w&.'\- ]{1,30})/); if (m) company = m[1].trim(); }
@@ -198,10 +206,12 @@ function parseEmail(raw) {
   const tp = [
     /(?:position|role|offer) (?:of|as) (?:an? |the )?([A-Z][\w&/,()+.'\- ]{2,70}?) (?:at|with) /,
     /for (?:the )?(?:position of |role of )?["“]?([A-Z][\w&/,()+.'\- ]{2,70}?)["”]? (?:position|role|opening|internship)/,
+    /(?:application|applying|interview|candidacy) (?:for|to) (?:the )?["“]?([A-Z][\w&/()+.,'\- ]{2,70}?)["”]? (?:position|role|opening|internship)/,
     /(?:application|applying|interview|candidacy) for (?:the )?["“]?([A-Z][\w&/()+.'\- ]{2,70}?)["”]?(?: position| role| opening)?(?: at | with |[.!,\n(])/,
     /(?:position|role):\s*([^\n]{3,70})/i,
   ];
   for (const re of tp) { const m = text.match(re); if (m) { title = m[1].trim(); break; } }
+  if (!title && subject) { const m = subject.match(/^(?:Application (?:Received|Submitted|Confirmation)|Thank you for applying|Your application)\s*(?:to [^-–:|]+)?[-–:|]\s*(.+?)(?:\s*\((?:[A-Z]{0,4}-?)?\d{3,}\))?\s*$/i); if (m) title = m[1].trim(); }
   if (!title && subject) { const m = subject.match(/[-–:|]\s*([A-Z][^-–:|]{3,60}(?:Intern|Engineer|Analyst|Scientist|Developer|Manager|Designer|Associate)[^-–:|]*)/); if (m) title = m[1].trim(); }
 
   // date
@@ -212,10 +222,22 @@ function parseEmail(raw) {
   let interviewAt = null;
   const body = text.replace(/^(?:From|To|Cc|Bcc|Subject|Date|Sent|Reply-To):.*$/gim, "");
   const dm = body.match(/(?:on\s+)?((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*,?\s+)?((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?(?:\s*(?:at|@|,)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)))?/i);
-  if (dm && (kind === "interview" || kind === "screen")) {
+  const deadline = dm && /\b(by|before|deadline|due|expires?|until)\s*(on\s*)?$/i.test(body.slice(Math.max(0, dm.index - 24), dm.index).trim() + " ");
+  if (dm && !deadline && (kind === "interview" || kind === "screen")) {
     const yr = dm[3] || new Date().getFullYear();
-    const t = Date.parse(`${dm[2]} ${yr} ${dm[4] ? dm[4].replace(/(am|pm)/i, " $1") : "10:00 am"}`);
-    if (!isNaN(t)) interviewAt = t < now() - 30 * DAY ? Date.parse(`${dm[2]} ${+yr + 1} ${dm[4] || "10:00 am"}`) : t;
+    const t = Date.parse(`${dm[2]} ${yr} ${hb_time(dm[4])}`);
+    if (!isNaN(t)) interviewAt = t < now() - 30 * DAY ? Date.parse(`${dm[2]} ${+yr + 1} ${hb_time(dm[4])}`) : t;
+  }
+  if (!interviewAt && (kind === "interview" || kind === "screen")) {
+    const nm = body.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b(?:\s*(?:at|@|,)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)))?/i);
+    const before = nm ? body.slice(Math.max(0, nm.index - 24), nm.index) : "";
+    if (nm && +nm[1] <= 12 && +nm[2] <= 31 && !/\b(by|before|deadline|due|until)\s*(on\s*)?$/i.test(before.trim() + " ")) {
+      let yr = nm[3] ? (+nm[3] < 100 ? 2000 + +nm[3] : +nm[3]) : new Date().getFullYear();
+      const tm = hb_time(nm[4]);
+      let t = Date.parse(`${nm[1]}/${nm[2]}/${yr} ${tm}`);
+      if (!nm[3] && t < now() - 30 * DAY) t = Date.parse(`${nm[1]}/${nm[2]}/${yr + 1} ${tm}`);
+      if (!isNaN(t)) interviewAt = t;
+    }
   }
   let roundType = null;
   if (kind === "screen") roundType = "recruiter";
@@ -229,7 +251,7 @@ function parseEmail(raw) {
 function matchApp(company, title) {
   if (!company) return null;
   const c = norm(company);
-  const cands = Object.values(store.get().apps).filter((a) => { const ac = norm(a.company); return ac && (ac === c || ac.includes(c) || c.includes(ac)); });
+  const cands = Apps.list().filter((a) => { const ac = norm(a.company); return ac && (ac === c || ac.includes(c) || c.includes(ac)); });
   if (!cands.length) return null;
   if (title) { const t = norm(title); const exact = cands.find((a) => norm(a.title) === t || norm(a.title).includes(t) || t.includes(norm(a.title))); if (exact) return exact; }
   return cands.sort((a, b) => b.lastActivityAt - a.lastActivityAt)[0];

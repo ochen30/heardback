@@ -53,7 +53,7 @@ function computeStats(s = store.get(), apps = Apps.list(s)) {
   const replied = applied.filter((a) => a.lastReplyAt || ["screen", "interview", "offer", "rejected"].includes(a.stage));
   const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).length || a.events.some((e) => e.to === "interview"));
   const offers = applied.filter((a) => a.stage === "offer" || a.events.some((e) => e.to === "offer"));
-  const replyDays = replied.map((a) => a.lastReplyAt && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null).filter((x) => x != null && x >= 0);
+  const replyDays = replied.map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
   const median = (arr) => { if (!arr.length) return null; const v = [...arr].sort((a, b) => a - b); const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   const weekStart = startOfWeek(now());
   const thisWeek = applied.filter((a) => a.appliedAt >= weekStart).length;
@@ -64,7 +64,7 @@ function computeStats(s = store.get(), apps = Apps.list(s)) {
     ghosted: applied.filter((a) => a.stage === "ghosted").length, rejected: applied.filter((a) => a.stage === "rejected").length,
     responseRate: applied.length ? replied.length / applied.length : null,
     interviewRate: applied.length ? interviewed.length / applied.length : null,
-    medianReplyDays: median(replyDays), thisWeek, weeks,
+    medianReplyDays: median(replyDays), replyN: replyDays.length, thisWeek, weeks,
     active: apps.filter((a) => ACTIVE_STAGES.includes(a.stage)).length,
   };
 }
