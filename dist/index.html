@@ -2412,11 +2412,15 @@ function computeTasks(s = store.get()) {
     if (a.stage === "saved") {
       const age = Math.floor((t - a.createdAt) / DAY);
       const job = a.jobId ? jobsStore.byId.get(a.jobId) : null;
-      if (age >= 3) {
+      const cs = jobsStore.cstats?.[a.company];
+      const se = job && job.lvl === "intern" ? cs?.season : null;
+      const closing = se && se.posted >= 5 && se.open / se.posted < 0.2 && se.lastNew && now() - se.lastNew * 1000 > 21 * DAY;
+      if (age >= 3 || closing) {
         const key = `apply:${a.id}`;
-        if (!skip(key)) out.push({ key, kind: "apply", pri: 4, app: a, icon: "bolt", tone: "", title: `Apply to ${a.company}`, sub: `Saved ${age} days ago${job && job.g >= 50 ? " · this listing shows ghost-job signs" : ". Early applicants get more replies."}`, action: "Open" });
-      }
-    }
+        const sub = closing ? `${a.company} has closed ${Math.round((1 - se.open / se.posted) * 100)}% of its ${se.term} internship postings. Apply soon or let it go.`
+          : `Saved ${age} days ago${job && job.g >= 50 ? " · this listing shows strong ghost signals" : ". Early applicants get more replies."}`;
+        if (!skip(key)) out.push({ key, kind: "apply", pri: closing ? 1 : 4, app: a, icon: "bolt", tone: closing ? "wait" : "", title: `Apply to ${a.company}`, sub, action: "Apply" });
+      }    }
   }
   out.sort((x, y) => x.pri - y.pri);
   return out;
