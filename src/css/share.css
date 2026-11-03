@@ -1,0 +1,16 @@
+/* ===== Share your progress ===== */
+@media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
+.share-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.share-preview { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); line-height: 0; }
+.share-img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; border-radius: 0; }
+.share-opts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.share-caption { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.share-caption-label { font-size: var(--fs-xs); color: var(--fg-3); font-weight: 500; margin-bottom: 4px; }
+.share-caption p { font-size: var(--fs-sm); color: var(--fg); margin: 0; }
+.share-modal .modal-foot { flex-wrap: wrap; align-items: center; }
+.share-foot-note { margin-right: auto; }
+@media (max-width: 640px) {
+  .share-foot-note { width: 100%; }
+  .share-modal .modal-foot .btn { flex: 1; justify-content: center; min-height: 44px; }
+  .share-controls .seg button { min-height: 40px; }
+}

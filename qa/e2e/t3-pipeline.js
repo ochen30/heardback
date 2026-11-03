@@ -109,7 +109,7 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     const tabs = await page.locator('.drawer [role=tablist] [role=tab]').allInnerTexts();
     T.check('drawer has 4 underline tabs', tabs.length === 4, tabs.join('|'));
     // v5: read-mode details that edit on click (PlInline): click value -> input -> Enter saves
-    const inline = async (id, v) => { await page.click(`#${id}-v`); await page.waitForSelector(`#${id}`); await page.fill(`#${id}`, v); await page.locator(`#${id}`).press('Enter'); await page.waitForTimeout(150); };
+    const inline = async (id, v) => { await page.click(`#${id}-v`); await page.waitForSelector(`#${id}`); await page.waitForTimeout(80); await page.fill(`#${id}`, v); await page.locator(`#${id}`).press('Enter'); await page.waitForTimeout(150); };
     await inline('pl-loc', 'Seattle, WA (hybrid)');
     await inline('pl-salary', '$55/hr');
     await inline('pl-url', 'northwind.example/jobs/1');
@@ -122,7 +122,7 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     T.check('appliedAt edited', new Date(nw.appliedAt).getDate() === 1 && new Date(nw.appliedAt).getMonth() === 9, new Date(nw.appliedAt).toString());
     T.check('focus returns to read-mode value after Enter', await page.evaluate(() => document.activeElement?.id === 'pl-applied-v'));
     // Escape inside inline edit cancels edit only (drawer stays)
-    await page.click('#pl-salary-v'); await page.fill('#pl-salary', 'nope'); await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    await page.click('#pl-salary-v'); await page.waitForTimeout(80); await page.fill('#pl-salary', 'nope'); await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     nw = await appOf(page, 'Northwind Labs');
     T.check('Escape cancels inline edit, keeps drawer', nw.salary === '$55/hr' && (await page.locator('.drawer').count()) === 1, nw.salary);
     // contacts: "Add contact" button reveals the form

@@ -331,7 +331,8 @@ async function saveFile(filename, data, mime = "text/plain") {
     try { await caps.downloads.save({ filename, data: typeof data === "string" ? new Blob([data], { type: mime }) : data }); toast(`Saved ${filename}`); return true; }
     catch (e) { if (e?.code === "cancelled" || e?.code === "declined") return false; }
   }
-  return copyText(typeof data === "string" ? data : "", "File downloads aren't available here, so the contents were copied instead");
+  if (typeof data !== "string") { toast("Saving files isn't available here. Right-click or long-press the image to save it.", { ms: 7000 }); return false; }
+  return copyText(data, "Saving files isn't available here, so the contents were copied instead");
 }
 
 /* ---------- Text helpers ---------- */

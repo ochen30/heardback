@@ -282,6 +282,7 @@ function stats_View() {
       <div><h1>Insights</h1><p>How your applications are performing.</p></div>
       <span class="spacer"></span>
       ${ex && html`<div class="st-head-note"><${Switch} id="stats-show-examples" checked=${s.settings.showExamples} onChange=${setShow} label="Include examples" /></div>`}
+      <${Btn} icon="send" onClick=${() => openModal("share")}>Share progress</${Btn}>
     </div>
     ${st.applied === 0
       ? html`<div class="card"><${Empty} icon="stats" title="Insights start with your first application" action=${html`<div class="row wrap" style="justify-content:center"><${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")}>Add application</${Btn}><${Btn} icon="find" onClick=${() => go("find")}>Find jobs</${Btn}></div>`}>
