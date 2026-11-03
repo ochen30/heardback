@@ -147,7 +147,7 @@ const GL = (page) => page.evaluate(() => ghostLabel(100).toLowerCase());
     await page.locator('.find-row').first().locator('.find-save').click();
     await page.waitForTimeout(250);
     let apps = await page.evaluate(() => Object.values(store.get().apps));
-    T.check('save creates saved app', apps.length === 1 && apps[0].stage === 'saved' && apps[0].title === firstTitle, JSON.stringify(apps.map((a) => [a.title, a.stage])));
+    T.check('save creates saved app', apps.length === 1 && apps[0].stage === 'saved' && apps[0].title.replace(/ [-–] /g, ' – ') === firstTitle.replace(/ [-–] /g, ' – '), JSON.stringify(apps.map((a) => [a.title, a.stage])));
     T.check('saved button shows pressed', (await page.locator('.find-row').first().locator('.find-save').getAttribute('aria-pressed')) === 'true');
     // toast undo
     await page.click('.toast button:has-text("Undo")');

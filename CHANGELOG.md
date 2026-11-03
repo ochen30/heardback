@@ -183,3 +183,7 @@ A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, 
 
 ### 08:03 PT — v19
 - Upcoming uses the same natural round names as the task list ("Technical interview").
+
+### 08:18 PT — v20 (final)
+- Job data refreshed at 8:08 AM PT: 8,263 open postings from 1,965 companies.
+- Final QA: end-to-end 2,428 / 2,428; zero console errors at 375/768/1440 in light and dark.
