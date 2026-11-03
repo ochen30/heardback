@@ -380,7 +380,7 @@ p { margin: 0; }
   background: var(--surface);
 }
 .job-row:hover { background: var(--surface-2); }
-.job-row[aria-selected="true"] { background: var(--accent-soft); }
+.job-row[aria-selected="true"], .job-row[aria-current="true"] { background: var(--accent-soft); }
 .job-title { font-weight: 500; color: var(--fg); }
 .job-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--fg-2); font-size: var(--fs-sm); min-width: 0; }
 .job-meta .sep { color: var(--line-strong); }
@@ -605,3 +605,4 @@ input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; borde
 p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .sep-item { white-space: nowrap; }
 @media (max-width: 860px) { .topbar .btn.primary { width: 36px; height: 36px; padding: 0; } }
+p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }

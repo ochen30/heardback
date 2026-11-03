@@ -105,9 +105,9 @@ function Skeleton({ rows = 6 }) {
     ${Array.from({ length: rows }).map(() => html`<div class="job-row" style="cursor:default"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="stack-sm"><div class="skel" style="height:12px;width:55%"></div><div class="skel" style="height:10px;width:35%"></div></div><div class="skel" style="height:20px;width:60px"></div></div>`)}
   </div>`;
 }
-function Meter({ value, max, ok }) {
+function Meter({ value, max, ok, label = "Progress" }) {
   const w = max ? clamp((value / max) * 100, 0, 100) : 0;
-  return html`<div class=${cx("meter", ok && "ok")} role="progressbar" aria-valuenow=${value} aria-valuemax=${max}><i style=${`width:${w}%`}></i></div>`;
+  return html`<div class=${cx("meter", ok && "ok")} role="progressbar" aria-label=${label} aria-valuemin="0" aria-valuenow=${value} aria-valuemax=${max}><i style=${`width:${w}%`}></i></div>`;
 }
 function Field({ label, hint, children, id }) {
   return html`<div class="field">${label && html`<label for=${id}>${label}</label>`}${children}${hint && html`<span class="hint">${hint}</span>`}</div>`;

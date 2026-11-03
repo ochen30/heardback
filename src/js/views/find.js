@@ -249,7 +249,7 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
   const metaP = inCompany ? [find_locText(job), FIND_LV[job.lvl], job.term].filter(Boolean) : find_metaParts(job);
   const metaT = metaP.join(" · ");
   const title = find_title(job.t);
-  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-selected=${sel ? "true" : "false"} onClick=${open}>
+  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-current=${sel ? "true" : undefined} onClick=${open}>
     ${!inCompany && html`<${Logo} name=${job.co} />`}
     <div class="find-row-main">
       <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${title}>${title}</button>

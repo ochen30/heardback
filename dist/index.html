@@ -387,7 +387,7 @@ p { margin: 0; }
   background: var(--surface);
 }
 .job-row:hover { background: var(--surface-2); }
-.job-row[aria-selected="true"] { background: var(--accent-soft); }
+.job-row[aria-selected="true"], .job-row[aria-current="true"] { background: var(--accent-soft); }
 .job-title { font-weight: 500; color: var(--fg); }
 .job-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--fg-2); font-size: var(--fs-sm); min-width: 0; }
 .job-meta .sep { color: var(--line-strong); }
@@ -612,6 +612,7 @@ input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; borde
 p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .sep-item { white-space: nowrap; }
 @media (max-width: 860px) { .topbar .btn.primary { width: 36px; height: 36px; padding: 0; } }
+p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -629,7 +630,7 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .find-fgroups .seg { align-self: flex-start; }
 .find-fgroups .hint { line-height: 1.4; }
 .chip .find-chip-n { font-size: var(--fs-xs); color: var(--fg-3); font-variant-numeric: tabular-nums; font-weight: 400; }
-.chip[aria-pressed="true"] .find-chip-n { color: var(--accent-text); opacity: .75; }
+.chip[aria-pressed="true"] .find-chip-n { color: var(--accent-text); }
 .find-chip:disabled { opacity: .45; cursor: default; pointer-events: none; }
 .find-fgroups .chips { gap: 6px; }
 .find-fgroups .chip { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
@@ -694,7 +695,7 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .find-c-fresh { justify-self: stretch; justify-content: flex-start; }
 .find-save.on { color: var(--accent-text); }
 /* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
-.find-row[aria-selected="true"] .find-row-title:focus-visible { box-shadow: none; }
+.find-row[aria-current="true"] .find-row-title:focus-visible { box-shadow: none; }
 .find-stage { border: 0; background: none; padding: 0; cursor: pointer; border-radius: 99px; }
 .find-more { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 4px 0; font-size: var(--fs-sm); flex-wrap: wrap; }
 .find-keys { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-xs); color: var(--fg-3); }
@@ -2402,9 +2403,9 @@ function Skeleton({ rows = 6 }) {
     ${Array.from({ length: rows }).map(() => html`<div class="job-row" style="cursor:default"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="stack-sm"><div class="skel" style="height:12px;width:55%"></div><div class="skel" style="height:10px;width:35%"></div></div><div class="skel" style="height:20px;width:60px"></div></div>`)}
   </div>`;
 }
-function Meter({ value, max, ok }) {
+function Meter({ value, max, ok, label = "Progress" }) {
   const w = max ? clamp((value / max) * 100, 0, 100) : 0;
-  return html`<div class=${cx("meter", ok && "ok")} role="progressbar" aria-valuenow=${value} aria-valuemax=${max}><i style=${`width:${w}%`}></i></div>`;
+  return html`<div class=${cx("meter", ok && "ok")} role="progressbar" aria-label=${label} aria-valuemin="0" aria-valuenow=${value} aria-valuemax=${max}><i style=${`width:${w}%`}></i></div>`;
 }
 function Field({ label, hint, children, id }) {
   return html`<div class="field">${label && html`<label for=${id}>${label}</label>`}${children}${hint && html`<span class="hint">${hint}</span>`}</div>`;
@@ -2935,7 +2936,7 @@ function Rail({ route }) {
     <div class="rail-foot">
       ${route !== "today" && html`<div class="goal-card">
         <div class="goal-top"><span style="font-weight:500">This week</span><span class="num muted">${st.thisWeek} / ${goal} applied</span></div>
-        <${Meter} value=${st.thisWeek} max=${goal} ok=${st.thisWeek >= goal} />
+        <${Meter} value=${st.thisWeek} max=${goal} ok=${st.thisWeek >= goal} label="Applications this week toward your goal" />
         <span class="hint">${st.thisWeek >= goal ? "Weekly goal reached. Nice work." : `${goal - st.thisWeek} more to hit your goal`}</span>
       </div>`}
       <a class="nav-item" href="#prefs" aria-current=${route === "prefs" ? "page" : undefined}><${Icon} name="prefs" />Settings</a>
@@ -3407,7 +3408,7 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
   const metaP = inCompany ? [find_locText(job), FIND_LV[job.lvl], job.term].filter(Boolean) : find_metaParts(job);
   const metaT = metaP.join(" · ");
   const title = find_title(job.t);
-  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-selected=${sel ? "true" : "false"} onClick=${open}>
+  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-current=${sel ? "true" : undefined} onClick=${open}>
     ${!inCompany && html`<${Logo} name=${job.co} />`}
     <div class="find-row-main">
       <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${title}>${title}</button>
@@ -8182,6 +8183,7 @@ MODALS.share = function ShareModal() {
 /* ===== Boot ===== */
 (function boot() {
   applyTheme(store.get().settings.theme);
+  try { document.documentElement.lang = document.documentElement.lang || "en"; } catch {}
   render(html`<${App} />`, document.getElementById("app"));
   initCaps();
   if (storage.corrupt) setTimeout(() => toast("Your saved data couldn't be read. A copy was kept in this browser.", { ms: 15000, action: { label: "Restore", run: () => go("prefs") } }), 600);

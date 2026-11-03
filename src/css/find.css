@@ -14,7 +14,7 @@
 .find-fgroups .seg { align-self: flex-start; }
 .find-fgroups .hint { line-height: 1.4; }
 .chip .find-chip-n { font-size: var(--fs-xs); color: var(--fg-3); font-variant-numeric: tabular-nums; font-weight: 400; }
-.chip[aria-pressed="true"] .find-chip-n { color: var(--accent-text); opacity: .75; }
+.chip[aria-pressed="true"] .find-chip-n { color: var(--accent-text); }
 .find-chip:disabled { opacity: .45; cursor: default; pointer-events: none; }
 .find-fgroups .chips { gap: 6px; }
 .find-fgroups .chip { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
@@ -79,7 +79,7 @@
 .find-c-fresh { justify-self: stretch; justify-content: flex-start; }
 .find-save.on { color: var(--accent-text); }
 /* J/K focuses the title so the drawer can hand focus back; the selected row's tint is the indicator */
-.find-row[aria-selected="true"] .find-row-title:focus-visible { box-shadow: none; }
+.find-row[aria-current="true"] .find-row-title:focus-visible { box-shadow: none; }
 .find-stage { border: 0; background: none; padding: 0; cursor: pointer; border-radius: 99px; }
 .find-more { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 4px 0; font-size: var(--fs-sm); flex-wrap: wrap; }
 .find-keys { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-xs); color: var(--fg-3); }

@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axe-core": "^4.10.2",
     "htm": "^3.1.1",
     "pdfjs-dist": "^3.11.174",
     "preact": "^10.19.3"
