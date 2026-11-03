@@ -1,0 +1,1 @@
+module.exports = { pool: async (page) => { await page.waitForTimeout(1500); await page.evaluate(() => openCompany('Northwind Labs')); await page.waitForTimeout(800); const t = await page.evaluate(() => document.querySelector('.drawer')?.innerText || ''); console.log(t.split('\n').filter((l) => /reply|stops|Ghosted|interviews|shared/i.test(l)).slice(0, 12).join(' | ')); } };

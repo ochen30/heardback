@@ -43,7 +43,8 @@ async function poolLoad() {
         if (!e || typeof e.co !== "string") continue;
         apps++;
         const k = norm(e.co);
-        const c = by[k] || (by[k] = { name: e.co, n: 0, people: 0, replied: 0, ghosted: 0, rejected: 0, offers: 0, interviews: 0, rds: [] });
+        const c = by[k] || (by[k] = { name: e.co, n: 0, people: 0, replied: 0, ghosted: 0, rejected: 0, offers: 0, interviews: 0, rds: [], stops: {} });
+        if (e.out === "ghosted" || e.out === "rejected") c.stops[e.reached] = (c.stops[e.reached] || 0) + 1;
         c.n++;
         if (!seenCo.has(k)) { c.people++; seenCo.add(k); }
         if (e.rd != null || ["screen", "interview", "offer"].includes(e.reached) || e.out === "rejected") c.replied++;
@@ -111,7 +112,10 @@ function PoolCompanyCard({ company }) {
       <${PoolShareInline} />
     </div></section>`;
   }
-  const rows = [["Got any reply", fmt.pct(c.replyRate)], ["Reached interviews", fmt.pct(c.interviewRate)], ["Ghosted", fmt.pct(c.ghostRate)], ["Median days to first reply", c.medReply == null ? "—" : `${Math.round(c.medReply)} days`]];
+  const stopEntries = Object.entries(c.stops || {}).sort((a, b) => b[1] - a[1]);
+  const stopTotal = stopEntries.reduce((t, [, n]) => t + n, 0);
+  const stopText = stopTotal >= 3 ? `${STAGE[stopEntries[0][0]]?.label || "Applied"} (${fmt.pct(stopEntries[0][1] / stopTotal)} of closed)` : "—";
+  const rows = [["Got any reply", fmt.pct(c.replyRate)], ["Reached interviews", fmt.pct(c.interviewRate)], ["Ghosted", fmt.pct(c.ghostRate)], ["Median days to first reply", c.medReply == null ? "—" : `${Math.round(c.medReply)} days`], ["Most often stops at", stopText]];
   return html`<section class="dsec">${head}<div class="stack">
     <dl class="kv">${rows.map(([k, v]) => html`<dt>${k}</dt><dd class="num" style="font-weight:600">${v}</dd>`)}</dl>
     <span class="hint">From ${pluralize(c.n, "application")} shared anonymously by ${pluralize(c.people, "person", "people")}.</span>
