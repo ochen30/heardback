@@ -251,7 +251,7 @@ const WRAP = () => {
     await page.evaluate(() => closeDrawer());
     const cal = await page.evaluate(() => { const a = Apps.create({ company: 'Cal Co', title: 'SWE Intern', stage: 'interview', appliedAt: Date.now() - 5 * 864e5 }); const r = Apps.addRound(a.id, { type: 'technical', at: Date.UTC(2026, 10, 20, 17, 30), interviewers: 'Priya S., Sam', prep: 'Graphs; DP, and SQL' }); ui.set({ toasts: [] }); return { a: a.id, r: r.id }; });
     await page.evaluate(({ a }) => openApp(a, 'rounds'), cal); await page.waitForTimeout(400);
-    const calBtn = page.locator(`[data-round="${cal.r}"] button:has-text("Add to calendar")`);
+    const calBtn = page.locator(`[data-round="${cal.r}"] button:is(:has-text("Add to calendar"), :has-text("Copy event details"))`);
     T.check('calendar: button on upcoming round', await calBtn.count() === 1);
     await page.evaluate(() => navigator.clipboard.writeText(''));
     await calBtn.click(); await page.waitForTimeout(500);
@@ -264,12 +264,12 @@ const WRAP = () => {
       T.check('calendar (MOCK downloads): saved text = cal_ics(app, round)', sv && noStamp(sv.text) === noStamp(ics), sv && sv.text.slice(0, 80));
     } else {
       const tt = await page.locator('.toast').first().innerText().catch(() => '');
-      T.check('calendar (no downloads): toast explains files can’t be saved here', /Calendar files can.t be saved in this view/.test(tt), tt);
+      T.check('calendar (no downloads): event details copied instead (toast says so)', /Event details copied|copy automatically/i.test(tt), tt);
       const clip = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
-      T.check('calendar (no downloads): nothing copied to clipboard', clip === '', clip.slice(0, 60));
+      T.check('calendar (no downloads): clipboard holds event details or is unavailable', clip === '' || /Interview|Recruiter|Technical|assessment/i.test(clip), clip.slice(0, 60));
       T.check('calendar (no downloads): round not marked', (await page.evaluate(({ a, r }) => Apps.get(a).rounds.find((x) => x.id === r).calendar, cal)) == null);
       const btxt = await page.locator(`[data-round="${cal.r}"] .pl-round-foot`).innerText();
-      T.check('calendar (no downloads): button still says "Add to calendar"', /Add to calendar/.test(btxt) && !/In calendar/.test(btxt), btxt.replace(/\n/g, ' '));
+      T.check('calendar (no downloads): button offers "Copy event details"', /Copy event details/.test(btxt) && !/In calendar/.test(btxt), btxt.replace(/\n/g, ' '));
       await clearToasts(page);
     }
     T.check('ics: DTSTART is UTC of round time', /DTSTART:20261120T173000Z/.test(ics), (ics.match(/DTSTART:[^\r\n]*/) || [''])[0]);
@@ -288,14 +288,14 @@ const WRAP = () => {
     const icsU = await page.evaluate(() => cal_ics({ company: 'Café Zoë', title: 'Ingénieur logiciel – stagiaire' }, { id: 'ru', type: 'technical', at: Date.UTC(2026, 10, 20, 17, 30), interviewers: 'José Müller, Zoë Ångström, Søren Æbelø', prep: 'Révisez les graphes – c’est important; préparez « DP » et SQL ’’’’’’’’’’’’’’’’’’’’' }));
     const uLong = icsU.split('\r\n').find((l) => Buffer.byteLength(l) > 75);
     T.check('ics: non-ASCII lines folded at 75 octets', !uLong, uLong ? `${Buffer.byteLength(uLong)} octets: ${uLong.slice(0, 50)}…` : '');
-    if (MOCK) T.check('calendar: round marked + button says "In calendar"', (await page.evaluate(({ a, r }) => Apps.get(a).rounds.find((x) => x.id === r).calendar, cal)) === 'ics' && await page.locator(`[data-round="${cal.r}"] button:has-text("In calendar")`).count() === 1);
+    if (MOCK) T.check('calendar: round marked + button says "Calendar file saved"', (await page.evaluate(({ a, r }) => Apps.get(a).rounds.find((x) => x.id === r).calendar, cal)) === "ics" && await page.locator(`[data-round="${cal.r}"] button:has-text("Calendar file saved")`).count() === 1);
     // past round: no button; no date: no button
     const past = await page.evaluate(({ a }) => Apps.addRound(a, { type: 'behavioral', at: Date.now() - 3 * 864e5 }).id, cal);
     const nod = await page.evaluate(({ a }) => Apps.addRound(a, { type: 'behavioral' }).id, cal);
     await page.waitForTimeout(200);
     for (const [id, nm] of [[past, 'past'], [nod, 'undated']]) {
       if (!(await page.locator(`[data-round="${id}"] .pl-round-foot`).count())) await page.click(`#pl-r-${id}-sum`).catch(() => {});
-      T.check(`calendar: no button on ${nm} round`, !(await page.locator(`[data-round="${id}"] button:has-text("Add to calendar")`).count()));
+      T.check(`calendar: no button on ${nm} round`, !(await page.locator(`[data-round="${id}"] button:is(:has-text("Add to calendar"), :has-text("Copy event details"))`).count()));
     }
     // Google Calendar connector path
     if (MOCK) {

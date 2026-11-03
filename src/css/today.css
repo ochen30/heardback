@@ -291,3 +291,20 @@
   .td-start-acts { width: 100%; }
   .td-start-acts .btn { flex: 1; height: 44px; justify-content: center; }
 }
+
+/* ===== Next up: a round within 12 hours, pinned above Needs you ===== */
+.td-next { border-left: 3px solid var(--accent); }
+.td-next-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.td-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.td-next-k { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-text); }
+.td-next-k .faint { font-weight: 400; }
+.td-next-line { font-size: var(--fs-md); color: var(--fg); }
+.td-next-line b { font-weight: 600; }
+.td-next-where { font-size: var(--fs-xs); display: flex; align-items: center; gap: 4px; }
+.td-next-actions { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .td-next-row { flex-wrap: wrap; align-items: flex-start; }
+  .td-next-text { flex-basis: calc(100% - 40px); }
+  .td-next-actions { width: 100%; }
+  .td-next-actions > * { flex: 1; justify-content: center; min-height: 44px; }
+}

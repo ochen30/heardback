@@ -33,6 +33,22 @@ function plStageAt(a, stage) {
 }
 /* Whole calendar days since ts (an applied date stored as noon yesterday is 1 day ago at 3 AM) */
 function plDaysSince(ts) { return Math.max(0, Math.round((fmt.startOfDay(now()) - fmt.startOfDay(ts)) / DAY)); }
+/* round.where: a meeting link, phone number or address. Meeting URLs show as the service name. */
+const PL_MEET = [[/(^|\.)zoom\.(us|com)$/i, "Zoom"], [/^meet\.google\.com$/i, "Google Meet"], [/(^|\.)teams\.(microsoft|live)\.com$/i, "Teams"], [/(^|\.)webex\.com$/i, "Webex"]];
+const PL_MEET_RE = /https?:\/\/[^\s<>"'()]*(?:zoom\.(?:us|com)|meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|webex\.com)[^\s<>"'()]*/i;
+function plWhereUrl(w) { const x = (w || "").trim(); if (!x || /\s/.test(x)) return ""; if (/^https?:\/\//i.test(x)) return x; return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(x) && !/^\d[\d.\-]*$/.test(x) ? `https://${x}` : ""; }
+function plWhereLabel(w) {
+  const u = plWhereUrl(w);
+  if (!u) return (w || "").trim();
+  try { const h = new URL(u).hostname.replace(/^www\./, ""); const m = PL_MEET.find(([re]) => re.test(h)); return m ? m[1] : h; } catch { return w.trim(); }
+}
+function PlWhere({ w, cls }) {
+  const x = (w || "").trim();
+  if (!x) return null;
+  const u = plWhereUrl(x), label = plWhereLabel(x);
+  return u ? html`<a class=${cx("pl-where", cls)} href=${u} target="_blank" rel="noopener" title=${x} aria-label=${`Join on ${label} (opens in a new tab)`}><${Icon} name="ext" size=${12} /><span class="truncate">${label}</span></a>`
+    : html`<span class=${cx("pl-where pl-where-text", cls)} title=${x}><span class="truncate">${label}</span></span>`;
+}
 function plHref(u) { const x = (u || "").trim(); if (!x) return ""; return /^https?:\/\//i.test(x) ? x : `https://${x}`; }
 function plFromDate(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).getTime() : null; }
 function plFurthest(a) {
@@ -196,6 +212,7 @@ const PL_SAMPLES = {
 };
 
 /* Debounced text input that saves as you type and flushes on blur / unmount */
+function plMeetLink(raw) { const m = PL_MEET_RE.exec(raw || ""); return m ? m[0].replace(/[.,;:!?>\]]+$/, "") : ""; }
 function PlText({ id, value, onSave, multiline, onStatus, delay = 450, cls, ...rest }) {
   const [v, setV] = useState(value || "");
   const timer = useRef(null), pending = useRef(null);
@@ -687,12 +704,22 @@ function PlTable({ apps, settings, sort, sel }) {
 const PL_TABS = [{ id: "overview", label: "Overview" }, { id: "rounds", label: "Rounds" }, { id: "timeline", label: "Timeline" }, { id: "notes", label: "Notes" }];
 
 /* The one action that matches the current next step (shown as the drawer's primary button) */
+/* B8: switch to Rounds and put focus on that round's outcome select */
+function plGoOutcome(r, setTab) {
+  setTab("rounds");
+  if (!r) return;
+  setTimeout(() => {
+    let el = document.getElementById(`pl-r-${r.id}-out`);
+    if (!el) { document.getElementById(`pl-r-${r.id}-sum`)?.click(); }
+    setTimeout(() => { el = document.getElementById(`pl-r-${r.id}-out`); if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); } }, 0);
+  }, 0);
+}
 function plNextAction(a, ns, setTab) {
   const draft = (mode, extra) => () => openModal("draft", { appId: a.id, mode, ...extra });
   return {
     upcoming: { label: ns.round?.type === "assessment" ? "Prep for the assessment" : "Prep for this round", icon: "prep", run: () => plPrep(a, ns.round) },
     thanks: { label: "Draft thank-you", icon: "send", run: draft("thanks", { roundId: ns.round?.id }) },
-    outcome: { label: "Log outcome", icon: "flag", run: () => setTab("rounds") },
+    outcome: { label: "Log outcome", icon: "flag", run: () => plGoOutcome(ns.round, setTab) },
     saved: { label: "Mark as applied", icon: "check", run: () => Apps.move(a.id, "applied") },
     ghost: { label: "Mark as ghosted", icon: "ghost", run: () => Apps.move(a.id, "ghosted") },
     follow: { label: "Draft follow-up", icon: "reply", run: draft("follow") },
@@ -729,7 +756,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const foot = html`
     ${act && !takedown && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
     ${ns.kind === "wait" && !takedown && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
-    ${a.url && !removed && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}
+    ${a.url && !removed && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener" aria-label="Open posting in a new tab" title="Open posting"><${Icon} name="ext" /><span class="hide-sm">Open posting</span></a>`}
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del} aria-label="Delete application" title="Delete application"><span class="hide-sm">Delete</span></${Btn}>`;
   const counts = { rounds: (a.rounds || []).length, timeline: (a.events || []).length };
@@ -854,8 +881,8 @@ function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo })
   const replyTxt = lastContact ? `${plDaysSince(lastContact) < 1 ? "Today" : plDaysSince(lastContact) === 1 ? "Yesterday" : `${pluralize(plDaysSince(lastContact), "day")} ago`} · ${fmt.date(lastContact)}` : a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
     : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
-    upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
-    thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
+    upcoming: html`${ns.round?.where && html`<${PlWhere} w=${ns.round.where} cls="pl-next-where" />`}<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
+    thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => plGoOutcome(ns.round, setTab)}>Log the outcome instead</button>`,
     ghost: html`<button type="button" class="pl-linkbtn" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</button>`,
   }[ns.kind];
   return html`<div class="pl-ov">
@@ -925,6 +952,7 @@ function PlContacts({ a }) {
   };
   const rm = (i) => { const c = a.contacts[i]; Apps.update(a.id, (x) => ({ contacts: x.contacts.filter((_, j) => j !== i) })); toast(`Removed ${c.name}`, { undo: () => Apps.update(a.id, (x) => { const n = [...x.contacts]; n.splice(i, 0, c); return { contacts: n }; }) }); };
   const contacts = a.contacts || [];
+  const fromRounds = [...new Set((a.rounds || []).map((r) => roundPeople(r)).filter(Boolean))].join(", ");
   return html`<section class="dsec">
     <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}<span class="spacer"></span>
       ${!open && html`<${Btn} kind="ghost" size="sm" icon="plus" id="pl-c-add" onClick=${show}>Add contact</${Btn}>`}</h3>
@@ -934,7 +962,7 @@ function PlContacts({ a }) {
       ${c.email && html`<${Btn} kind="ghost" size="sm" icon="copy" aria-label=${`Copy ${c.name}'s email`} title="Copy email" onClick=${() => copyText(c.email, "Email copied")} />`}
       <${Btn} kind="ghost" size="sm" icon="x" aria-label=${`Remove ${c.name}`} title="Remove" onClick=${() => rm(i)} />
     </div>`)}</div>`}
-    ${!contacts.length && !open && html`<p class="pl-none">No contacts yet. Add the recruiter or interviewers so follow-ups have a name.</p>`}
+    ${!contacts.length && !open && html`<p class="pl-none">${fromRounds ? `No contacts saved yet. Your rounds list ${fromRounds}. Add them here to keep their emails.` : "No contacts yet. Add the recruiter or interviewers so follow-ups have a name."}</p>`}
     ${open && html`<form class="pl-contact-form" onSubmit=${add}>
       <input id="pl-c-name" class="input" placeholder="Name" aria-label="Contact name" value=${f.name} onInput=${(e) => { setF({ ...f, name: e.currentTarget.value }); setErr(""); }} aria-invalid=${err ? "true" : undefined} />
       <input id="pl-c-role" class="input" placeholder="Role, e.g. Recruiter" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
@@ -998,9 +1026,20 @@ function PlRoundRow({ r, onEdit }) {
       </span>
       <span class="pl-round-edit"><${Icon} name="edit" size=${13} />Edit</span>
     </button>
+    ${r.where && html`<${PlWhere} w=${r.where} cls="pl-round-where" />`}
   </div>`;
 }
 
+/* B9: the drawer's outcome select confirms the change with Undo, like Today's inline buttons */
+function plSetOutcome(a, r, outcome) {
+  const prev = r.outcome || "pending";
+  if (outcome === prev) return;
+  Apps.updateRound(a.id, r.id, { outcome });
+  const undo = () => Apps.updateRound(a.id, r.id, { outcome: prev });
+  const label = PL_OUTCOMES.find((o) => o.id === outcome)?.label || outcome;
+  if (outcome === "passed") toast("Logged as passed", { undo, action: { label: "Add next round", run: () => { const n = Apps.addRound(a.id, { type: "technical" }); setTimeout(() => document.getElementById(`pl-r-${n.id}-sum`)?.click(), 0); } } });
+  else toast(`Outcome set to ${label.toLowerCase()}`, { undo });
+}
 function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
@@ -1015,8 +1054,9 @@ function PlRound({ a, r, onDone }) {
     </div>
     <div class="pl-round-grid">
       <${Field} label=${oa ? "Due" : "Date and time"} id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
-      <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => upd({ outcome: e.currentTarget.value })}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
+      <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => plSetOutcome(a, r, e.currentTarget.value)}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
       <div class="pl-span2"><${Field} label=${oa ? "Platform" : "Interviewers"} id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder=${oa ? "e.g. HackerRank, CodeSignal" : "e.g. Priya S. (Eng manager)"} onSave=${(v) => upd({ interviewers: v })} /></${Field}></div>
+      <div class="pl-span2"><${Field} label="Where" id=${pid + "-where"}><${PlText} id=${pid + "-where"} value=${r.where || ""} placeholder=${oa ? "Assessment link" : "Zoom link, phone number or address"} onSave=${(v) => upd({ where: v.trim() })} /></${Field}></div>
       <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics, stories, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
       <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
     </div>
@@ -1024,7 +1064,7 @@ function PlRound({ a, r, onDone }) {
       ${!oa && html`<label class="check" for=${pid + "-thx"}><input id=${pid + "-thx"} type="checkbox" checked=${!!r.thanked} onChange=${(e) => upd({ thanked: e.currentTarget.checked })} />Thank-you sent</label>`}
       <span class="spacer" style="flex:1"></span>
       <${Btn} kind="ghost" size="sm" icon="trash" aria-label="Delete round" title="Delete round" onClick=${del} />
-      <${CalendarButton} appId=${a.id} round=${r} />
+      ${r.at && r.at > t && html`<${CalendarButton} appId=${a.id} round=${r} />`}
       ${r.at && r.at > t ? html`<${Btn} size="sm" icon="prep" onClick=${() => plPrep(a, r)}>Prep</${Btn}>`
         : oa ? null : html`<${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>`}
     </div>
@@ -1043,7 +1083,7 @@ function PlTimeline({ a }) {
   const add = (e) => {
     e.preventDefault();
     const v = txt.trim(); if (!v) return;
-    Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "note", text: v }] }));
+    Apps.update(a.id, (x) => ({ events: [...x.events, { id: uid("e_"), at: now(), kind: "note", text: v }], lastActivityAt: now() }));
     setTxt("");
   };
   return html`<div class="stack">
@@ -1239,7 +1279,7 @@ MODALS.paste = function PlPaste() {
 
   const fill = (p, from) => {
     const m = matchApp(p.company, p.title);
-    setF({ kind: p.kind, company: p.company || "", title: p.title || "", at: p.at || now(), interviewAt: p.interviewAt || null, roundType: p.roundType || (p.kind === "screen" ? "recruiter" : "other"), interviewers: p.interviewers || "", next: p.next || "", tz: p.tz || "" });
+    setF({ kind: p.kind, company: p.company || "", title: p.title || "", at: p.at || now(), interviewAt: p.interviewAt || null, roundType: p.roundType || (p.kind === "screen" ? "recruiter" : "other"), interviewers: p.interviewers || "", next: p.next || "", tz: p.tz || "", where: p.where || plMeetLink(raw) });
     setTarget(m && visibleIds.has(m.id) ? m.id : "new"); setTouched(false); setSrc(from); setErr(""); setShowRaw(false);
   };
   const readRules = () => { if (!raw.trim()) { setErr("Paste an email first, or try one of the samples."); return; } fill(plParse(raw), "rules"); };
@@ -1272,7 +1312,7 @@ ${raw.slice(0, 12000)}
       if (!ac.signal.aborted) setErr(`${aiErr(e)} You can still use “Read email”, which works without Claude.`);
     } finally { setBusy(false); ctrl.current = null; }
   };
-  const sample = (k) => { setRaw(PL_SAMPLES[k].text); setF(null); setErr(""); fill(plParse(PL_SAMPLES[k].text), "rules"); };
+  const sample = (k) => { const tx = PL_SAMPLES[k].text; setRaw(tx); setF(null); setErr(""); fill({ ...plParse(tx), where: plMeetLink(tx) }, "rules"); };
   const upd = (k) => (e) => { const v = e.currentTarget.value; setF((x) => { const n = { ...x, [k]: v }; if ((k === "company" || k === "title") && !touched) { const m = matchApp(k === "company" ? v : x.company, k === "title" ? v : x.title); setTarget(m && visibleIds.has(m.id) ? m.id : "new"); } return n; }); };
 
   const tApp = f && target !== "new" ? apps[target] : null;
@@ -1305,7 +1345,7 @@ ${raw.slice(0, 12000)}
     }
     if (f.kind !== "confirmation" && f.kind !== "other") Apps.update(id, (x) => ({ lastReplyAt: Math.max(x.lastReplyAt || 0, at) }));
     if (dupRound) done.push("round already logged");
-    if (willRound) { Apps.addRound(id, { type: f.roundType || "other", at: f.interviewAt, interviewers: f.interviewers || "" }); done.push(`${ROUND[f.roundType]?.label || "Interview"} round added`); }
+    if (willRound) { Apps.addRound(id, { type: f.roundType || "other", at: f.interviewAt, interviewers: f.interviewers || "", where: (f.where || "").trim() }); done.push(`${ROUND[f.roundType]?.label || "Interview"} round added`); }
     Apps.addEvent(id, { kind: "email", text: `Logged email: ${k.label}` });
     const app = Apps.get(id);
     closeModal();
@@ -1350,7 +1390,8 @@ ${raw.slice(0, 12000)}
         ${roundOn && html`
           <div class="field"><label for="pl-p-when">Interview time</label><input id="pl-p-when" class="input" type="datetime-local" value=${fmt.toInput(f.interviewAt)} onChange=${(e) => setF({ ...f, interviewAt: fmt.fromInput(e.currentTarget.value), tz: "" })} />${!f.interviewAt ? html`<span class="hint">No time found. Add one to create a round.</span>` : f.tz ? html`<span class="hint">Converted from ${f.tz} to your time.</span>` : null}</div>
           <div class="field"><label for="pl-p-rt">Round type</label><select id="pl-p-rt" class="select" value=${f.roundType} onChange=${upd("roundType")}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select></div>
-          <div class="field pl-span2"><label for="pl-p-who">Interviewers</label><input id="pl-p-who" class="input" value=${f.interviewers} onInput=${upd("interviewers")} placeholder="Optional" /></div>`}
+          <div class="field pl-span2"><label for="pl-p-who">Interviewers</label><input id="pl-p-who" class="input" value=${f.interviewers} onInput=${upd("interviewers")} placeholder="Optional" /></div>
+          <div class="field pl-span2"><label for="pl-p-where">Where</label><input id="pl-p-where" class="input" value=${f.where || ""} onInput=${upd("where")} placeholder="Zoom link, phone number or address" /></div>`}
         <div class="field pl-span2"><label for="pl-p-target">Apply to</label>
           <select id="pl-p-target" class="select" value=${target} onChange=${(e) => { setTarget(e.currentTarget.value); setTouched(true); }}>
             <option value="new">New application</option>

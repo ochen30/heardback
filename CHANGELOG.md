@@ -163,3 +163,11 @@ A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, 
 - Company "typical time open" shows only with 10+ measurable closed listings.
 - Interviews have their own calm violet, so amber means only "needs attention".
 - Chaos test: 1,900 random clicks and keys across desktop and phone, with and without Claude: zero errors, never a blank screen. End-to-end 2,428 / 2,428; axe clean.
+
+### 07:28 PT — v16 published (usability test 4: interview day; review 11: 9.2)
+- **Next up:** when a round starts within 12 hours, Today pins it first ("Stripe · 2:00 PM · Daniel Cho") with Open notes and a Join link for video calls.
+- Rounds have a **Where** field (Zoom/Meet/Teams links become "Zoom"/"Join"); logging an invite email fills it from the link.
+- Prep shows "From your notes on {Company}" and the round's location; mock-interview answers can always be saved to notes, and practice outlines can be added to the round's notes.
+- Calendar is honest: "Copy event details" when it can't add events, "Calendar file saved" for .ics, "In calendar" only for Google Calendar.
+- Natural round names everywhere; interviews violet in Today's glance bar; no goal nag before your first application; second follow-up has its own subject.
+- QA: end-to-end 2,428 / 2,428; axe clean; zero console errors at every width and theme.

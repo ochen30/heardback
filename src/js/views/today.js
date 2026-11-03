@@ -243,7 +243,8 @@ function today_sortGroup(id, all) {
   const ord = (x, y) => at.get(x.key) - at.get(y.key);
   const silent = (t) => (t.kind === "follow" || t.kind === "ghost" ? Apps.daysSilent(t.app) || 0 : 0);
   const time = (t) => (t.round && t.round.at) || Infinity;
-  if (id === "today") return all.slice().sort((x, y) => (x.kind === "thanks" ? 0 : 1) - (y.kind === "thanks" ? 0 : 1) || (time(x) - time(y) || 0) || ord(x, y));
+  const first = (t) => (t.pri < 0 ? -1 : t.kind === "thanks" ? 0 : 1); // a round within 12h beats a thank-you
+  if (id === "today") return all.slice().sort((x, y) => first(x) - first(y) || (time(x) - time(y) || 0) || ord(x, y));
   if (id === "quick") return all.slice().sort((x, y) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || silent(y) - silent(x) || ord(x, y));
   return all;
 }
@@ -274,7 +275,7 @@ function today_ghostAll(list) {
   });
 }
 
-function today_NeedsYou({ tasks, fresh, next }) {
+function today_NeedsYou({ tasks, fresh, next, noPrimary }) {
   const [open, setOpen] = useState({});
   const [review, setReview] = useState({});
   const [kbd, setKbd] = useState(false);
@@ -284,7 +285,7 @@ function today_NeedsYou({ tasks, fresh, next }) {
   // Keyboard order: shown items, with a batch's rows right after it while Review is open.
   const flat = groups.flatMap((g) => g.shown.flatMap((it) => (it.kind === "ghostBatch" && review[g.id] ? [it, ...it.tasks] : [it])));
   const kref = useRef({}); kref.current = { flat, groups, review };
-  const primaryKey = flat.find((tk) => tk.kind !== "outcome")?.key;
+  const primaryKey = noPrimary ? null : flat.find((tk) => tk.kind !== "outcome")?.key;
 
   // Focus now when the row exists (so fast J J K stays in order), else after the render that adds it.
   const focusRow = (key) => {
@@ -613,6 +614,36 @@ function today_Response({ st }) {
 
 // Icons stay neutral; amber only when a task is genuinely late or closing: an intern season that is closing,
 // or a thank-you note past the 24-hour window.
+/* First link in a round's "where" (a video link or an address). */
+function today_whereUrl(w) {
+  const m = String(w || "").match(/\bhttps?:\/\/[^\s<>"]+|\bwww\.[^\s<>"]+/i);
+  return m ? (/^www\./i.test(m[0]) ? "https://" + m[0] : m[0]).replace(/[).,;]+$/, "") : "";
+}
+/* A round starting within 12 hours: pinned above Needs you, so the interview is the first thing you see. */
+function today_nextUp(up) {
+  const x = up.items[0];
+  return x && x.r.at && x.r.at - now() <= 12 * 3600000 ? x : null;
+}
+function today_NextUp({ x }) {
+  const { a, r } = x;
+  const url = today_whereUrl(r.where);
+  const started = r.at <= now();
+  return html`<section class="card td-next" aria-labelledby="td-next-h">
+    <div class="td-next-row">
+      <${Logo} name=${a.company} size="sm" />
+      <div class="td-next-text">
+        <span class="td-next-k" id="td-next-h">Next up<span class="faint"> · ${started ? "started " + fmt.ago(r.at) : fmt.until(r.at)}</span></span>
+        ${today_meta([html`<b>${a.company}</b>`, html`<span class="num">${fmt.time(r.at)}</span>`, roundPeople(r) || ROUND[r.type]?.label || "Interview"], "td-next-line", "div")}
+        ${r.where && !url ? html`<div class="td-next-where truncate muted"><${Icon} name="pin" size=${12} />${r.where}</div>` : null}
+      </div>
+      <div class="td-next-actions">
+        ${url ? html`<a class="btn sm" href=${url} target="_blank" rel="noopener" id="td-next-join" aria-label=${`Join the ${a.company} call (opens in a new tab)`}>Join<${Icon} name="ext" /></a>` : null}
+        <button type="button" class="btn sm primary" id="td-next-notes" onClick=${() => { today_setPrepFocus({ appId: a.id, roundId: r.id, notes: true }); go("prep"); }}>Open notes</button>
+      </div>
+    </div>
+  </section>`;
+}
+
 function today_tone(tk) {
   if (tk.kind === "apply" && tk.tone === "wait") return "wait";
   if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return "wait";
@@ -635,6 +666,7 @@ function today_View() {
   const tasks = useMemo(() => computeTasks(s), [s, jobs.status]);
   const st = useMemo(() => computeStats(s, apps), [s]);
   const up = useMemo(() => today_upcoming(apps), [s]);
+  const nextUp = today_nextUp(up);
   const m = useMemo(() => today_matches(jobs, s.profile, s.apps), [jobs.status, s.profile, s.apps]);
   const fr = useMemo(() => (!apps.length || m?.noProfile ? today_fresh(jobs, s.profile, s.apps) : null), [jobs.status, s.profile, s.apps, apps.length, m]);
   const name = today_firstName(s.profile.name);
@@ -668,7 +700,8 @@ function today_View() {
     <div class="split">
       <div class="stack td-col">
         ${!apps.length ? html`<${today_Start} jobs=${jobs} fr=${fr} />` : null}
-        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
+        ${nextUp ? html`<${today_NextUp} x=${nextUp} />` : null}
+        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} noPrimary=${!!nextUp} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
         ${apps.length || (m && !m.noProfile) ? html`<${today_NewForYou} jobs=${jobs} m=${m} fr=${fr} />` : null}
       </div>

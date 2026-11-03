@@ -472,3 +472,16 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-tcell { max-width: none; }
   .pl-ttitle, .pl-tco { display: block; }
 }
+
+/* round.where: a compact "Join" link (or plain text) in the round row and the Next step card */
+.pl-round-row { display: flex; align-items: center; }
+.pl-round-row > .pl-round-sum { flex: 1; min-width: 0; }
+.pl-where { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 220px; font-size: var(--fs-sm); font-weight: 500; color: var(--accent); text-decoration: none; }
+.pl-where .icon, .pl-where svg { flex: none; }
+a.pl-where:hover { text-decoration: underline; }
+.pl-where-text { color: var(--fg-2); font-weight: 400; }
+.pl-round-row .pl-round-meta { overflow: hidden; }
+.pl-round-where { flex: none; max-width: 28%; min-height: 44px; padding: 0 14px 0 4px; }
+.pl-next-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; min-width: 0; }
+.pl-next-where { max-width: 100%; }
+@media (max-width: 520px) { .pl-round-where { max-width: 34%; padding-right: 12px; align-self: flex-start; min-height: 52px; } }

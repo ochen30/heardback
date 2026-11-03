@@ -176,6 +176,29 @@ function prepRounds(s) {
   past.sort((x, y) => (y.r.at || 0) - (x.r.at || 0));
   return { up, past };
 }
+/* Append a block to a round's prep notes (after writing any unsaved typing). Returns false if the round is gone. */
+function prep_appendNotes(appId, roundId, add) {
+  flushAll();
+  const cur = Apps.get(appId)?.rounds?.find((x) => x.id === roundId);
+  if (!cur) return false;
+  Apps.updateRound(appId, roundId, { prep: (cur.prep || "").trim() ? `${cur.prep.trimEnd()}\n\n${add}` : add });
+  return true;
+}
+/* First link in a round's "where" (video link or address). */
+function prep_whereUrl(w) {
+  const m = String(w || "").match(/\bhttps?:\/\/[^\s<>"]+|\bwww\.[^\s<>"]+/i);
+  return m ? (/^www\./i.test(m[0]) ? "https://" + m[0] : m[0]).replace(/[).,;]+$/, "") : "";
+}
+/* Mock interview answers as Q/A pairs: the question is the last paragraph of the interviewer turn before each answer. */
+function prep_mockAnswers(turns) {
+  const L = [`Mock interview answers, ${fmt.date(now())}`];
+  let q = "";
+  for (const t of turns) {
+    if (t.role === "assistant") { const ps = t.text.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean); q = ps[ps.length - 1] || t.text; }
+    else L.push(`Q: ${q.slice(0, 400)}\nA: ${t.text.trim()}`);
+  }
+  return L.join("\n\n");
+}
 function prepSetFocus(f) { store.set((s) => ({ ...s, ui: { ...s.ui, prepFocus: f } })); }
 
 /* ---------- Small pieces ---------- */
@@ -272,7 +295,7 @@ function PrepPractice({ questions, ctx, onExit }) {
     <div class="prep-practice-foot">
       <${Btn} icon="chevL" onClick=${() => goTo(i - 1)} disabled=${i === 0}>Previous</${Btn}>
       <span class="spacer"></span>
-      ${i < questions.length - 1 ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => goTo(i + 1)} id="prep-next">Next question</${Btn}>` : html`<${Btn} kind="primary" icon="check" onClick=${onExit}>Finish practice</${Btn}>`}
+      ${i < questions.length - 1 ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => goTo(i + 1)} id="prep-next">Next question</${Btn}>` : html`<${Btn} kind="primary" icon="check" onClick=${() => onExit(true)} id="prep-finish">Finish practice</${Btn}>`}
     </div>
   </div>`;
 }
@@ -527,7 +550,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
 
   const start = () => {
     const mm = { company: a?.company || "", title: a?.title || "", cat: ctx.cat, type: ctx.type, roundLabel };
-    setM(mm); setTurns([]); setCard(null); setSaved(false); setDraft(""); setPhase("live");
+    setM(mm); setTurns([]); setCard(null); setSaved(false); setAnsSaved(false); setDraft(""); setPhase("live");
     ask([], mm, n);
   };
 
@@ -557,7 +580,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     score(list, m);
   };
 
-  const reset = () => { ctl.current?.abort(); setStream(null); setErr(""); setTurns([]); setCard(null); setSaved(false); setDraft(""); setPhase("start"); };
+  const reset = () => { ctl.current?.abort(); setStream(null); setErr(""); setTurns([]); setCard(null); setSaved(false); setAnsSaved(false); setDraft(""); setPhase("start"); };
 
   const save = () => {
     if (!a || !r) return;
@@ -569,6 +592,14 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     setSaved(true); onSaved && onSaved();
     toast("Added the scorecard to this round’s prep notes");
   };
+
+  const [ansSaved, setAnsSaved] = useState(false);
+  const saveAnswers = () => {
+    if (!a || !r || !prep_appendNotes(a.id, r.id, prep_mockAnswers(turnsRef.current))) return;
+    setAnsSaved(true); onSaved && onSaved();
+    toast("Added your answers to this round’s prep notes");
+  };
+  const ansBtn = (primary) => a && answered > 0 && html`<${Btn} kind=${primary ? "primary" : "ghost"} icon=${ansSaved ? "check" : "doc"} onClick=${saveAnswers} disabled=${ansSaved} id="prep-mock-save-answers">${ansSaved ? "Answers saved" : "Save answers to notes"}</${Btn}>`;
 
   const onKey = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } };
 
@@ -630,10 +661,13 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
     ${phase === "end" && html`<div class="prep-practice-foot prep-mock-foot">
       <${Btn} kind="ghost" icon="copy" onClick=${() => copyText(prepMockSummary(m, card, answered), "Scorecard")} id="prep-mock-copy">Copy</${Btn}>
       <span class="spacer"></span>
-      <${Btn} kind=${a ? undefined : "primary"} icon="refresh" onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>
+      <${Btn} kind=${a ? "ghost" : "primary"} icon="refresh" onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>
+      ${ansBtn(false)}
       ${a && html`<${Btn} kind="primary" icon=${saved ? "check" : "doc"} onClick=${save} disabled=${saved} id="prep-mock-save">${saved ? "Saved to notes" : "Save to round notes"}</${Btn}>`}
     </div>`}
-    ${phase === "scoring" && !busy && err && html`<div class="prep-practice-foot prep-mock-foot"><span class="spacer"></span><${Btn} onClick=${reset} id="prep-mock-again">New mock interview</${Btn}></div>`}
+    ${phase === "scoring" && !busy && err && html`<div class="prep-practice-foot prep-mock-foot">
+      ${a && answered > 0 ? html`<span class="hint prep-mock-safe">Your answers are safe.</span>` : null}
+      <span class="spacer"></span><${Btn} kind=${a && answered > 0 ? "ghost" : undefined} onClick=${reset} id="prep-mock-again">New mock interview</${Btn}>${ansBtn(true)}</div>`}
   </div>`;
 }
 
@@ -671,12 +705,34 @@ function PrepWorkspace({ a, r }) {
   const [notesRev, setNotesRev] = useState(0);
   const [pType, setPType] = useState("behavioral");
   const [pCat, setPCat] = useState(() => store.get().profile.roles?.[0] || "Software");
+  const [done, setDone] = useState(null); // outlines from a finished practice run, offered for this round's notes
+  const outlines = useStore((s) => s.ui.prepPractice) || {};
   const isPractice = !a;
   const type = isPractice ? pType : r.type;
   const cat = isPractice ? pCat : prepCatOf(a);
   const questions = useMemo(() => prepQuestions(type, cat), [type, cat]);
   const ctx = { round: (ROUND[type]?.label || "interview").toLowerCase(), title: a?.title || "", cat };
   const askType = type === "case" ? "case" : type;
+  const endPractice = () => {
+    setPractice(false);
+    const list = questions.filter((q) => (outlines[q.q] || "").trim()).map((q) => ({ q: q.q, o: outlines[q.q].trim() }));
+    setDone(a && list.length ? { list, saved: false } : null);
+    if (a && list.length) setTimeout(() => { const el = document.getElementById("prep-done"); el?.scrollIntoView({ block: "center" }); el?.querySelector("button")?.focus({ preventScroll: true }); }, 60);
+  };
+  const addOutlines = () => {
+    if (!done || !prep_appendNotes(a.id, r.id, [`Practice outlines, ${fmt.date(now())}`, ...done.list.map((x) => `Q: ${x.q}\n${x.o}`)].join("\n\n"))) return;
+    setDone({ ...done, saved: true }); setNotesRev((x) => x + 1);
+    toast(`Added ${pluralize(done.list.length, "outline")} to your ${a.company} prep notes`);
+  };
+  const whereUrl = r && prep_whereUrl(r.where);
+  /* Today's "Open notes" lands here with focus.notes: bring the notes into view. */
+  useEffect(() => {
+    const f = store.get().ui.prepFocus;
+    if (!r || !f?.notes || f.roundId !== r.id) return;
+    prepSetFocus({ appId: f.appId, roundId: f.roundId });
+    const t = setTimeout(() => { const el = document.getElementById("prep-notes-" + r.id); if (el) { el.scrollIntoView({ block: "center" }); el.focus({ preventScroll: true }); } }, 80);
+    return () => clearTimeout(t);
+  }, [r?.id]);
   return html`<div class="stack prep-work">
     ${isPractice
       ? html`<div class="card prep-head">
@@ -706,13 +762,25 @@ function PrepWorkspace({ a, r }) {
           <dl class="prep-facts">
             <div><dt>When</dt><dd class="num">${r.at ? today_meta([fmt.dateTime(r.at), html`<span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>${fmt.until(r.at)}</span>`]) : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
+            ${r.where ? html`<div><dt>Where</dt><dd class="prep-where">${whereUrl ? html`<a href=${whereUrl} target="_blank" rel="noopener" class="truncate" id="prep-where-link">${r.where}</a>` : r.where}</dd></div>` : null}
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
         </div>`}
+    ${a && (a.notes || "").trim() ? html`<div class="card prep-appnotes" aria-labelledby="prep-appnotes-h">
+        <div class="card-head"><h3 id="prep-appnotes-h">From your notes on ${a.company}</h3><span class="spacer"></span>
+          <${Btn} size="sm" kind="ghost" icon="edit" onClick=${() => openApp(a.id, "notes")} id="prep-appnotes-edit">Edit</${Btn}></div>
+        <div class="card-body"><p class="prep-appnotes-text">${a.notes.trim()}</p></div>
+      </div>` : null}
+    ${done && !practice ? html`<div class="callout prep-done" role="status" id="prep-done">
+        <${Icon} name="check" />
+        <span class="prep-done-text">${done.saved ? `Your outlines are in your ${a.company} prep notes.` : `Practice done. You wrote ${pluralize(done.list.length, "outline")}.`}</span>
+        ${done.saved ? html`<${Btn} size="sm" kind="ghost" onClick=${() => setDone(null)} id="prep-done-close">Done</${Btn}>`
+          : html`<${Btn} size="sm" kind="primary" icon="doc" onClick=${addOutlines} id="prep-add-outlines">Add your outlines to ${a.company} prep notes</${Btn}>`}
+      </div>` : null}
     ${pc.sample && !practice && html`<${PrepMock} key=${r?.id || "p"} ctx=${{ type, cat }} a=${a} r=${r} resume=${resume} onPhase=${setMockPhase} onSaved=${() => setNotesRev((x) => x + 1)} />`}
     ${practice
-      ? html`<${PrepPractice} key=${type + cat} questions=${questions} ctx=${ctx} onExit=${() => setPractice(false)} />`
-      : !(pc.sample && mockPhase !== "start") && html`<${PrepQuestionsCard} key=${type + cat} questions=${questions} onPractice=${() => { setMockPhase("start"); setPractice(true); }} />`}
+      ? html`<${PrepPractice} key=${type + cat} questions=${questions} ctx=${ctx} onExit=${endPractice} />`
+      : !(pc.sample && mockPhase !== "start") && html`<${PrepQuestionsCard} key=${type + cat} questions=${questions} onPractice=${() => { setMockPhase("start"); setDone(null); setPractice(true); }} />`}
     <${PrepTailored} key=${(r?.id || "p") + type + cat} ctx=${ctx} skills=${skills || []} />
     <${PrepTalking} resume=${resume} />
     ${isPractice ? html`<${PrepAskCard} type=${askType} />` : html`<div class="grid cols-2 prep-two">

@@ -383,3 +383,16 @@
   .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
 }
 @media (max-width: 400px) { .onb-foot { flex-wrap: wrap; row-gap: 8px; } .onb-foot .btn { padding: 0 14px; } .onb-foot > :not(.btn):not(.spacer) { min-width: 0; font-size: var(--fs-sm); } }
+
+/* ----- Application notes, where, finished practice ----- */
+.prep-appnotes .card-head h3 { font-size: var(--fs-md); }
+.prep-appnotes-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-sm); color: var(--fg-2); line-height: 1.55; max-height: 9.5em; overflow-y: auto; }
+.prep-where { min-width: 0; overflow-wrap: anywhere; }
+.prep-where a { display: block; max-width: 100%; color: var(--accent-text); }
+.prep-done { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.prep-done-text { flex: 1; min-width: 180px; }
+.prep-mock-safe { align-self: center; }
+@media (max-width: 640px) {
+  .prep-done .btn { width: 100%; justify-content: center; min-height: 44px; }
+  .prep-mock-foot { flex-wrap: wrap; }
+}
