@@ -159,7 +159,7 @@ function Palette() {
 }
 
 MODALS.shortcuts = () => {
-  const rows = [["⌘K / Ctrl K", "Search and commands"], ["/", "Search jobs"], ["N", "Add application"], ["E", "Paste an email"], ["G then T", "Today"], ["G then F", "Find jobs"], ["G then P", "Pipeline"], ["G then C", "Companies"], ["G then I", "Interview prep"], ["G then S", "Insights"], ["J / K", "Next / previous item in lists"], ["1 – 7", "Move the open application to a stage"], ["Esc", "Close panel"], ["?", "This list"]];
+  const rows = [["⌘K / Ctrl K", "Search and commands"], ["/", "Search jobs"], ["N", "Add application"], ["E", "Paste an email"], ["G then T", "Today"], ["G then F", "Find jobs"], ["G then P", "Pipeline"], ["G then C", "Companies"], ["G then I", "Interview prep"], ["G then S", "Insights"], ["J / K", "Next / previous item in lists"], ["1 – 7", "Move the open application to a stage"], ["X", "Select in Pipeline (Shift X for a range)"], ["S", "Save the selected job in Find"], ["Esc", "Close panel"], ["?", "This list"]];
   return html`<${Modal} title="Keyboard shortcuts" onClose=${closeModal}>
     <div class="list">${rows.map(([k, v]) => html`<div class="row" style="padding:9px 0"><span style="flex:1">${v}</span>${k.split(" ").map((x) => x === "then" || x === "/" && k.length > 1 ? html`<span class="faint" style="font-size:var(--fs-xs)">${x}</span>` : html`<${Kbd}>${x}</${Kbd}>`)}</div>`)}</div>
   </${Modal}>`;
