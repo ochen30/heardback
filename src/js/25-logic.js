@@ -17,19 +17,19 @@ function computeTasks(s = store.get()) {
       const fromEmail = (a.events || []).some((e) => e.kind === "email" && t - e.at < 3 * DAY);
       if (until > 0 && fromEmail && !r.confirmed) {
         const key = `confirm:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${(ROUND[r.type]?.label || "interview").toLowerCase()} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
+        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${roundNoun(r)} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
       }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${ROUND[r.type]?.label || "Interview"} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
+        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
       }
       if (until <= 0 && -until < 2 * DAY && !r.thanked && r.outcome === "pending") {
         const key = `thanks:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${(ROUND[r.type]?.label || "interview").toLowerCase()}${r.interviewers ? " with " + r.interviewers : ""}`, action: "Draft note" });
+        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${roundNoun(r)}${r.interviewers ? " with " + r.interviewers : ""}`, action: "Draft note" });
       }
       if (until <= -DAY && r.outcome === "pending") {
         const key = `outcome:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "outcome", pri: 2, app: a, round: r, icon: "flag", tone: "", title: `How did the ${a.company} ${(ROUND[r.type]?.label || "interview").toLowerCase()} go?`, sub: `It was ${fmt.ago(r.at)}. Log the outcome and a few notes while you remember.`, action: "Log outcome" });
+        if (!skip(key)) out.push({ key, kind: "outcome", pri: 2, app: a, round: r, icon: "flag", tone: "", title: `How did the ${a.company} ${roundNoun(r)} go?`, sub: `It was ${fmt.ago(r.at)}. Log the outcome and a few notes while you remember.`, action: "Log outcome" });
       }
     }
     if (["applied", "screen", "interview"].includes(a.stage)) {
@@ -147,9 +147,14 @@ function hasExamples(s = store.get()) { return Object.values(s.apps).some((a) =>
 
 /* ===== Templates (used when Claude isn't available) ===== */
 function followUpTemplate(a, profile) {
-  return `Subject: Following up on my ${a.title || "application"}\n\nHi ${a.contacts?.[0]?.name || "there"},\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
+  const name = a.contacts?.[0]?.name?.split(/\s+/)[0];
+  const hi = name ? `Hi ${name},` : `Hi ${a.company} team,`;
+  if (a.followedUpAt) {
+    return `Subject: Checking in on my ${a.title || "application"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
+  }
+  return `Subject: Following up on my ${a.title || "application"} application\n\n${hi}\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 function thankYouTemplate(a, r, profile) {
   const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  return `Subject: Thank you for the ${roundNoun(r)} · ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }

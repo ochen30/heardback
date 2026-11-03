@@ -148,3 +148,11 @@ A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, 
 - **"Just browse jobs →"** lands on Find; **"See a sample tracker first"** loads examples into the pipeline; a "Something else" option for non-tech students with an honest note.
 - Step 3 shows a flagged listing with its reason, and previews are tappable. Today is never empty for a brand-new user ("Fresh roles posted today").
 - Pipeline table fits tablets without hiding key columns; card footers never truncate; the methodology table stacks on phones.
+
+### 06:35 PT — v14 published (design review 9: 9.1, "ship")
+- Rounds read naturally in every sentence ("Confirm your technical interview", "How did the Point72 interview go?"), never "Other with…".
+- "Last reply" counts past rounds and stage advances, so it agrees everywhere.
+- Today: no "With HackerRank" for assessments; saved listings with strong ghost signals offer "Review" instead of "Apply".
+- A second follow-up draft reads differently from the first ("Checking in once more…"); thank-you subject reads "Thank you for the technical interview · Role".
+- Onboarding footer fits narrow phones.
+- QA: end-to-end 2,428 / 2,428.

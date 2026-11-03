@@ -92,6 +92,10 @@ const ROUND_TYPES = [
   { id: "other", label: "Other" },
 ];
 const ROUND = Object.fromEntries(ROUND_TYPES.map((r) => [r.id, r]));
+/* How a round reads inside a sentence: "your technical interview", "the recruiter call", "the online assessment" */
+const ROUND_NOUN = { recruiter: "recruiter call", assessment: "online assessment", technical: "technical interview", behavioral: "behavioral interview", case: "case interview", onsite: "final round", other: "interview" };
+function roundNoun(r) { return ROUND_NOUN[r?.type] || "interview"; }
+function roundTitle(r) { const n = roundNoun(r); return n[0].toUpperCase() + n.slice(1); }
 const CATS = ["Software", "Data & AI", "Product", "Quant", "Hardware"];
 const LEVELS = [{ id: "intern", label: "Internship" }, { id: "newgrad", label: "New grad" }];
 

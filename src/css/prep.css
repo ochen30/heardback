@@ -382,3 +382,4 @@
   .onb-deg .seg { display: flex; width: 100%; }
   .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
 }
+@media (max-width: 400px) { .onb-foot { flex-wrap: wrap; row-gap: 8px; } .onb-foot .btn { padding: 0 14px; } .onb-foot > :not(.btn):not(.spacer) { min-width: 0; font-size: var(--fs-sm); } }

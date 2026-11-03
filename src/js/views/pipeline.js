@@ -850,7 +850,8 @@ function PlRemoved({ a, jobs, hasCo }) {
 function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
+  const lastContact = Math.max(a.lastReplyAt || 0, ...(a.rounds || []).filter((r) => r.at && r.at <= now()).map((r) => r.at), ...(a.events || []).filter((e) => e.kind === "stage" && ["screen", "interview", "offer"].includes(e.to)).map((e) => e.at)) || null;
+  const replyTxt = lastContact ? `${plDaysSince(lastContact) < 1 ? "Today" : plDaysSince(lastContact) === 1 ? "Yesterday" : `${pluralize(plDaysSince(lastContact), "day")} ago`} · ${fmt.date(lastContact)}` : a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
     : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,

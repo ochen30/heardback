@@ -59,7 +59,7 @@ const pad = (n) => String(n).padStart(2, '0');
         // Today shows one row per application (its most urgent task), so check the confirm task with the
         // app's other rounds set aside, then check Today shows whatever computeTasks ranks first for the app
         const ct = await page.evaluate(({ id, rid, k }) => { const s = store.get(); const a = s.apps[id]; const t = computeTasks({ ...s, apps: { ...s.apps, [id]: { ...a, rounds: a.rounds.filter((r) => r.id === rid) } } }).find((x) => x.key === k); return t && { kind: t.kind, title: t.title }; }, { id: nw.id, rid: nr.id, k: key });
-        T.check('interview invite -> "Confirm your technical with Northwind Labs" task', ct && ct.kind === 'confirm' && ct.title === 'Confirm your technical with Northwind Labs', JSON.stringify(ct));
+        T.check('interview invite -> "Confirm your technical interview with Northwind Labs" task', ct && ct.kind === 'confirm' && ct.title === 'Confirm your technical interview with Northwind Labs', JSON.stringify(ct));
         const top = await page.evaluate((id) => { const t = computeTasks().find((x) => x.app.id === id); return t && { key: t.key, kind: t.kind, title: t.title }; }, nw.id);
         await page.evaluate(() => (location.hash = 'today')); await page.waitForTimeout(500);
         for (const b of await page.locator('.td-group-more button').all()) { await b.click(); await page.waitForTimeout(100); }

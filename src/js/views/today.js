@@ -175,6 +175,7 @@ function today_TaskRow({ tk, primary, idx, child }) {
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
     </div>`;
+  else if (tk.kind === "apply" && a.jobId && jobsStore.byId.get(a.jobId)?.g >= 50 && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Review</button>`;
   else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
   else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
   else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
@@ -413,7 +414,7 @@ function today_Upcoming({ up }) {
             <${Logo} name=${a.company} size="sm" />
             <span class="td-up-main">
               <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
-              <span class="td-up-sub truncate">${r.interviewers ? `With ${r.interviewers}` : a.title}</span>
+              <span class="td-up-sub truncate">${r.interviewers && r.type !== "assessment" ? `With ${r.interviewers}` : a.title}</span>
             </span>
             ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}
             <${Icon} name="chevR" cls="faint" />

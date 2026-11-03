@@ -1765,6 +1765,7 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .onb-deg .seg { display: flex; width: 100%; }
   .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
 }
+@media (max-width: 400px) { .onb-foot { flex-wrap: wrap; row-gap: 8px; } .onb-foot .btn { padding: 0 14px; } .onb-foot > :not(.btn):not(.spacer) { min-width: 0; font-size: var(--fs-sm); } }
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -2178,6 +2179,10 @@ const ROUND_TYPES = [
   { id: "other", label: "Other" },
 ];
 const ROUND = Object.fromEntries(ROUND_TYPES.map((r) => [r.id, r]));
+/* How a round reads inside a sentence: "your technical interview", "the recruiter call", "the online assessment" */
+const ROUND_NOUN = { recruiter: "recruiter call", assessment: "online assessment", technical: "technical interview", behavioral: "behavioral interview", case: "case interview", onsite: "final round", other: "interview" };
+function roundNoun(r) { return ROUND_NOUN[r?.type] || "interview"; }
+function roundTitle(r) { const n = roundNoun(r); return n[0].toUpperCase() + n.slice(1); }
 const CATS = ["Software", "Data & AI", "Product", "Quant", "Hardware"];
 const LEVELS = [{ id: "intern", label: "Internship" }, { id: "newgrad", label: "New grad" }];
 
@@ -2954,19 +2959,19 @@ function computeTasks(s = store.get()) {
       const fromEmail = (a.events || []).some((e) => e.kind === "email" && t - e.at < 3 * DAY);
       if (until > 0 && fromEmail && !r.confirmed) {
         const key = `confirm:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${(ROUND[r.type]?.label || "interview").toLowerCase()} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
+        if (!skip(key)) out.push({ key, kind: "confirm", pri: 0, app: a, round: r, icon: "reply", tone: "accent", title: `Confirm your ${roundNoun(r)} with ${a.company}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}. Reply so they know you'll be there.`, action: "Review" });
       }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${ROUND[r.type]?.label || "Interview"} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
+        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${r.interviewers ? " · " + r.interviewers : ""}`, action: "Prep" });
       }
       if (until <= 0 && -until < 2 * DAY && !r.thanked && r.outcome === "pending") {
         const key = `thanks:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${(ROUND[r.type]?.label || "interview").toLowerCase()}${r.interviewers ? " with " + r.interviewers : ""}`, action: "Draft note" });
+        if (!skip(key)) out.push({ key, kind: "thanks", pri: 0, app: a, round: r, icon: "send", tone: "ok", title: `Send a thank-you note to ${a.company}`, sub: `Within 24 hours of your ${roundNoun(r)}${r.interviewers ? " with " + r.interviewers : ""}`, action: "Draft note" });
       }
       if (until <= -DAY && r.outcome === "pending") {
         const key = `outcome:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "outcome", pri: 2, app: a, round: r, icon: "flag", tone: "", title: `How did the ${a.company} ${(ROUND[r.type]?.label || "interview").toLowerCase()} go?`, sub: `It was ${fmt.ago(r.at)}. Log the outcome and a few notes while you remember.`, action: "Log outcome" });
+        if (!skip(key)) out.push({ key, kind: "outcome", pri: 2, app: a, round: r, icon: "flag", tone: "", title: `How did the ${a.company} ${roundNoun(r)} go?`, sub: `It was ${fmt.ago(r.at)}. Log the outcome and a few notes while you remember.`, action: "Log outcome" });
       }
     }
     if (["applied", "screen", "interview"].includes(a.stage)) {
@@ -3084,11 +3089,16 @@ function hasExamples(s = store.get()) { return Object.values(s.apps).some((a) =>
 
 /* ===== Templates (used when Claude isn't available) ===== */
 function followUpTemplate(a, profile) {
-  return `Subject: Following up on my ${a.title || "application"}\n\nHi ${a.contacts?.[0]?.name || "there"},\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
+  const name = a.contacts?.[0]?.name?.split(/\s+/)[0];
+  const hi = name ? `Hi ${name},` : `Hi ${a.company} team,`;
+  if (a.followedUpAt) {
+    return `Subject: Checking in on my ${a.title || "application"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
+  }
+  return `Subject: Following up on my ${a.title || "application"} application\n\n${hi}\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 function thankYouTemplate(a, r, profile) {
   const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  return `Subject: Thank you for the ${roundNoun(r)} · ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me${r?.at && fmt.startOfDay(r.at) === fmt.startOfDay(now()) ? " today" : ""} about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 
 /* --- js/30-shell.js --- */
@@ -5563,7 +5573,8 @@ function PlRemoved({ a, jobs, hasCo }) {
 function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
+  const lastContact = Math.max(a.lastReplyAt || 0, ...(a.rounds || []).filter((r) => r.at && r.at <= now()).map((r) => r.at), ...(a.events || []).filter((e) => e.kind === "stage" && ["screen", "interview", "offer"].includes(e.to)).map((e) => e.at)) || null;
+  const replyTxt = lastContact ? `${plDaysSince(lastContact) < 1 ? "Today" : plDaysSince(lastContact) === 1 ? "Yesterday" : `${pluralize(plDaysSince(lastContact), "day")} ago`} · ${fmt.date(lastContact)}` : a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
     : a.appliedAt ? (plDaysSince(a.appliedAt) < 1 ? "No reply yet · applied today" : `No reply in ${pluralize(plDaysSince(a.appliedAt), "day")}`) : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
@@ -7732,6 +7743,7 @@ function today_TaskRow({ tk, primary, idx, child }) {
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
     </div>`;
+  else if (tk.kind === "apply" && a.jobId && jobsStore.byId.get(a.jobId)?.g >= 50 && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Review</button>`;
   else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
   else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
   else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
@@ -7970,7 +7982,7 @@ function today_Upcoming({ up }) {
             <${Logo} name=${a.company} size="sm" />
             <span class="td-up-main">
               <span class="td-up-title truncate"><b>${a.company}</b><span class="faint" aria-hidden="true"> · </span>${ROUND[r.type]?.label || "Interview"}</span>
-              <span class="td-up-sub truncate">${r.interviewers ? `With ${r.interviewers}` : a.title}</span>
+              <span class="td-up-sub truncate">${r.interviewers && r.type !== "assessment" ? `With ${r.interviewers}` : a.title}</span>
             </span>
             ${g.label === "Today" ? html`<span class="faint td-up-until hide-sm">${fmt.until(r.at)}</span>` : html`<span></span>`}
             <${Icon} name="chevR" cls="faint" />
