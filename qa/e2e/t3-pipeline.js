@@ -4,6 +4,14 @@ const W = +(process.env.W || 1440), MOCK = !!process.env.MOCK;
 const T = mk(`pipeline-${W}${MOCK ? '-mock' : ''}`);
 const mobile = W < 700;
 const stageOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).find((a) => a.company === c)?.stage, c);
+async function drag(page, src, dst) {
+  const a = await page.locator(src).first().boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2 + 20, a.y + a.height / 2 + 10, { steps: 4 }); await page.waitForTimeout(150);
+  const b = await page.locator(dst).first().boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + Math.min(b.height / 2, 40), { steps: 8 }); await page.waitForTimeout(100);
+  await page.mouse.up(); await page.waitForTimeout(200);
+}
 const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).find((a) => a.company === c), c);
 (async () => {
   const { page, errors, close } = await open({ W, mock: MOCK, setup: 'examples', route: 'pipeline' });
@@ -15,7 +23,7 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     T.check('board shows 8 visible cards (rejected/ghosted collapsed)', cards === 8, cards);
     // drag & drop
     if (!mobile) {
-      await page.dragAndDrop('.pl-card:has-text("Verity Labs")', '[data-col="screen"]');
+      await drag(page, '.pl-card:has-text("Verity Labs")', '[data-col="screen"]');
       await page.waitForTimeout(300);
       T.check('DnD Verity -> screen', (await stageOf(page, 'Verity Labs')) === 'screen');
       const v = await appOf(page, 'Verity Labs');
@@ -27,9 +35,9 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
       T.check('Undo removes stage event', v2.events.length === v.events.length - 1, `${v2.events.length} vs ${v.events.length}`);
       T.check('Undo restores lastReplyAt=null', v2.lastReplyAt == null, v2.lastReplyAt);
       // drop on collapsed rejected rail
-      await page.dragAndDrop('.pl-card:has-text("Verity Labs")', '[data-col="rejected"]');
+      await drag(page, '.pl-card:has-text("Verity Labs")', '.pl-drop[data-col="rejected"]');
       await page.waitForTimeout(300);
-      T.check('DnD to collapsed Rejected rail', (await stageOf(page, 'Verity Labs')) === 'rejected');
+      T.check('DnD to Closed rail -> Rejected target', (await stageOf(page, 'Verity Labs')) === 'rejected');
       await page.click('.toast button:has-text("Undo")'); await page.waitForTimeout(200);
       await clearToasts(page);
     }
@@ -98,29 +106,40 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     await page.locator('.pl-card:has-text("Northwind Labs")').click(); await page.waitForTimeout(300);
     T.check('app drawer opens', await page.locator('.drawer').isVisible());
     T.check('no overflow drawer', (await overflow(page)).ok);
-    const tabs = await page.locator('.pl-tabs .seg button').allInnerTexts();
-    T.check('drawer has 4 tabs', tabs.length === 4, tabs.join('|'));
-    // edit fields
-    await page.fill('#pl-loc', 'Seattle, WA (hybrid)');
-    await page.fill('#pl-salary', '$55/hr');
-    await page.fill('#pl-url', 'northwind.example/jobs/1');
-    await page.locator('#pl-applied').fill('2026-10-01');
-    await page.waitForTimeout(700);
+    const tabs = await page.locator('.drawer [role=tablist] [role=tab]').allInnerTexts();
+    T.check('drawer has 4 underline tabs', tabs.length === 4, tabs.join('|'));
+    // v5: read-mode details that edit on click (PlInline): click value -> input -> Enter saves
+    const inline = async (id, v) => { await page.click(`#${id}-v`); await page.waitForSelector(`#${id}`); await page.fill(`#${id}`, v); await page.locator(`#${id}`).press('Enter'); await page.waitForTimeout(150); };
+    await inline('pl-loc', 'Seattle, WA (hybrid)');
+    await inline('pl-salary', '$55/hr');
+    await inline('pl-url', 'northwind.example/jobs/1');
+    await inline('pl-applied', '2026-10-01');
+    await page.waitForTimeout(300);
     let nw = await appOf(page, 'Northwind Labs');
     T.check('location saved', nw.location === 'Seattle, WA (hybrid)', nw.location);
     T.check('salary saved', nw.salary === '$55/hr');
     T.check('url saved', nw.url === 'northwind.example/jobs/1');
     T.check('appliedAt edited', new Date(nw.appliedAt).getDate() === 1 && new Date(nw.appliedAt).getMonth() === 9, new Date(nw.appliedAt).toString());
-    // clear applied date
-    // contacts
+    T.check('focus returns to read-mode value after Enter', await page.evaluate(() => document.activeElement?.id === 'pl-applied-v'));
+    // Escape inside inline edit cancels edit only (drawer stays)
+    await page.click('#pl-salary-v'); await page.fill('#pl-salary', 'nope'); await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    nw = await appOf(page, 'Northwind Labs');
+    T.check('Escape cancels inline edit, keeps drawer', nw.salary === '$55/hr' && (await page.locator('.drawer').count()) === 1, nw.salary);
+    // contacts: "Add contact" button reveals the form
+    T.check('contacts start empty with Add contact', await page.locator('#pl-c-add').isVisible());
+    await page.click('#pl-c-add'); await page.waitForTimeout(100);
+    T.check('Add contact focuses name', await page.evaluate(() => document.activeElement?.id === 'pl-c-name'));
+    await page.click('.pl-contact-form button[type=submit]'); await page.waitForTimeout(100);
+    T.check('empty contact name shows error', await page.locator('.pl-contact-form [aria-invalid=true]').count() === 1);
     await page.fill('#pl-c-name', 'Dana Ruiz'); await page.fill('#pl-c-role', 'Recruiter'); await page.fill('#pl-c-email', 'dana@northwind.example');
     await page.click('.pl-contact-form button[type=submit]'); await page.waitForTimeout(200);
     nw = await appOf(page, 'Northwind Labs');
     T.check('contact added', nw.contacts.length === 1 && nw.contacts[0].name === 'Dana Ruiz');
     // rounds tab
-    await page.click('.pl-tabs .seg button:has-text("Rounds")'); await page.waitForTimeout(200);
+    await page.click('#pl-tab-rounds'); await page.waitForTimeout(200);
     const r0 = await page.locator('.pl-round').count();
     T.check('rounds tab lists 2 rounds', r0 === 2, r0);
+    T.check('rounds are summary rows with Edit', (await page.locator('.pl-round-row .pl-round-edit').count()) >= 1, await page.locator('.pl-round-row').count());
     await page.click('.drawer button:has-text("Add round")'); await page.waitForTimeout(300);
     nw = await appOf(page, 'Northwind Labs');
     T.check('add round', nw.rounds.length === 3);
@@ -137,10 +156,10 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     T.check('round interviewers saved', rr.interviewers === 'Sam Lee');
     T.check('round prep saved', rr.prep === 'STAR stories');
     // outcome changes
-    await page.locator(`[data-round="${newR.id}"] .pl-outcome button:has-text("Passed")`).click(); await page.waitForTimeout(150);
+    await page.selectOption(`#pl-r-${newR.id}-out`, 'passed'); await page.waitForTimeout(150);
     nw = await appOf(page, 'Northwind Labs');
     T.check('outcome -> passed', nw.rounds.find((r) => r.id === newR.id).outcome === 'passed');
-    await page.locator(`[data-round="${newR.id}"] .pl-outcome button:has-text("Didn't pass")`).click(); await page.waitForTimeout(150);
+    await page.selectOption(`#pl-r-${newR.id}-out`, 'failed'); await page.waitForTimeout(150);
     nw = await appOf(page, 'Northwind Labs');
     T.check('outcome -> failed', nw.rounds.find((r) => r.id === newR.id).outcome === 'failed');
     // thanked checkbox
@@ -154,14 +173,19 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     const afterEsc = { modal: await page.locator('.modal').count(), drawer: await page.locator('.drawer').count() };
     T.check('Escape on confirm closes only confirm (drawer stays)', afterEsc.modal === 0 && afterEsc.drawer === 1, JSON.stringify(afterEsc));
-    if (!afterEsc.drawer) { await page.locator('.pl-card:has-text("Northwind Labs")').click(); await page.waitForTimeout(300); await page.click('.pl-tabs .seg button:has-text("Rounds")'); await page.waitForTimeout(200); }
+    if (!afterEsc.drawer) { await page.locator('.pl-card:has-text("Northwind Labs")').click(); await page.waitForTimeout(300); await page.click('#pl-tab-rounds'); await page.waitForTimeout(200); }
+    if (!(await page.locator(`#pl-r-${newR.id}-type`).count())) await page.click(`#pl-r-${newR.id}-sum`);
     await page.locator(`[data-round="${newR.id}"] button[aria-label="Delete round"]`).click(); await page.waitForTimeout(200);
     await page.click('.modal-foot button:has-text("Delete round")'); await page.waitForTimeout(200);
     nw = await appOf(page, 'Northwind Labs');
     T.check('round deleted', nw.rounds.length === 2);
+    // Done collapses an open round to a summary row and focuses it
+    const openR = await page.locator('.pl-round-open').first().getAttribute('data-round').catch(() => null);
+    if (openR) { await page.locator(`.pl-round-open[data-round="${openR}"] button:has-text("Done")`).click(); await page.waitForTimeout(150);
+      T.check('Done collapses round + focuses summary', await page.evaluate((id) => document.activeElement?.id === `pl-r-${id}-sum`, openR)); }
     T.check('drawer still open after confirm', await page.locator('.drawer').count() === 1);
     // timeline note
-    await page.click('.pl-tabs .seg button:has-text("Timeline")'); await page.waitForTimeout(200);
+    await page.click('#pl-tab-timeline'); await page.waitForTimeout(200);
     await page.fill('#pl-tl-note', 'Recruiter said decisions by Friday');
     await page.keyboard.press('Enter'); await page.waitForTimeout(200);
     nw = await appOf(page, 'Northwind Labs');
@@ -169,7 +193,7 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     T.check('timeline note updates lastActivityAt', Date.now() - nw.lastActivityAt < 5000, new Date(nw.lastActivityAt).toString());
     T.check('timeline shows note first', (await page.locator('.pl-tl .tl-item').first().innerText()).includes('Friday'));
     // notes autosave
-    await page.click('.pl-tabs .seg button:has-text("Notes")'); await page.waitForTimeout(200);
+    await page.click('#pl-tab-notes'); await page.waitForTimeout(200);
     await page.fill('#pl-notes', 'Referral from Jamie. Team: Payments.');
     await page.waitForTimeout(1000);
     T.check('notes saved indicator', /Saved/.test(await page.locator('.pl-saved').innerText()));
@@ -190,7 +214,7 @@ const appOf = (page, c) => page.evaluate((c) => Object.values(store.get().apps).
     T.check('notes persist after reload', nw.notes === 'Referral from Jamie. Team: Payments. 6', JSON.stringify(nw.notes));
     // notes: type then reload quickly (within debounce)
     await page.locator('.pl-card:has-text("Northwind Labs")').click(); await page.waitForTimeout(300);
-    await page.click('.pl-tabs .seg button:has-text("Notes")'); await page.waitForTimeout(200);
+    await page.click('#pl-tab-notes'); await page.waitForTimeout(200);
     await page.fill('#pl-notes', 'quick edit then reload');
     await page.waitForTimeout(300);
     await page.reload(); await page.waitForTimeout(900);

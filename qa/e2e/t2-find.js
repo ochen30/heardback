@@ -16,7 +16,9 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     await page.click('.find-prefs .find-link');
     await page.waitForTimeout(250);
     const nAll = await count(page);
-    T.check('Show all = all jobs', nAll === 8227, nAll);
+    const nTot = await page.evaluate(() => jobsStore.jobs.length);
+    const nRaw = await page.evaluate(() => jobsStore.jobs.reduce((n, j) => n + 1 + (j.dup || 0), 0));
+    T.check('Show all = de-duplicated job count', nAll === nTot, `${nAll} vs ${nTot} (raw incl dups ${nRaw})`);
     // search
     await page.fill('#find-q', 'google software');
     await page.waitForTimeout(400);
@@ -50,7 +52,7 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     n = await filt('.chip:has-text("Quant")');
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.lvl === 'intern' && j.cat === 'Quant').length);
     T.check('+Role=Quant', n === e, `${n} vs ${e}`);
-    n = await filt('.chip:has-text("New York")');
+    n = await filt(`label[for="${mobile ? "find-m" : "find-f"}-loc-new-york"]`);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.lvl === 'intern' && j.cat === 'Quant' && jobInLoc(j, 'new york')).length);
     T.check('+Loc=New York', n === e, `${n} vs ${e}`);
     // posted 7d
@@ -62,12 +64,12 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     if (mobile) { await page.click('.find-fbtn'); await page.click('.modal-foot button:has-text("Clear filters")'); await page.click('.modal-foot .btn.primary'); }
     else await page.click('.find-aside button:has-text("Clear filters")');
     await page.waitForTimeout(250);
-    T.check('clear filters -> all', (await count(page)) === 8227);
+    T.check('clear filters -> all', (await count(page)) === nTot);
     // visa + ghost
-    n = await filt('.chip:has-text("Offers sponsorship")');
+    n = await filt(`label[for="${mobile ? 'find-m' : 'find-f'}-visa-yes"]`);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp === 'yes').length);
     T.check('Visa=yes', n === e, `${n} vs ${e}`);
-    n = await filt('.chip:has-text("Hide citizenship-required")');
+    n = await filt(`label[for="${mobile ? 'find-m' : 'find-f'}-visa-nocit"]`);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
     T.check('Visa=nocit', n === e, `${n} vs ${e}`);
     await openFilters(); await page.click(`${scope} label[for$="-ghost"]`); await page.waitForTimeout(200); await closeFilters(); await page.waitForTimeout(200);
@@ -79,7 +81,7 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     await page.waitForTimeout(250);
     // sorts
     const setSort = async (id, label) => { if (mobile) await page.selectOption('#find-sort-sm', id); else await page.click(`.find-sort .seg button:has-text("${label}")`); await page.waitForTimeout(300); };
-    await setSort('ghost', 'Fewest ghost');
+    await setSort('ghost', 'Most likely real');
     const gs = await page.evaluate(() => [...document.querySelectorAll('.find-row')].slice(0, 60).map((r) => +r.dataset.findI));
     const firstG = await page.evaluate(() => { const f = find_getFilters(store.get()); return find_sort(find_run(jobsStore.jobs, f, '', false).res, 'ghost', store.get().profile).slice(0, 5).map((j) => j.g); });
     T.check('ghost sort ascending', firstG.every((x, i, a) => !i || a[i - 1] <= x), firstG.join(','));

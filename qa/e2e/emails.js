@@ -39,7 +39,7 @@ You can check the status of your application at any time by signing in to your c
 
 Sincerely,
 Capital One Talent Acquisition` },
-  { id: 'recruiter-screen', exp: { kind: 'screen', company: 'Datadog', title: 'Software Engineer Intern', at: '2026-11-10 15:30' },
+  { id: 'recruiter-screen', exp: { kind: 'screen', company: 'Datadog', title: 'Software Engineer Intern', at: '2026-11-10 20:30' /* 3:30 PM ET, UTC */ },
     text: `From: Jordan Lee <jordan.lee@datadoghq.com>
 Subject: Datadog - Next steps for the Software Engineer Intern role
 Date: Tue, 3 Nov 2026 09:41:00 -0500
@@ -53,7 +53,7 @@ Would Tuesday, November 10 at 3:30 PM ET work for you? If not, send me a couple 
 Thanks,
 Jordan Lee
 Technical Recruiter, Datadog` },
-  { id: 'virtual-onsite', exp: { kind: 'interview', company: 'Robinhood', title: 'Software Engineer Intern', at: '2026-11-16 10:00' },
+  { id: 'virtual-onsite', exp: { kind: 'interview', company: 'Robinhood', title: 'Software Engineer Intern', at: '2026-11-16 18:00' /* 10am PT, UTC */ },
     text: `From: Robinhood Interviews <interviews@robinhood.com>
 Subject: Interview Confirmation: Software Engineer Intern
 Date: Wed, 4 Nov 2026 16:10:00 -0800
@@ -65,7 +65,7 @@ Your virtual onsite with Robinhood is confirmed for Monday, Nov 16, 2026 from 10
 A Zoom link will follow 24 hours before your interview.
 
 Robinhood Recruiting Coordination` },
-  { id: 'numeric-date-tech', exp: { kind: 'interview', company: 'Duolingo', title: 'Software Engineer Intern', at: '2026-11-12 14:00' },
+  { id: 'numeric-date-tech', exp: { kind: 'interview', company: 'Duolingo', title: 'Software Engineer Intern', at: '2026-11-12 19:00' /* 2pm ET, UTC */ },
     text: `From: Maya Patel <maya@duolingo.com>
 Subject: Duolingo technical interview
 Date: Tue, 3 Nov 2026 12:00:00 -0500

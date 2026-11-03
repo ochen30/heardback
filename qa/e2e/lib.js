@@ -24,7 +24,7 @@ async function open(o = {}) {
   const port = server.address().port;
   const W = o.W || 1440, H = o.H || (W < 600 ? 812 : 900);
   const browser = o.browser || await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, colorScheme: o.theme || 'light', permissions: ['clipboard-read', 'clipboard-write'] });
+  const ctx = await browser.newContext({ viewport: { width: W, height: H }, colorScheme: o.theme || 'light', timezoneId: o.tz || process.env.TZID || 'UTC', acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) errors.push(m.text()); });

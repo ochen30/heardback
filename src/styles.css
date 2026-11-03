@@ -583,3 +583,4 @@ input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; borde
 .meth-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .meth-table td { vertical-align: top; padding-block: 10px; height: auto; }
 .modal-body > * { flex-shrink: 0; }
+.meth-pts { white-space: nowrap; min-width: 140px; }

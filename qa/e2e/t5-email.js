@@ -11,7 +11,7 @@ const pad = (n) => String(n).padStart(2, '0');
     // ---- Parser accuracy (plParse is what the modal uses; parseEmail is the shared core) ----
     for (const em of EMAILS) {
       const r = await page.evaluate((t) => { const p = plParse(t); const c = parseEmail(t); return { p: { ...p }, core: { kind: c.kind, company: c.company, title: c.title, interviewAt: c.interviewAt } }; }, em.text);
-      const at = r.p.interviewAt ? (() => { const d = new Date(r.p.interviewAt); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; })() : null;
+      const at = r.p.interviewAt ? (() => { const d = new Date(r.p.interviewAt); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; })() : null;
       const got = { kind: r.p.kind, company: r.p.company, title: r.p.title, at };
       const fields = ['kind', 'company', 'title', 'at'];
       const bad = fields.filter((f) => (got[f] || '') !== (em.exp[f] || ''));

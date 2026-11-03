@@ -23,8 +23,10 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
     await page.click('.onboard .chip:has-text("Internship")'); // toggle off intern -> only newgrad
     await page.click('.onboard .chip:has-text("Software")');
     await page.click('.onboard .chip:has-text("Data & AI")');
-    await page.click('.onboard .chip:has-text("New York")');
-    await page.click('.onboard .chip:has-text("Seattle")');
+    // v5: locations are a checkbox list (top N + "Show more")
+    if (!(await page.locator('#onb-loc-seattle').count())) await page.click('.onb-more');
+    await page.check('#onb-loc-new-york');
+    await page.check('#onb-loc-seattle');
     await page.click('label[for="onb-sponsor"]');
     await page.fill('#onb-name', '  Sam  ');
     await shot(page, `onb-step1-${W}`);
