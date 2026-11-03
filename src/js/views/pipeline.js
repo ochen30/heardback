@@ -55,6 +55,8 @@ function plSortInCol(list) {
 }
 
 function plRoundLabel(r) { return ROUND[r?.type]?.label || "Round"; }
+/* "Recruiter call" -> "Recruiter", "Onsite / Final" -> "Onsite": fits a card foot on one line */
+function plShortRound(r) { return plRoundLabel(r).replace(/ call$/i, "").replace(/ \/ .*$/, ""); }
 /* "Today, 11 PM" -> "today, 11 PM" (weekday and month names keep their capital) */
 function plLower(w) { return w.replace(/^(Today|Tomorrow)\b/, (m) => m.toLowerCase()); }
 function plPastPending(a, t = now()) { return (a.rounds || []).filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0] || null; }
@@ -70,7 +72,11 @@ function plStatus(a, st) {
   }
   /* A past round still waiting on its outcome says so, instead of "Replied 21d ago" */
   const past = ["screen", "interview"].includes(a.stage) ? plPastPending(a, t) : null;
-  if (past) return { icon: "flag", tone: "wait", lead: "Log outcome", rest: `${plRoundLabel(past)}, ${fmt.ago(past.at)}`, text: `Log outcome · ${plRoundLabel(past)}, ${fmt.ago(past.at)}`, title: `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
+  if (past) {
+    const thanks = past.type !== "assessment" && !past.thanked && t - past.at < 2 * DAY;
+    const lead = thanks ? "Send thanks" : "Outcome?", rest = `${plShortRound(past)}, ${fmt.ago(past.at)}`;
+    return { icon: thanks ? "send" : "flag", tone: "wait", lead, rest, text: `${lead} · ${rest}`, title: thanks ? `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: send a thank-you note` : `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
+  }
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
@@ -100,8 +106,8 @@ function plNextStep(a, st) {
   if (past) return { kind: "outcome", icon: "flag", round: past, short: "Log the outcome", title: `How did the ${label(past).toLowerCase()} go?`, sub: `It was ${fmt.ago(past.at)}. Log the outcome and a few notes while you remember.` };
   if (listingRemoved(a) && a.stage === "saved") return { kind: "removed", icon: "flag", tone: "wait", short: "Posting taken down", title: "The posting was taken down", sub: "It’s no longer in the live listings. Check the company’s careers page, or remove it from your board." };
   if (a.stage === "saved") return { kind: "saved", icon: "bolt", short: "Apply", title: "Apply, then mark it applied", sub: `You saved this ${fmt.ago(a.createdAt)}. Early applicants tend to hear back more often.` };
-  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${silent} days. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they’re interested. Marking it keeps your board honest. You can move it back any time." };
-  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${silent} days ago and haven’t heard back. A short, specific note is fine.` };
+  if (silent >= st.ghostDays) return { kind: "ghost", icon: "ghost", tone: "wait", short: "Mark as ghosted?", title: `No reply in ${pluralize(plDaysSince(a.lastReplyAt || a.appliedAt || a.createdAt), "day")}. Mark as ghosted?`, sub: "Most companies reply within 3 weeks if they’re interested. Marking it keeps your board honest. You can move it back any time." };
+  if (a.stage === "applied" && silent >= st.followUpDays && !a.followedUpAt) return { kind: "follow", icon: "reply", tone: "wait", short: "Follow up", title: "Send a follow-up", sub: `You applied ${pluralize(plDaysSince(a.appliedAt || a.createdAt), "day")} ago and haven’t heard back. A short, specific note is fine.` };
   if (a.stage === "applied") {
     const due = (a.followedUpAt || a.appliedAt || t) + st.followUpDays * DAY;
     return { kind: "wait", icon: "clock", short: a.followedUpAt ? "Waiting after follow-up" : "Wait for a reply", title: "Waiting for a reply", sub: a.followedUpAt ? `You followed up ${fmt.ago(a.followedUpAt)}.` : `Heardback will suggest a follow-up on ${fmt.date(due)} if you haven’t heard back.` };
@@ -554,7 +560,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
     if (e.target.closest(".pl-chk") || e.metaKey || e.ctrlKey || (selecting && (e.shiftKey || plTouch()))) { onSelect(e.shiftKey); return; }
     openApp(a.id);
   };
-  return html`<article class=${cx("app-card pl-card", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed", selected && "sel")} tabindex="0" draggable="true" data-card=${a.id}
+  return html`<article class=${cx("app-card pl-card kb-row", dragging && "dragging", PL_CLOSED.includes(a.stage) && "closed", selected && "sel")} tabindex="0" draggable="true" data-card=${a.id}
     aria-label=${`${a.title} at ${a.company}. ${STAGE[a.stage].label}. ${stt.text}.${selected ? " Selected." : ""}`} aria-describedby="pl-kbd-hint"
     onClick=${click} onMouseDown=${(e) => { if (e.shiftKey && selecting) e.preventDefault(); }} ...${rest}>
     <div class="pl-card-top">
@@ -565,7 +571,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone, stt.lead && "pl-status-2l")} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : stt.lead ? html`<span>${stt.lead}<span class="pl-status-extra"> · ${stt.rest}</span></span>` : html`<span class="truncate">${stt.text}</span>`}</span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : stt.lead ? html`<span class="truncate">${stt.lead}<span class="pl-status-extra"> · ${stt.rest}</span></span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -657,7 +663,7 @@ function PlTable({ apps, settings, sort, sel }) {
             const due = PL_DUE.includes(ns.kind);
             const dot = due ? "pl-dot-due" : ns.kind === "upcoming" ? "pl-dot-up" : "pl-dot-idle";
             const on = sel.has(a.id);
-            return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx(on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
+            return html`<tr key=${a.id} data-row=${a.id} tabindex="0" class=${cx("kb-row", on && "sel")} onClick=${rowClick(a)} onMouseDown=${(e) => { if (e.shiftKey) e.preventDefault(); }}
               onKeyDown=${(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter") openApp(a.id); else if ((e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); sel.toggle(a.id, e.shiftKey); } }}>
               <td class="pl-chk-cell"><input type="checkbox" id=${"pl-sel-" + a.id} tabindex="-1" checked=${on} aria-label=${`Select ${a.company}, ${a.title || "untitled role"}`} /></td>
               <td><div class="pl-tcell"><${Logo} name=${a.company} size="sm" /><div class="pl-tname"><span class="pl-ttitle truncate">${a.title || "Untitled role"}</span><span class="pl-tco truncate">${a.company}${a.location ? " · " + a.location : ""}</span><span class=${cx("pl-next pl-tnext-m", due && "due")}><span class=${cx("dot", dot)}></span>${today_meta([STAGE[a.stage]?.label, ...(ns.kind === "closed" ? [] : ns.kind === "ghost" ? [`No reply in ${silent} days`] : [ns.short, silent != null && silent >= settings.followUpDays ? `${silent}d silent` : null])])}</span></div></div></td>
@@ -708,6 +714,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   const ns = plNextStep(a, settings);
   const act = plNextAction(a, ns, setT);
   const removed = listingRemoved(a);
+  const takedown = plTakedown(a, ns, removed);
   const head = html`<div class="pl-dhead">
     <${Logo} name=${a.company} size="lg" />
     <div class="pl-dhead-text">
@@ -719,11 +726,9 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
     </div>
   </div>`;
   const foot = html`
-    ${act && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
-    ${ns.kind === "wait" && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
-    ${a.url && (removed
-      ? html`<button type="button" class="btn pl-removed-btn hide-sm" disabled title="This listing is no longer live"><${Icon} name="flag" />Posting removed</button>`
-      : html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`)}
+    ${act && !takedown && html`<${Btn} kind="primary" icon=${act.icon} onClick=${act.run}>${act.label}</${Btn}>`}
+    ${ns.kind === "wait" && !takedown && html`<${Btn} icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft follow-up</${Btn}>`}
+    ${a.url && !removed && html`<a class="btn" href=${plHref(a.url)} target="_blank" rel="noopener"><${Icon} name="ext" />Open posting</a>`}
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" cls="danger" icon="trash" onClick=${del} aria-label="Delete application" title="Delete application"><span class="hide-sm">Delete</span></${Btn}>`;
   const counts = { rounds: (a.rounds || []).length, timeline: (a.events || []).length };
@@ -740,7 +745,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
       ${PL_TABS.map((x) => html`<button type="button" role="tab" key=${x.id} id=${`pl-tab-${x.id}`} aria-selected=${t === x.id ? "true" : "false"} aria-controls="pl-tabpanel" tabindex=${t === x.id ? "0" : "-1"} onClick=${() => setT(x.id)}>${x.label}${counts[x.id] ? html`<span class="count">${counts[x.id]}</span>` : null}</button>`)}
     </div>
     <div id="pl-tabpanel" role="tabpanel" aria-labelledby=${`pl-tab-${t}`} class="pl-tabpanel">
-      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} removed=${removed} hasCo=${hasCo} />`}
+      ${t === "overview" && html`<${PlOverview} a=${a} ns=${ns} settings=${settings} jobs=${jobs} setTab=${setT} removed=${removed} takedown=${takedown} hasCo=${hasCo} />`}
       ${t === "rounds" && html`<${PlRounds} a=${a} />`}
       ${t === "timeline" && html`<${PlTimeline} a=${a} />`}
       ${t === "notes" && html`<${PlNotes} a=${a} />`}
@@ -810,24 +815,30 @@ function PlEscape({ onEscape }) {
 
 function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : "")).replace(/\/$/, ""); } catch { return u; } }
 
-/* B4: an Applied / Screen application whose linked posting is no longer live */
+/* B4: an Applied / Screen application whose linked posting is no longer live. When nothing more
+   specific is next (a round, a thank-you, an outcome), the takedown block takes the Next step's place. */
+function plTakedown(a, ns, removed) {
+  return !!removed && ["applied", "screen"].includes(a.stage) && ["follow", "ghost", "wait", "schedule"].includes(ns.kind);
+}
 function PlRemoved({ a, jobs, hasCo }) {
   const open = hasCo ? (jobs.byCompany.get(a.company) || []).length : 0;
   const screen = a.stage === "screen";
-  return html`<div class="callout pl-removed" role="note">
-    <${Icon} name="flag" />
+  const roles = hasCo && html`<button type="button" class="pl-linkbtn" onClick=${() => openCompany(a.company)}>${open ? `See ${a.company}’s ${pluralize(open, "open role")}` : `See ${a.company}’s open roles`} →</button>`;
+  return html`<div class="pl-next-card wait pl-removed">
+    <span class="pl-next-ico"><${Icon} name="flag" /></span>
     <div class="stack-sm pl-removed-body">
-      <span><b>This posting was taken down.</b> ${screen ? `It may be filled, but your process with ${a.company} can still go on.` : "It may be filled."}</span>
+      <span class="pl-eyebrow">Next step</span>
+      <strong>This posting was taken down</strong>
+      <span class="muted pl-small">${screen ? `Your process with ${a.company} can still go on.` : "It may be filled."} ${roles}</span>
       <div class="pl-removed-actions">
-        ${html`<${Btn} size="sm" icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</${Btn}>`}
-        ${html`<${Btn} size="sm" kind="ghost" icon="ghost" onClick=${() => Apps.move(a.id, "ghosted")}>Mark as ghosted</${Btn}>`}
-        ${hasCo && html`<${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openCompany(a.company)}>${open ? `See ${a.company}’s ${pluralize(open, "open role")}` : `See ${a.company}’s open roles`}</${Btn}>`}
+        <${Btn} size="sm" icon="reply" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>${screen ? "Draft a follow-up" : "Draft a last follow-up"}</${Btn}>
+        ${!screen && html`<${Btn} size="sm" kind="ghost" icon="ghost" onClick=${() => Apps.move(a.id, "ghosted")}>Mark as ghosted</${Btn}>`}
       </div>
     </div>
   </div>`;
 }
 
-function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
+function PlOverview({ a, ns, settings, jobs, setTab, removed, takedown, hasCo }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
   const replyTxt = a.lastReplyAt ? `${plDaysSince(a.lastReplyAt) < 1 ? "Today" : plDaysSince(a.lastReplyAt) === 1 ? "Yesterday" : `${pluralize(plDaysSince(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}`
@@ -838,8 +849,7 @@ function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
     ghost: html`<button type="button" class="pl-linkbtn" onClick=${() => openModal("draft", { appId: a.id, mode: "follow" })}>Draft a last follow-up</button>`,
   }[ns.kind];
   return html`<div class="pl-ov">
-    ${removed && ["applied", "screen"].includes(a.stage) && html`<${PlRemoved} a=${a} jobs=${jobs} hasCo=${hasCo} />`}
-    <div class=${cx("pl-next-card", ns.tone)}>
+    ${takedown ? html`<${PlRemoved} a=${a} jobs=${jobs} hasCo=${hasCo} />` : html`<div class=${cx("pl-next-card", ns.tone)}>
       <span class="pl-next-ico"><${Icon} name=${ns.icon} /></span>
       <div class="stack-sm" style="flex:1;min-width:0">
         <span class="pl-eyebrow">Next step</span>
@@ -847,7 +857,7 @@ function PlOverview({ a, ns, settings, jobs, setTab, removed, hasCo }) {
         <span class="muted pl-small">${plSepText(ns.sub)}</span>
         ${secondary && html`<div class="pl-next-actions pl-small">${secondary}</div>`}
       </div>
-    </div>
+    </div>`}
 
     <section class="dsec">
       <h3>Details</h3>

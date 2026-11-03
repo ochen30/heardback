@@ -32,15 +32,17 @@ module.exports = {
     assert((await focusKey(page)) === keys0[2], `focus moves to the next row after S (${await focusKey(page)})`);
     await page.keyboard.press('d'); await page.waitForTimeout(300);
     assert((await focusKey(page)) === keys0[3], `focus moves to the next row after D (${await focusKey(page)})`);
-    // jump to a ghost row and press Enter
-    const ghostKey = await page.evaluate(() => computeTasks().find((t) => t.kind === 'ghost').key);
+    // jump to the ghost batch row (5 no-reply apps fold into one) and press Enter -> confirm dialog
+    const ghostKey = 'ghost-batch:quick';
     for (let i = 0; i < 30 && (await focusKey(page)) !== ghostKey; i++) { await page.keyboard.press('j'); await page.waitForTimeout(40); }
-    assert((await focusKey(page)) === ghostKey, 'J reaches a row hidden behind Show more (group expands)');
+    assert((await focusKey(page)) === ghostKey, 'J reaches the ghost batch row hidden behind Show more (group expands)');
     const ki = (await visibleKeys(page)).indexOf(ghostKey);
     const nextKey = (await visibleKeys(page))[ki + 1];
-    await page.keyboard.press('Enter'); await page.waitForTimeout(350);
-    assert(!(await visibleKeys(page)).includes(ghostKey), 'Enter on a ghost row marks it ghosted');
-    assert((await focusKey(page)) === nextKey, `focus moves on after Enter (${await focusKey(page)} vs ${nextKey})`);
+    await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    assert(await page.$('.modal'), 'Enter on the batch row asks to confirm');
+    await page.click('.modal .btn.primary'); await page.waitForTimeout(400);
+    assert(!(await visibleKeys(page)).includes(ghostKey), 'confirming marks them all ghosted');
+    assert((await focusKey(page)) === nextKey || nextKey === undefined, `focus moves on after the batch (${await focusKey(page)} vs ${nextKey})`);
     const toasts = await page.$$eval('.toast', (els) => els.length);
     assert(toasts <= 2, `at most two toasts (${toasts})`);
     // typing in an input must not trigger shortcuts
@@ -61,19 +63,25 @@ module.exports = {
     assert(out === 'passed', 'Passed logs the round outcome');
     assert(await page.evaluate(() => !!document.activeElement.closest('.td-task')), 'focus stays in the list after Passed');
     const k2 = (await visibleKeys(page)).find((x) => x.startsWith('outcome:'));
-    await page.locator(`.td-task[data-key="${k2}"] button:has-text("Still waiting")`).click(); await page.waitForTimeout(300);
+    assert((await page.locator(`.td-task[data-key="${k2}"] .td-outcome .btn`).count()) === 2, 'outcome row has two joined buttons');
+    await page.locator(`.td-task[data-key="${k2}"] .td-more`).click(); await page.waitForTimeout(150);
+    await page.click('.td-menu [role="menuitem"]:has-text("Still waiting")'); await page.waitForTimeout(300);
     const until = await page.evaluate((x) => store.get().dismissed[x], k2);
-    assert(until && Math.abs(until - Date.now() - 2 * 86400000) < 60000, 'Still waiting snoozes 2 days');
+    assert(until && Math.abs(until - Date.now() - 3 * 86400000) < 60000, 'Still waiting (menu) snoozes 3 days');
   },
   async ghostAll(page) {
     await module.exports.seed(page);
     const n = await page.evaluate(() => computeTasks().filter((t) => t.kind === 'ghost').length);
-    await page.click('.td-batch'); await page.waitForTimeout(250);
+    assert(!(await page.$('.td-group-h .td-batch')), 'no batch button in the group header');
+    await page.evaluate(() => { const b = document.querySelector('.td-group-more button'); if (b) b.click(); });
+    await page.waitForTimeout(150);
+    assert((await page.$$('.td-batch-row')).length === 1, 'ghosts fold into one batch row');
+    await page.click('.td-batch-row .td-act'); await page.waitForTimeout(250);
     await page.screenshot({ path: require('path').join(process.env.OUT || 'qa/out', `today-ghostAll-confirm-${page.viewportSize().width}.png`) });
     await page.click('.modal .btn.primary'); await page.waitForTimeout(350);
     const after = await page.evaluate(() => computeTasks().filter((t) => t.kind === 'ghost').length);
     assert(n >= 2 && after === 0, `Mark all ${n} as ghosted clears them (${after} left)`);
-    const toasts = await page.$$eval('.toast', (els) => els.map((e) => e.innerText));
+    const toasts = (await page.$$eval('.toast', (els) => els.map((e) => e.innerText))).filter((t) => !/examples/.test(t));
     assert(toasts.length === 1 && /Undo/.test(toasts[0]), `one toast with Undo (${toasts.join(' / ')})`);
     assert(await page.evaluate(() => document.activeElement !== document.body), `focus not on body after batch (${await focusKey(page)})`);
   },
@@ -89,6 +97,32 @@ module.exports = {
   },
   async seedQuick(page) { await module.exports.seed(page); await module.exports.scrollQuick(page); },
   async seedUpcoming(page) { await module.exports.seed(page); await module.exports.scrollUpcoming(page); },
+  // Ghost batch: Review lists the folded rows inline; each still acts on its own.
+  async reviewBatch(page) {
+    await module.exports.seed(page);
+    await page.evaluate(() => { const b = document.querySelector('.td-group-more button'); if (b) b.click(); });
+    await page.waitForTimeout(150);
+    await page.click('.td-batch-row .td-review'); await page.waitForTimeout(200);
+    const n = await page.$$eval('.td-batch-list .td-task', (els) => els.length);
+    const g = await page.evaluate(() => computeTasks().filter((t) => t.kind === 'ghost').length);
+    assert(n === g, `Review lists all ${g} ghost rows (${n})`);
+    await page.evaluate(() => { const w = document.getElementById('workspace'); w.style.scrollBehavior = 'auto'; const el = document.querySelector('.td-batch-row'); w.scrollTop = el.getBoundingClientRect().top + w.scrollTop - 120; });
+    await page.waitForTimeout(150);
+  },
+  // Today group order: thanks first, then rounds by start time; primary sits on the first row.
+  async orderCheck(page) {
+    await module.exports.seed(page);
+    const rows = await page.$$eval('.td-group:first-child .td-task', (els) => els.map((e) => ({ key: e.dataset.key, p: !!e.querySelector('.btn.primary') })));
+    const at = await page.evaluate((keys) => keys.map((k) => { const t = computeTasks().find((x) => x.key === k); return t ? [t.kind, t.round ? t.round.at : null] : null; }), rows.map((r) => r.key));
+    log('today order', JSON.stringify(at.map((x) => x && x[0])));
+    const preps = at.filter((x) => x && x[0] !== 'thanks' && x[1]).map((x) => x[1]);
+    assert(preps.every((v, i) => !i || preps[i - 1] <= v), 'rounds sorted by start time');
+    const firstNonThanks = at.findIndex((x) => x && x[0] !== 'thanks');
+    assert(firstNonThanks < 0 || at.slice(firstNonThanks).every((x) => !x || x[0] !== 'thanks'), 'thank-yous come first');
+    assert(rows[0] && rows[0].p, 'primary button is on the first Today row');
+    const more = await page.$$eval('.td-more', (els) => els.map((e) => { const r = e.getBoundingClientRect(); return Math.round(Math.min(r.width, r.height)); }));
+    if (page.viewportSize().width <= 640) assert(more.every((m) => m >= 44), `the more button is at least 44px (${[...new Set(more)].join(',')})`);
+  },
   async seed(page) {
     await page.waitForFunction(() => jobsStore.status === 'ready', null, { timeout: 15000 }).catch(() => null);
     const res = await page.evaluate('(' + today_seedSrc() + ')()');

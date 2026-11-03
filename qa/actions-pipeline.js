@@ -666,18 +666,22 @@ const seeded = {
     const id = await appId(page, 'Figma');
     await page.evaluate((i) => openApp(i), id); await page.waitForTimeout(400);
     const txt = await page.locator('.drawer').innerText();
-    assert(/This posting was taken down/.test(txt) && /It may be filled/.test(txt), 'Figma drawer shows the takedown callout');
-    assert(/Draft a last follow-up/.test(txt) && /Mark as ghosted/.test(txt), 'callout offers follow-up + ghost');
-    assert(!/Open posting/.test(txt) && /Posting removed/.test(txt), 'footer says "Posting removed" instead of "Open posting"');
-    const dis = await page.locator('.drawer .pl-removed-btn').isDisabled(); assert(dis, 'Posting removed button is disabled');
+    assert(/This posting was taken down/.test(txt) && /It may be filled/.test(txt), 'Figma drawer shows the takedown block');
+    assert(await page.locator('.drawer .pl-removed').count() === 1 && await page.locator('.drawer .pl-ov > .pl-next-card').count() === 1, 'takedown block replaces the Next step card');
+    const n = (re) => (txt.match(re) || []).length;
+    assert(n(/Draft (a last )?follow-up/g) === 1, `one follow-up action (${n(/Draft (a last )?follow-up/g)})`);
+    assert(await page.locator('.drawer .pl-removed button:has-text("Mark as ghosted")').count() === 1, 'callout offers Mark as ghosted');
+    assert(!/Open posting/.test(txt) && !/Posting removed/.test(txt) && await page.locator('.drawer .pl-removed-btn').count() === 0, 'no disabled "Posting removed" button, no Open posting');
+    assert(await page.locator('.drawer-foot .btn.primary').count() === 0, 'footer has no duplicate primary');
     log('callout:', (await page.locator('.drawer .pl-removed').innerText()).replace(/\n+/g, ' | '));
   },
   async seedRemovedScreen(page) {
     const id = await appId(page, 'Ramp');
     await page.evaluate((i) => openApp(i), id); await page.waitForTimeout(400);
     const txt = await page.locator('.drawer .pl-removed').innerText();
-    assert(/process with Ramp/.test(txt), 'Ramp (screen) callout softens the copy');
-    const roles = page.locator('.drawer .pl-removed button:has-text("open role")');
+    assert(/process with Ramp can still go on/.test(txt), 'Ramp (screen) callout softens the copy');
+    assert(/Draft a follow-up/.test(txt) && !/last follow-up/.test(txt) && !/Mark as ghosted/.test(txt), 'Screen: plain follow-up, no ghost action');
+    const roles = page.locator('.drawer .pl-removed .pl-linkbtn:has-text("open role")');
     if (await roles.count()) { await roles.first().click(); await page.waitForTimeout(400); const k = await page.evaluate(() => ui.state.drawer?.kind); assert(k === 'company', 'See open roles opens the company drawer'); await page.keyboard.press('Escape'); await page.waitForTimeout(300); await page.evaluate((i) => openApp(i), id); await page.waitForTimeout(300); }
     else log('no company data for Ramp: open-roles button hidden');
   },
@@ -685,8 +689,12 @@ const seeded = {
   async seedStatus(page) {
     const sc = await page.locator('.pl-card:has-text("Scale AI") .pl-status').innerText();
     const ts = await page.locator('.pl-card:has-text("Two Sigma") .pl-status').innerText();
-    assert(/^Log outcome · Onsite \/ Final, \dd ago$/.test(sc.trim()), `Scale AI card: "${sc.trim()}"`);
-    assert(/^Log outcome · Technical, \dd ago$/.test(ts.trim()), `Two Sigma card: "${ts.trim()}"`);
+    const hx = await page.locator('.pl-card:has-text("Hex Technologies") .pl-status').innerText();
+    log('Scale AI:', sc.trim(), '| Two Sigma:', ts.trim(), '| Hex:', hx.trim());
+    assert(/^(Outcome\?|Send thanks) · Onsite, \dd ago$/.test(sc.trim()), `Scale AI card: "${sc.trim()}"`);
+    assert(/^Outcome\? · Technical, \dd ago$/.test(ts.trim()), `Two Sigma card: "${ts.trim()}"`);
+    assert(/^Send thanks · /.test(hx.trim()), `Hex card matches the table's Next step (thank-you): "${hx.trim()}"`);
+    for (const c of ['Scale AI', 'Two Sigma', 'Hex Technologies']) { const h = await page.locator(`.pl-card:has-text("${c}") .pl-card-foot`).evaluate((e) => e.getBoundingClientRect().height); assert(h < 34, `${c} foot is one line (${h}px)`); }
     await page.evaluate(() => document.querySelector('.pl-col[data-col="interview"]').scrollIntoView({ inline: 'center' }));
   },
   // B10: online assessment round
@@ -750,6 +758,8 @@ const seeded = {
     f = await focusId(page); assert(f === rows[2], 'Esc returns focus to the row');
   },
   async seedBoard(page) { await page.waitForTimeout(100); },
+  async seedBoardJK(page) { await page.evaluate(() => document.activeElement.blur()); for (let i = 0; i < 3; i++) await page.keyboard.press('j'); await page.waitForTimeout(150); },
+  async seedTableJK(page) { await page.evaluate(() => document.activeElement.blur()); for (let i = 0; i < 3; i++) await page.keyboard.press('j'); await page.waitForTimeout(150); },
   async seedTable(page) { await page.waitForTimeout(100); },
 };
 // Every action starts from a clean board (no overlays left from a previous action).

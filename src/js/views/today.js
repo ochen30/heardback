@@ -112,10 +112,17 @@ const TODAY_SNOOZE = [{ d: 1, label: "Snooze 1 day" }, { d: 3, label: "Snooze 3 
 function today_taskCopy(tk) {
   const a = tk.app;
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
-  if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
+  if (tk.kind === "apply") return { sub: today_typo(typeof tk.sub === "string" ? tk.sub.replace(" · this listing shows strong ghost signals", " · Strong ghost signals") : tk.sub), action: "Apply" };
   if (tk.kind === "nextround") return { sub: `${a.stage === "screen" ? "In screening" : "Interviewing"}, nothing scheduled yet. Add the next round’s date.`, action: "Add a round" };
-  if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
+  const rl = tk.round && (ROUND[tk.round.type]?.label || "Interview");
+  if (tk.kind === "outcome") return { sub: `${rl} · ${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })} (${today_daysAgo(tk.round.at)})`, action: "Log outcome" };
+  if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return { sub: `Your ${rl.toLowerCase()} was ${today_daysAgo(tk.round.at)}. A short note still helps.`, action: tk.action };
   return { sub: today_typo(tk.sub), action: tk.action };
+}
+/* Calendar days, so "yesterday" means the previous date, not 24 hours. */
+function today_daysAgo(ts) {
+  const n = Math.round((fmt.startOfDay(now()) - fmt.startOfDay(ts)) / DAY);
+  return n <= 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`;
 }
 /* Core builds task text with straight apostrophes; display them typographically. */
 function today_typo(t) { return typeof t === "string" ? t.replace(/(\w)'(\w)/g, "$1’$2") : t; }
@@ -136,8 +143,8 @@ function today_logOutcome(tk, outcome) {
   const restore = () => store.set((s) => ({ ...s, apps: { ...s.apps, [a.id]: before } }));
   if (outcome === "waiting") {
     const prev = store.get().dismissed[tk.key];
-    dismissTask(tk.key, 2);
-    toast(`We’ll ask again ${fmt.date(now() + 2 * DAY, { weekday: "short" })}`, { undo: () => today_undismiss(tk.key, prev) });
+    dismissTask(tk.key, 3);
+    toast(`We’ll ask again ${fmt.date(now() + 3 * DAY, { weekday: "short" })}`, { undo: () => today_undismiss(tk.key, prev) });
     return;
   }
   Apps.updateRound(a.id, r.id, { outcome });
@@ -149,51 +156,108 @@ function today_logOutcome(tk, outcome) {
 }
 function today_typing(el) { return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable); }
 
-function today_TaskRow({ tk, primary, idx }) {
+/* Snooze or dismiss several tasks at once (the ghost batch row); one toast undoes all of them. */
+function today_snoozeMany(tks, d) {
+  const prev = tks.map((tk) => [tk.key, store.get().dismissed[tk.key]]);
+  for (const tk of tks) dismissTask(tk.key, d);
+  const undo = () => prev.forEach(([k, p]) => today_undismiss(k, p));
+  toast(d ? `Snoozed ${tks.length} until ${fmt.date(now() + d * DAY, { weekday: "short", month: "short", day: "numeric" })}` : `Dismissed ${tks.length}`, { undo });
+}
+
+function today_TaskRow({ tk, primary, idx, child }) {
   const [menu, setMenu] = useState(null);
   const close = useCallback(() => setMenu(null), []);
   const a = tk.app;
   const copy = today_taskCopy(tk);
-  const cls = cx("btn sm td-act", primary && "primary");
+  const cls = cx("btn sm td-act", primary && "primary", child && "ghost");
   let act;
   if (tk.kind === "outcome" && tk.round) act = html`<div class="td-outcome" role="group" aria-label=${"Outcome of the " + a.company + " round"}>
-      <button type="button" class="btn sm" data-primary onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
+      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "passed")}>Passed</button>
       <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "failed")}>Didn’t pass</button>
-      <button type="button" class="btn sm" onClick=${() => today_logOutcome(tk, "waiting")}>Still waiting</button>
     </div>`;
   else if (tk.kind === "apply" && a.url) act = html`<a class=${cls} data-primary href=${a.url} target="_blank" rel="noopener" aria-label=${`Apply to ${a.company} (opens the posting in a new tab)`}>Apply<${Icon} name="ext" /></a>`;
   else if (tk.kind === "apply" && a.jobId && typeof openJob === "function") act = html`<button type="button" class=${cls} data-primary onClick=${() => openJob(a.jobId)}>Apply</button>`;
   else act = html`<button type="button" class=${cls} data-primary onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
   const safeKey = tk.key.replace(/[^a-z0-9]/gi, "-");
-  return html`<div class="task td-task" data-key=${tk.key} data-fidx=${idx} tabindex="-1" aria-label=${today_typo(tk.title)}>
+  const day = (d) => fmt.date(now() + d * DAY, { weekday: "short" });
+  const snooze = tk.kind === "outcome"
+    ? [{ key: "wait", icon: "clock", label: "Still waiting", hint: "Ask again " + day(3), run: () => today_logOutcome(tk, "waiting") },
+       { key: "s1", icon: "clock", label: "Snooze 1 day", hint: "S", run: () => today_snooze(tk, 1) },
+       { key: "s7", icon: "clock", label: "Snooze 1 week", hint: day(7), run: () => today_snooze(tk, 7) }]
+    : TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: o.d === 1 ? "S" : day(o.d), run: () => today_snooze(tk, o.d) }));
+  const sub = child
+    ? today_meta([a.appliedAt ? `Applied ${fmt.date(a.appliedAt, { month: "short", day: "numeric" })}` : null, a.title], "task-sub", "div")
+    : typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`;
+  return html`<div class="task td-task kb-row" data-key=${tk.key} data-fidx=${idx} tabindex="-1" aria-label=${today_typo(tk.title)}>
     <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${today_typo(tk.title)}</button>
-      ${typeof copy.sub === "string" && copy.sub.includes(" · ") ? today_meta(copy.sub.split(" · "), "task-sub", "div") : html`<div class="task-sub">${copy.sub}</div>`}
+      ${sub}
     </div>
     <div class=${cx("task-actions td-task-actions", tk.kind === "outcome" && "is-outcome")}>
       ${act}
       <button type="button" class="btn sm ghost icon td-more" id=${"more-" + safeKey} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
-        aria-label=${"More options: " + tk.title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
+        aria-label=${"More options: " + today_typo(tk.title)} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
     </div>
     ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Task options"
-      items=${[
-        ...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label, hint: o.d === 1 ? "S" : fmt.date(now() + o.d * DAY, { weekday: "short" }), run: () => today_snooze(tk, o.d) })),
-        { key: "sep", sep: true },
-        { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", hint: "D", run: () => today_dismiss(tk) },
-      ]} />`}
+      items=${[...snooze, { key: "sep", sep: true }, { key: "dismiss", icon: "x", label: "Dismiss", cls: "td-dismiss", hint: "D", run: () => today_dismiss(tk) }]} />`}
   </div>`;
 }
 
-const TODAY_GROUPS = [{ id: "today", label: "Today" }, { id: "quick", label: "Quick wins" }, { id: "later", label: "When you have time" }];
+/* Three or more no-reply applications fold into one row: one batch action, with the rows a click away. */
+function today_BatchRow({ item, primary, idx, open, onToggle }) {
+  const [menu, setMenu] = useState(null);
+  const close = useCallback(() => setMenu(null), []);
+  const tks = item.tasks, n = tks.length;
+  const title = `${n} applications with no reply in ${store.get().settings.ghostDays || 21}+ days`;
+  const day = (d) => fmt.date(now() + d * DAY, { weekday: "short" });
+  return html`<div class="task td-task td-batch-row kb-row" data-key=${item.key} data-fidx=${idx} tabindex="-1" aria-label=${title}>
+    <span class="task-ico ghost"><${Icon} name="ghost" /></span>
+    <div class="td-task-text">
+      <button type="button" class="td-task-title task-title" aria-expanded=${open ? "true" : "false"} aria-controls=${"td-bl-" + item.group} onClick=${onToggle}>${title}</button>
+      ${today_meta(tks.map((tk) => `${tk.app.company} ${Apps.daysSilent(tk.app)}d`), "task-sub", "div")}
+    </div>
+    <div class="task-actions td-task-actions">
+      <button type="button" class="btn sm ghost td-review" aria-expanded=${open ? "true" : "false"} aria-controls=${"td-bl-" + item.group} onClick=${onToggle}>Review<${Icon} name="chevD" /></button>
+      <button type="button" class=${cx("btn sm td-act", primary && "primary")} data-primary onClick=${() => today_ghostAll(tks)}>Mark all as ghosted</button>
+      <button type="button" class="btn sm ghost icon td-more" id=${"more-" + item.key.replace(/[^a-z0-9]/gi, "-")} aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"}
+        aria-label=${"More options: " + title} title="Snooze or dismiss" onClick=${(e) => setMenu(menu ? null : e.currentTarget)}><${Icon} name="more" /></button>
+    </div>
+    ${menu && html`<${today_Menu} anchor=${menu} onClose=${close} label="Options for all ${n}"
+      items=${[...TODAY_SNOOZE.map((o) => ({ key: "s" + o.d, icon: "clock", label: o.label.replace("Snooze", "Snooze all"), hint: o.d === 1 ? "S" : day(o.d), run: () => today_snoozeMany(tks, o.d) })),
+        { key: "sep", sep: true }, { key: "dismiss", icon: "x", label: "Dismiss all", cls: "td-dismiss", hint: "D", run: () => today_snoozeMany(tks, 0) }]} />`}
+  </div>`;
+}
+
+const TODAY_GROUPS = [{ id: "today", label: "Today" }, { id: "quick", label: "This week" }, { id: "later", label: "Later" }];
 const TODAY_GROUP_MAX = 8;
-// Within Quick wins: things only you can answer first, then nudges, then cleanup.
+const TODAY_BATCH_MIN = 3;
+const TODAY_FLAT_MAX = 6; // at or under this many tasks, one flat list (group headers are only for screen readers)
+// Within This week: things only you can answer first, then nudges, then cleanup.
 const TODAY_QUICK_ORDER = { confirm: 0, thanks: 0, outcome: 1, removed: 2, nextround: 3, follow: 4, ghost: 5 };
+/* Sort a group so the first row (and its primary button) is the soonest thing:
+   Today: thank-yous first (time-boxed), then rounds by start time. This week: by kind, then longest silence first. */
+function today_sortGroup(id, all) {
+  const at = new Map(all.map((t, i) => [t.key, i]));
+  const ord = (x, y) => at.get(x.key) - at.get(y.key);
+  const silent = (t) => (t.kind === "follow" || t.kind === "ghost" ? Apps.daysSilent(t.app) || 0 : 0);
+  const time = (t) => (t.round && t.round.at) || Infinity;
+  if (id === "today") return all.slice().sort((x, y) => (x.kind === "thanks" ? 0 : 1) - (y.kind === "thanks" ? 0 : 1) || (time(x) - time(y) || 0) || ord(x, y));
+  if (id === "quick") return all.slice().sort((x, y) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || silent(y) - silent(x) || ord(x, y));
+  return all;
+}
+/* Groups of display items: a task, or one ghost batch standing in for 3+ ghost tasks. */
 function today_groups(tasks, open) {
   return TODAY_GROUPS.map((g) => {
-    let all = tasks.filter((tk) => (tk.group || "later") === g.id);
-    if (g.id === "quick") all = all.map((tk, i) => [tk, i]).sort(([x, i], [y, j]) => (TODAY_QUICK_ORDER[x.kind] ?? 9) - (TODAY_QUICK_ORDER[y.kind] ?? 9) || i - j).map((p) => p[0]);
-    return { ...g, all, shown: open[g.id] ? all : all.slice(0, TODAY_GROUP_MAX) };
+    const all = today_sortGroup(g.id, tasks.filter((tk) => (tk.group || "later") === g.id));
+    const ghosts = all.filter((tk) => tk.kind === "ghost");
+    let items = all;
+    if (ghosts.length >= TODAY_BATCH_MIN) {
+      const at = all.indexOf(ghosts[0]);
+      items = all.filter((tk) => tk.kind !== "ghost");
+      items.splice(at, 0, { key: "ghost-batch:" + g.id, kind: "ghostBatch", group: g.id, tasks: ghosts });
+    }
+    return { ...g, all, items, shown: open[g.id] ? items : items.slice(0, TODAY_GROUP_MAX) };
   }).filter((g) => g.all.length);
 }
 
@@ -211,12 +275,14 @@ function today_ghostAll(list) {
 
 function today_NeedsYou({ tasks, fresh, next }) {
   const [open, setOpen] = useState({});
+  const [review, setReview] = useState({});
   const [kbd, setKbd] = useState(false);
   const listRef = useRef(null);
   const last = useRef({ key: null, idx: 0 });
   const groups = today_groups(tasks, open);
-  const flat = groups.flatMap((g) => g.shown);
-  const kref = useRef({}); kref.current = { flat, groups };
+  // Keyboard order: shown items, with a batch's rows right after it while Review is open.
+  const flat = groups.flatMap((g) => g.shown.flatMap((it) => (it.kind === "ghostBatch" && review[g.id] ? [it, ...it.tasks] : [it])));
+  const kref = useRef({}); kref.current = { flat, groups, review };
   const primaryKey = flat.find((tk) => tk.kind !== "outcome")?.key;
 
   // Focus now when the row exists (so fast J J K stays in order), else after the render that adds it.
@@ -255,7 +321,7 @@ function today_NeedsYou({ tasks, fresh, next }) {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (k === "g") { lastG = now(); return; }
       if (lastG && now() - lastG < 1200) { lastG = 0; return; } // "G then S" etc. belong to the shell
-      const { flat, groups } = kref.current;
+      const { flat, groups, review } = kref.current;
       if (!flat.length) return;
       const row = e.target?.closest?.(".td-task");
       const curKey = row ? row.dataset.key : null;
@@ -269,9 +335,9 @@ function today_NeedsYou({ tasks, fresh, next }) {
         if (k === "k") return focusRow(flat[Math.max(0, idx - 1)].key);
         // J past the last shown row of a group with more: show the rest of that group.
         const g = groups.find((x) => x.shown.some((t) => t.key === curKey));
-        if (g && g.shown[g.shown.length - 1].key === curKey && g.all.length > g.shown.length) {
+        if (g && g.shown[g.shown.length - 1].key === curKey && g.items.length > g.shown.length && !(review[g.id] && g.shown[g.shown.length - 1].kind === "ghostBatch")) {
           setOpen((o) => ({ ...o, [g.id]: true }));
-          return focusRow(g.all[g.shown.length].key);
+          return focusRow(g.items[g.shown.length].key);
         }
         return focusRow(flat[Math.min(flat.length - 1, idx + 1)].key);
       }
@@ -282,8 +348,8 @@ function today_NeedsYou({ tasks, fresh, next }) {
         e.preventDefault();
         if (tk.kind === "outcome") return today_runTask(tk);
         row.querySelector("[data-primary]")?.click();
-      } else if (k === "d") { e.preventDefault(); today_dismiss(tk); }
-      else if (k === "s") { e.preventDefault(); today_snooze(tk, 1); }
+      } else if (k === "d") { e.preventDefault(); tk.kind === "ghostBatch" ? today_snoozeMany(tk.tasks, 0) : today_dismiss(tk); }
+      else if (k === "s") { e.preventDefault(); tk.kind === "ghostBatch" ? today_snoozeMany(tk.tasks, 1) : today_snooze(tk, 1); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -299,20 +365,24 @@ function today_NeedsYou({ tasks, fresh, next }) {
   let n = 0;
   return html`<section class="card" aria-labelledby="td-needs-h">
     <div class="card-head"><h2 id="td-needs-h">Needs you</h2>${tasks.length ? html`<span class="td-count num">${tasks.length}</span>` : null}
-      ${tasks.length ? html`<span class="spacer"></span><span class=${cx("td-keys hide-sm", kbd && "on")} aria-hidden="true"><${Kbd}>J</${Kbd}><${Kbd}>K</${Kbd}> move<${Kbd}>Enter</${Kbd}> do it<${Kbd}>S</${Kbd}> snooze<${Kbd}>D</${Kbd}> dismiss</span>` : null}</div>
+      ${tasks.length ? html`<span class="spacer"></span><span class=${cx("td-keys hide-sm", kbd && "on")} aria-hidden="true"><${Kbd}>J</${Kbd}><${Kbd}>K</${Kbd}> move<${Kbd}>↵</${Kbd}> do it<${Kbd}>S</${Kbd}> snooze<${Kbd}>D</${Kbd}> dismiss</span>` : null}</div>
     ${tasks.length
-      ? html`<div class="td-groups" ref=${listRef} onfocusin=${onFocusIn} onfocusout=${onFocusOut}>${groups.map((g) => {
-          const ghosts = g.all.filter((tk) => tk.kind === "ghost");
+      ? html`<div class=${cx("td-groups", tasks.length <= TODAY_FLAT_MAX && "td-flat")} ref=${listRef} onfocusin=${onFocusIn} onfocusout=${onFocusOut}>${groups.map((g) => {
           const startIdx = n; n += g.shown.length;
-          const more = g.all.length - TODAY_GROUP_MAX;
+          const more = g.items.length - TODAY_GROUP_MAX;
+          const rows = [];
+          g.shown.forEach((it, i) => {
+            if (it.kind !== "ghostBatch") return rows.push(html`<${today_TaskRow} key=${it.key} tk=${it} idx=${startIdx + i} primary=${it.key === primaryKey} />`);
+            rows.push(html`<${today_BatchRow} key=${it.key} item=${it} idx=${startIdx + i} primary=${it.key === primaryKey} open=${!!review[g.id]} onToggle=${() => setReview((o) => ({ ...o, [g.id]: !o[g.id] }))} />`);
+            if (review[g.id]) rows.push(html`<div class="list td-batch-list" key=${it.key + ":list"} id=${"td-bl-" + g.id} role="group" aria-label="No-reply applications">
+              ${it.tasks.map((tk) => html`<${today_TaskRow} key=${tk.key} tk=${tk} idx=${startIdx + i} child=${true} />`)}</div>`);
+          });
           return html`<div class="td-group" key=${g.id} role="group" aria-labelledby=${"td-g-" + g.id}>
             <div class="td-group-h" data-key=${"group:" + g.id} data-fidx=${startIdx}>
               <h3 id=${"td-g-" + g.id}>${g.label}</h3><span class="td-count num">${g.all.length}</span>
-              <span class="spacer"></span>
-              ${ghosts.length >= 2 ? html`<${Btn} size="sm" kind="ghost" icon="ghost" cls="td-batch" onClick=${() => today_ghostAll(ghosts)}>Mark all ${ghosts.length} as ghosted</${Btn}>` : null}
             </div>
-            <div class="list">${g.shown.map((tk, i) => html`<${today_TaskRow} key=${tk.key} tk=${tk} idx=${startIdx + i} primary=${tk.key === primaryKey} />`)}</div>
-            ${more > 0 ? html`<div class="td-group-more" data-key=${"more:" + g.id} data-fidx=${startIdx + g.shown.length - 1}><${Btn} size="sm" kind="ghost" iconRight=${open[g.id] ? undefined : "chevD"} onClick=${() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>${open[g.id] ? "Show fewer" : `Show ${more} more`}</${Btn}></div>` : null}
+            <div class="list">${rows}</div>
+            ${more > 0 ? html`<div class="td-group-more" data-key=${"more:" + g.id} data-fidx=${startIdx + g.shown.length - 1}><${Btn} size="sm" kind="ghost" iconRight="chevD" cls=${open[g.id] ? "td-less" : ""} onClick=${() => setOpen((o) => ({ ...o, [g.id]: !o[g.id] }))}>${open[g.id] ? "Show fewer" : `Show ${more} more`}</${Btn}></div>` : null}
           </div>`;
         })}</div>`
       : html`<div class="td-caught">
@@ -513,12 +583,12 @@ function today_View() {
     if (!tasks.length) parts.push("Nothing needs you right now");
     else {
       if (nT) parts.push(`${nT} for today`);
-      if (nQ) parts.push(pluralize(nQ, "quick win"));
-      if (!nT && !nQ) parts.push(`${nL} when you have time`);
+      if (nQ) parts.push(`${nQ}${nT ? " more" : ""} this week`);
+      if (!nT && !nQ) parts.push(`${nL} for later`);
     }
     const nx = up.items[0];
     if (nx && fmt.startOfDay(nx.r.at) === fmt.startOfDay(now())) parts.push(`Next: ${nx.a.company} ${(ROUND[nx.r.type]?.label || "interview").toLowerCase()} at ${fmt.time(nx.r.at)}`);
-    else if (up.week) parts.push(pluralize(up.week, "interview") + " this week");
+    else if (up.week) parts.push(pluralize(up.week, "interview") + " in the next 7 days");
     else if (up.items.length) parts.push(`Next interview ${fmt.date(up.items[0].r.at, { weekday: "short", month: "short", day: "numeric" })}`);
     else parts.push(`${st.thisWeek} of ${goal} applications sent this week`);
   }

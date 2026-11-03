@@ -131,3 +131,11 @@ A third usability test played a student five weeks in, with 42 real applications
 - Insights comparisons are age-matched and name their sample; patterns that could mislead are gone.
 - Command palette: "Add an interview round" actually adds one; new actions for outcome, thank-you, note, mark ghosted, export.
 - Thank-you drafts don't say "today" for yesterday's call; at most two toasts at once.
+
+### 05:42 PT — v12 published (design review 7 on the new UI)
+Review 7 found the new power-user UI louder than the rest (8.8). Quieted it:
+- One keyboard-focus style everywhere (a slim accent edge and soft fill).
+- Today: silent applications fold into one row ("5 applications with no reply in 21+ days") with "Mark all as ghosted" and a Review list; outcome is two joined buttons (Passed / Didn't pass); groups sorted by urgency so the one primary button sits on the soonest item; 44px menu targets on phones.
+- Pipeline: the taken-down drawer shows one block with each action once; card footers match the next step on one line.
+- Calendar files fold lines by UTF-8 bytes per RFC 5545.
+- QA: end-to-end suite 2,428 / 2,428 checks passing; axe clean on every screen.

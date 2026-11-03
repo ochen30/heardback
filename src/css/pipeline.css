@@ -57,7 +57,6 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 
 .pl-card { position: relative; gap: 4px; padding: 10px 10px 10px 12px; user-select: none; -webkit-user-select: none; }
 .pl-card:active { cursor: grabbing; }
-.pl-card:focus-visible { border-color: var(--accent); }
 .pl-card.closed { opacity: .82; }
 .pl-card.closed:hover, .pl-card.closed:focus-visible { opacity: 1; }
 .pl-card-top { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 2px; }
@@ -120,7 +119,8 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-sort.desc { transform: none; }
 .pl-sort-idle { opacity: 0; }
 .pl-table th button:hover .pl-sort-idle { opacity: .7; }
-.pl-table tbody tr:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
+.pl-table tbody tr.kb-row:focus-visible { border-radius: 0; }
+.pl-table tbody tr.sel.kb-row:focus-visible td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
 .pl-tcell { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 380px; }
 .pl-tname { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
 .pl-ttitle { font-weight: 500; color: var(--fg); }
@@ -372,10 +372,10 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .pl-chk input { position: relative; }
 @media (hover: hover) { .pl-card:hover .pl-chk { opacity: 1; } }
 .pl-board.selecting .pl-chk, .pl-card.sel .pl-chk { opacity: 1; }
-/* Selection is a tint, like table rows: no frame; focus adds the one standard ring */
+/* Selection is a tint, like table rows: no frame; keyboard focus adds the shared .kb-row bar */
 .pl-card.sel { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); box-shadow: none; }
-/* Focused + selected: fill and ring only, no tinted border on top */
-.pl-card.sel:focus-visible { border-color: var(--line); box-shadow: var(--focus); }
+/* Focused + selected: keeps the tint, gains the same left bar as any focused card */
+.pl-card.sel.kb-row:focus-visible { box-shadow: inset 2px 0 0 var(--accent); }
 .pl-card.sel .pl-card-foot { border-top-color: color-mix(in srgb, var(--accent) 20%, var(--line)); }
 .pl-card.sel.closed { opacity: 1; }
 
@@ -443,14 +443,10 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 @media (max-width: 520px) { .pl-banner-more { display: none; } }
 @media (hover: none) { .pl-board:not(.selecting) .pl-chk { pointer-events: none; } }
 
-/* B4: taken-down posting callout (quiet: neutral surface, amber icon only) */
-.pl-removed { align-items: flex-start; }
-.pl-removed > .ico { color: var(--wait); }
-.pl-removed-body { flex: 1; min-width: 0; gap: 8px; }
-.pl-removed-body b { color: var(--fg); font-weight: 600; }
-.pl-removed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: -2px; }
-.pl-removed-btn[disabled] { opacity: 1; color: var(--fg-3); background: transparent; }
+/* B4: taken-down posting, shown in the Next step card's place (one block, each action once) */
+.pl-removed-body { flex: 1; min-width: 0; }
+.pl-removed-actions { display: flex; flex-wrap: nowrap; gap: 8px; margin-top: 6px; }
 .pl-removed-tag { flex: none; }
-/* B9: "Log outcome · Onsite / Final, 2d ago" may wrap to a second line instead of truncating */
-.pl-status-2l { white-space: normal; align-items: flex-start; line-height: 1.35; }
-.pl-status-2l .ico { margin-top: 2px; }
+/* Phones: the icon column gives its width back so the two actions share one line */
+@media (max-width: 520px) { .pl-next-card .pl-next-ico { display: none; } .pl-removed-actions { flex-wrap: wrap; } .pl-removed-actions .btn { flex: 0 0 auto; } }
+

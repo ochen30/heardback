@@ -251,7 +251,7 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
   const metaP = inCompany ? [find_locText(job), FIND_LV[job.lvl], job.term].filter(Boolean) : find_metaParts(job);
   const metaT = metaP.join(" · ");
   const title = find_title(job.t);
-  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co")} role="listitem" data-find-i=${i} aria-current=${sel ? "true" : undefined} onClick=${open}>
+  return html`<div class=${cx("job-row find-row", inCompany && "find-row-co", sel && "kb-active")} role="listitem" data-find-i=${i} aria-current=${sel ? "true" : undefined} onClick=${open}>
     ${!inCompany && html`<${Logo} name=${job.co} />`}
     <div class="find-row-main">
       <button type="button" class="find-row-title" onClick=${(e) => { e.stopPropagation(); open(); }} title=${title}>${title}</button>
@@ -806,7 +806,7 @@ VIEWS.companies = function CompaniesView() {
         <tbody>${rows.map((x) => {
           const n = appsBy.get(x.k) || 0;
           const g = rs.get(x.name) ?? 0;
-          return html`<tr key=${x.name} tabindex="0" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
+          return html`<tr key=${x.name} tabindex="0" class="kb-row" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
             <td><div class="row"><${Logo} name=${x.name} size="sm" /><span class="truncate find-coname">${x.name}</span></div></td>
             <td class="r num">${fmt.num(x.open)}</td>
             ${(() => { const a = agg.get(x.name) || { n: x.c.open, ni: x.c.intern, ng: x.c.newgrad }; return html`<td><div class="find-split" title=${`${pluralize(a.ni, "internship")} · ${a.ng} new grad`}><span class="find-split-bar"><i style=${`width:${a.n ? (a.ni / a.n) * 100 : 0}%`}></i></span><span class="num muted">${fmt.num(a.ni)} / ${fmt.num(a.ng)}</span></div></td>`; })()}
