@@ -2850,6 +2850,8 @@ function Palette() {
       { g: "Actions", icon: "plus", label: "Add application", sub: "N", run: () => openModal("add") },
       { g: "Actions", icon: "mail", label: "Log an email", sub: "E", run: () => openModal("paste") },
       { g: "Actions", icon: "doc", label: "Update your resume", run: () => openModal("resume") },
+      { g: "Actions", icon: "send", label: "Share your progress", run: () => (MODALS.share ? openModal("share") : go("stats")) },
+      { g: "Actions", icon: "info", label: "How we score listings", run: () => openModal("method") },
       { g: "Actions", icon: "moon", label: "Toggle dark mode", run: () => store.set((st) => ({ ...st, settings: { ...st.settings, theme: document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches) ? "light" : "dark" } })) },
       { g: "Actions", icon: "keyboard", label: "Keyboard shortcuts", sub: "?", run: () => openModal("shortcuts") },
       ...NAV.concat([{ id: "prefs", label: "Settings", icon: "prefs" }]).map((x, i) => ({ g: "Go to", icon: x.icon, label: x.label, sub: `G then ${"TFPCIS"[i] || ","}`, run: () => go(x.id) })),
