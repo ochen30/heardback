@@ -139,3 +139,12 @@ Review 7 found the new power-user UI louder than the rest (8.8). Quieted it:
 - Pipeline: the taken-down drawer shows one block with each action once; card footers match the next step on one line.
 - Calendar files fold lines by UTF-8 bytes per RFC 5545.
 - QA: end-to-end suite 2,428 / 2,428 checks passing; axe clean on every screen.
+
+### 06:15 PT — v13 published (launch readiness)
+A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, "ship once these land"). Fixed:
+- **Fit respects degree:** a PhD-only role no longer shows "Fit 92" to an undergrad (capped low, with "Asks for a PhD"). New degree setting in onboarding and Settings.
+- **Fit appears only once you've added skills or a resume**; before that every match would score the same.
+- **First run says what it is in one glance:** "Internship and new-grad listings, checked for ghost jobs. Track every application and interview in one calm place." plus "Free. Your data stays in this browser."
+- **"Just browse jobs →"** lands on Find; **"See a sample tracker first"** loads examples into the pipeline; a "Something else" option for non-tech students with an honest note.
+- Step 3 shows a flagged listing with its reason, and previews are tappable. Today is never empty for a brand-new user ("Fresh roles posted today").
+- Pipeline table fits tablets without hiding key columns; card footers never truncate; the methodology table stacks on phones.

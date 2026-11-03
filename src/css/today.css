@@ -282,3 +282,12 @@
 @media (max-width: 640px) { .st-insight-act { display: flex; width: fit-content; margin: 2px 0 0; min-height: 36px; } }
 @media (max-width: 640px) and (min-width: 360px) { .td-task-actions.is-outcome { gap: 4px; flex-wrap: nowrap; } }
 @media (max-width: 640px) { .td-batch-list .td-act { margin-left: -10px; } }
+
+/* First-run Today: fresh roles + the two ways in */
+.td-start-sub { padding: 10px 16px 4px; }
+.td-start-foot { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--line); }
+.td-start-acts { gap: 8px; flex: none; }
+@media (max-width: 520px) {
+  .td-start-acts { width: 100%; }
+  .td-start-acts .btn { flex: 1; height: 44px; justify-content: center; }
+}

@@ -87,16 +87,16 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
     const usingPrefs = await page.locator(W <= 520 ? '.find-bar2-sub' : '.find-count').innerText().catch(() => '');
     const prefEl = page.locator(W <= 520 ? '.find-bar2-sub #find-bar-prefs:text-is("Your preferences")' : '.find-count .find-prefs:text-is("Your preferences")');
     T.check('Find shows "Your preferences" (filtered by prefs)', (await prefEl.count()) === 1 && (await page.evaluate(() => find_isPrefs(find_getFilters(store.get()), store.get().profile))), usingPrefs.replace(/\n/g, ' | '));
-    // Skip setup path
+    // Just browse jobs path
     T.check('console errors', errors.length === 0, errors.join(' | '));
   } catch (e) { T.check('exception', false, e.message.split('\n')[0]); }
   await close();
   // skip path
   const r2 = await open({ W, mock: MOCK, setup: 'fresh' });
   try {
-    await r2.page.click('text=Skip setup'); await r2.page.waitForTimeout(300);
+    await r2.page.click('text=Just browse jobs'); await r2.page.waitForTimeout(300);
     const p = await r2.page.evaluate(() => store.get().profile);
-    T.check('skip setup -> onboarded, defaults (levels unpicked = both)', p.onboarded && p.levels.length === 0, JSON.stringify(p.levels));
+    T.check('just browse jobs -> onboarded, defaults (levels unpicked = both), lands on Find', p.onboarded && p.levels.length === 0 && (await r2.page.evaluate(() => location.hash)) === '#find', JSON.stringify(p.levels));
     T.check('skip: no console errors', r2.errors.length === 0, r2.errors.join('|'));
     // back button retains state
   } catch (e) { T.check('exception skip', false, e.message.split('\n')[0]); }

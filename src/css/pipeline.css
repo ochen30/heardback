@@ -114,7 +114,7 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-num { text-align: right; }
 .pl-table th.pl-num { text-align: right; }
 .pl-table th.pl-num button { position: relative; }
-.pl-table th.pl-num button .ico { position: absolute; left: 100%; margin-left: 2px; }
+.pl-table th.pl-num button .ico { position: absolute; right: 100%; margin-right: 4px; }
 .pl-sort { transition: transform var(--t-fast); transform: rotate(180deg); }
 .pl-sort.desc { transform: none; }
 .pl-sort-idle { opacity: 0; }
@@ -176,6 +176,8 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 }
 .pl-close-btn:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-close-btn.rejected.on { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.pl-close-btn.pl-close-more { display: none; width: 36px; height: 36px; padding: 0; justify-content: center; border-color: transparent; background: none; color: var(--fg-3); }
+.pl-close-btn.pl-close-more:hover, .pl-close-btn.pl-close-more[aria-expanded="true"] { background: var(--surface-2); color: var(--fg); }
 .pl-close-btn.ghosted.on { background: var(--ghost-soft); color: var(--ghost); border-color: transparent; }
 
 .pl-dtabs { margin-bottom: -4px; flex: none; }
@@ -322,9 +324,9 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 @media (max-width: 520px) {
   .pl-dhead .logo { display: none; }
   .pl-steps { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, .8fr); }
-  .pl-stage-line > .pl-small { flex-basis: 100%; margin-bottom: 2px; }
-  .pl-stage-line > .spacer { display: none; }
-  .pl-close-btn { flex: 1; justify-content: center; }
+  /* R8 #7: the closers fold into one menu button at the end of the stage line, below the stepper rather than above the tabs */
+  .pl-close-btn.pl-close-wide { display: none; }
+  .pl-close-btn.pl-close-more { display: inline-flex; }
   .pl-col { flex-basis: 82%; }
   .pl-round-name { min-width: 0; }
   .pl-round-sum { flex-wrap: wrap; row-gap: 4px; }
@@ -427,6 +429,8 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-table td.pl-chk-cell { width: 40px; padding: 14px 0 0 12px; vertical-align: top; }
   /* Stage shows as its dot only; titles get the width back */
   .pl-table th:nth-child(3) { width: 52px; }
+  /* The Sort by select above the table carries the sort state; header icons would spill past the 52px column */
+  .pl-table th button .ico { display: none; }
   .pl-table td:nth-child(3) { padding-right: 8px; vertical-align: top; padding-top: 0; }
   .pl-stage-sel .select { width: 40px; min-height: 40px; height: 40px; padding: 0; color: transparent; background-size: 0 0; border-color: transparent; }
   .pl-stage-sel .select option { color: var(--fg); }
@@ -450,3 +454,21 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 /* Phones: the icon column gives its width back so the two actions share one line */
 @media (max-width: 520px) { .pl-next-card .pl-next-ico { display: none; } .pl-removed-actions { flex-wrap: wrap; } .pl-removed-actions .btn { flex: 0 0 auto; } }
 
+
+/* R8 #2: tablet / small laptop. The table fits its card instead of scrolling inside it.
+   Applied (a date, also in the drawer) gives its width to Next step; every other column stays. */
+@media (min-width: 521px) and (max-width: 1100px) {
+  .pl-table { min-width: 0; table-layout: fixed; }
+  .pl-table th.pl-chk-cell { width: 44px; }
+  .pl-table th:nth-child(4), .pl-table td:nth-child(4) { display: none; }
+  .pl-table th:nth-child(3) { width: 116px; }
+  .pl-table th:nth-child(5) { width: 96px; }
+  .pl-table th:nth-child(6) { width: 22%; }
+  .pl-table th:nth-child(7) { width: 92px; }
+  .pl-table th + th, .pl-table td + td { padding-left: 8px; }
+  .pl-table th button { white-space: nowrap; }
+  .pl-table td:nth-child(6) .pl-next { white-space: normal; align-items: baseline; }
+  .pl-table td:nth-child(6) .pl-next > .dot { flex: none; transform: translateY(-1px); }
+  .pl-tcell { max-width: none; }
+  .pl-ttitle, .pl-tco { display: block; }
+}

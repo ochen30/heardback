@@ -208,6 +208,7 @@ function OnbLocChecklist({ idp, value, onChange, label, roles = [], levels = [] 
 }
 
 /* ---------- Steps ---------- */
+const ONB_DEGREES = [{ id: "AS", label: "Associate" }, { id: "BS", label: "Bachelor’s" }, { id: "MS", label: "Master’s" }, { id: "PhD", label: "PhD" }];
 const ONB_OTHER_NOTE = "Most listings here are technical roles. You can still track any application.";
 function OnbGroup({ title, hint, children, id }) {
   return html`<section class="onb-group" aria-labelledby=${id}>
@@ -220,6 +221,9 @@ function OnbStepTargets({ d, set }) {
   return html`<div class="card onb-card">
     <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
+    </${OnbGroup}>
+    <${OnbGroup} id="onb-g-deg" title="Degree by graduation" hint="Roles that ask for a higher degree get a low fit.">
+      <div class="onb-deg"><${Seg} label="Degree by graduation" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-role" title="Roles" hint="Tech-focused for now: software, data and AI, product, quant and hardware.">
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}<${Chip} key="other" on=${!!d.other} onClick=${() => set({ other: !d.other })}>Something else</${Chip}></div>
@@ -307,7 +311,7 @@ VIEWS.__onboarding = function Onboarding() {
   const [d, setD] = useState(() => saved ? { ...saved.d } : ({
     // no level pre-picked: empty means both, like Roles and Locations
     levels: !start.onboarded && (start.levels || []).length === LEVELS.length ? [] : start.levels || [], roles: start.roles || [], locations: start.locations || [],
-    remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "",
+    remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "", degree: start.degree || "BS",
   }));
   const [res, setRes] = useState(() => (saved ? saved.res : onbEditorInit(start)));
   const [examples, setExamples] = useState(saved ? saved.examples : false);
@@ -338,7 +342,15 @@ VIEWS.__onboarding = function Onboarding() {
   const browse = () => { commit(true); go("find"); };
   const sample = () => { commit(true); if (!hasExamples()) loadExamples(); go("pipeline"); };
   // Tapping a preview finishes setup and opens that listing over Find (after the route change, which closes drawers).
-  const openPreview = (id) => { finish("find"); setTimeout(() => openJob(id), 80); };
+  const openPreview = (id) => {
+    const open = () => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      openJob(id);
+      setTimeout(() => { if (!ui.state.drawer) openJob(id); }, 300); // in case the route's reset landed after us
+    }, 0)));
+    if (location.hash === "#find") { finish("find"); open(); return; }
+    window.addEventListener("hashchange", open, { once: true });
+    finish("find");
+  };
   const S = ONB_STEPS[step];
   return html`<div class="onboard-wrap" ref=${top} role="dialog" aria-modal="true" aria-label="Set up Heardback">
     <div class="onboard">
@@ -368,12 +380,12 @@ VIEWS.__onboarding = function Onboarding() {
       ${step === 1 && html`<div class="card onb-card onb-card-pad"><${OnbResumeEditor} value=${res} onChange=${setRes} idp="onb-res" /></div>`}
       ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} onOpen=${openPreview} />`}
       <footer class="onb-foot">
-        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<button type="button" class="onb-link onb-sample" onClick=${sample}>See a sample tracker first</button>`}
-        <span class="spacer"></span>
-        ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
+        ${step > 0 ? html`<${Btn} key="back" icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<button key="sample" type="button" class="onb-link onb-sample" onClick=${sample}>See a sample tracker first</button>`}
+        <span class="spacer" key="sp"></span>
+        ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} key="skip" kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
         ${step < 2
-          ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
-          : html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => finish()} id="onb-finish">Start using Heardback</${Btn}>`}
+          ? html`<${Btn} key="next" kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
+          : html`<${Btn} key="finish" kind="primary" iconRight="arrowR" onClick=${() => finish()} id="onb-finish">Start using Heardback</${Btn}>`}
       </footer>
     </div>
   </div>`;

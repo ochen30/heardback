@@ -461,22 +461,81 @@ function today_matches(jobs, profile, apps) {
   return { list: fresh.concat(older).slice(0, 6), recentCount: recent.length, noProfile: false };
 }
 
-function today_NewForYou({ jobs, m }) {
-  const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
-    <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
-  let body;
-  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
-  else if (!m) body = html`<${Skeleton} rows=${4} />`;
-  else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
-  else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
-  else body = html`<div class="list">${m.list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
+/* Newest listings with no ghost signals, inside whatever targets the profile sets (empty = everything, as in
+   onboarding). Used when there is no fit score yet (no skills) and on a first-run Today. `today` counts the ones
+   posted since midnight, so the heading never claims "today" for older roles. */
+function today_fresh(jobs, profile, apps, n = 5) {
+  if (jobs.status !== "ready") return null;
+  const tracked = new Set(Object.values(apps || {}).map((a) => a.jobId).filter(Boolean));
+  const lv = profile.levels || [], roles = profile.roles || [];
+  const locs = (profile.locations || []).slice();
+  if (profile.remote && locs.length && !locs.includes("remote")) locs.push("remote");
+  const okLoc = (j) => !locs.length || locs.some((l) => (l === "remote" ? jobRemoteUS(j) : jobInLoc(j, l)));
+  const day0 = fmt.startOfDay(now());
+  const list = [], seen = new Set(), seenCo = new Set();
+  for (const j of jobs.jobs) { // newest first
+    if ((j.g || 0) >= 25 || tracked.has(j.id)) continue;
+    if (lv.length && !lv.includes(j.lvl)) continue;
+    if (roles.length && !roles.includes(j.cat)) continue;
+    if (!okLoc(j)) continue;
+    const dk = j.co + "|" + norm(j.t);
+    if (seen.has(dk) || seenCo.has(j.co)) continue; // one per company keeps the list varied
+    seen.add(dk); seenCo.add(j.co);
+    const city = locs.length ? (j.l || []).find((l) => locs.some((id) => id !== "remote" && jobInLoc({ ...j, l: [l] }, id))) : null;
+    const loc = city || (j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0]) || "Location not listed";
+    list.push({ j, f: fitScore(j, profile), loc });
+    if (list.length >= n) break;
+  }
+  return { list, today: list.filter((x) => x.j.p >= day0).length, targets: !!(lv.length || roles.length || locs.length) };
+}
+
+function today_JobRows({ list }) {
+  return html`<div class="list">${list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
         ${today_meta([j.co, `${loc}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
-      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
-    </div>`)}</div>
+      <div class="job-side"><${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span>`}</div>
+    </div>`)}</div>`;
+}
+
+/* First run (nothing tracked yet): real roles up top and the two ways in, so Today is never an empty screen. */
+function today_Start({ jobs, fr }) {
+  const allToday = fr && fr.list.length && fr.today >= Math.min(3, fr.list.length);
+  const title = !fr || allToday ? "Fresh roles posted today" : "Newest roles";
+  let body;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (!fr) body = html`<${Skeleton} rows=${4} />`;
+  else if (!fr.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">Nothing new inside your targets right now. Find has every open listing.</span></div>`;
+  else body = html`<${today_JobRows} list=${fr.list} />`;
+  return html`<section class="card td-start" aria-labelledby="td-start-h">
+    <div class="card-head"><h2 id="td-start-h">${title}</h2>
+      <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all<${Icon} name="arrowR" size=${14} /></a></div>
+    <p class="td-start-sub muted td-small">${fr && fr.targets ? "Newest roles in your targets with no ghost-job signals." : "Showing the newest roles with no ghost signals. Set targets to narrow these."}</p>
+    ${body}
+    <div class="td-start-foot">
+      <span class="muted td-small td-grow">Applied somewhere already? Paste the confirmation email and Heardback starts tracking it.</span>
+      <div class="row td-start-acts">
+        <${Btn} kind="primary" icon="find" onClick=${() => go("find")}>Find jobs</${Btn}>
+        <${Btn} icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
+      </div>
+    </div>
+  </section>`;
+}
+
+function today_NewForYou({ jobs, m, fr }) {
+  const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
+    <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
+  let body;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (!m) body = html`<${Skeleton} rows=${4} />`;
+  else if (m.noProfile) body = fr && fr.list.length
+    ? html`<${today_JobRows} list=${fr.list} />
+      <div class="td-card-foot faint td-small">${fr.targets ? "Newest roles in your targets with no ghost signals. Add your resume in Settings to rank them by fit." : "Showing the newest roles with no ghost signals. Set targets to narrow these."}</div>`
+    : html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">Nothing new inside your targets right now. Find has every open listing.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
+  else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
+  else body = html`<${today_JobRows} list=${m.list} />
     <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer’s own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
 }
@@ -574,6 +633,7 @@ function today_View() {
   const st = useMemo(() => computeStats(s, apps), [s]);
   const up = useMemo(() => today_upcoming(apps), [s]);
   const m = useMemo(() => today_matches(jobs, s.profile, s.apps), [jobs.status, s.profile, s.apps]);
+  const fr = useMemo(() => (!apps.length || m?.noProfile ? today_fresh(jobs, s.profile, s.apps) : null), [jobs.status, s.profile, s.apps, apps.length, m]);
   const name = today_firstName(s.profile.name);
   const goal = s.profile.weeklyGoal || 10;
   const parts = [];
@@ -604,9 +664,10 @@ function today_View() {
     ${hasExamples(s) && s.settings.showExamples ? html`<${today_ExampleBanner} />` : null}
     <div class="split">
       <div class="stack td-col">
+        ${!apps.length ? html`<${today_Start} jobs=${jobs} fr=${fr} />` : null}
         <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
-        <${today_NewForYou} jobs=${jobs} m=${m} />
+        ${apps.length || (m && !m.noProfile) ? html`<${today_NewForYou} jobs=${jobs} m=${m} fr=${fr} />` : null}
       </div>
       <aside class="stack td-col" aria-label="Your week">
         <${today_ThisWeek} apps=${apps} goal=${goal} thisWeek=${st.thisWeek} />

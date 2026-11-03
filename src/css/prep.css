@@ -73,7 +73,8 @@
 .onb-big { font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.025em; line-height: 1.1; }
 .onb-big-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); }
 .onb-count + .callout { margin: 16px 20px; }
-.onb-job { width: 100%; padding: 12px 20px; border: 0; text-align: left; min-height: 56px; }
+.onb-job { width: 100%; padding: 12px 20px; border-width: 0; text-align: left; min-height: 56px; }
+.list > .onb-job + .onb-job { border-top: 1px solid var(--line); }
 .onb-job:hover { background: var(--surface-2); }
 .onb-reason { font-size: var(--fs-xs); color: var(--fg-2); }
 .onb-flag-h { display: flex; flex-direction: column; gap: 2px; padding: 14px 20px 6px; border-top: 1px solid var(--line); }
@@ -375,3 +376,9 @@
 .chip.onb-skill[aria-pressed="true"] { background: var(--surface-2); border-color: var(--line); color: var(--fg); }
 .chip.onb-skill .ico { color: var(--fg-3); opacity: 1; }
 .pf-statement { text-wrap: pretty; }
+.onb-deg { max-width: 100%; overflow-x: auto; }
+.onb-deg .seg { flex-wrap: nowrap; }
+@media (max-width: 520px) {
+  .onb-deg .seg { display: flex; width: 100%; }
+  .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
+}

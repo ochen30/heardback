@@ -74,8 +74,9 @@ function plStatus(a, st) {
   const past = ["screen", "interview"].includes(a.stage) ? plPastPending(a, t) : null;
   if (past) {
     const thanks = past.type !== "assessment" && !past.thanked && t - past.at < 2 * DAY;
-    const lead = thanks ? "Send thanks" : "Outcome?", rest = `${plShortRound(past)}, ${fmt.ago(past.at)}`;
-    return { icon: thanks ? "send" : "flag", tone: "wait", lead, rest, text: `${lead} · ${rest}`, title: thanks ? `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: send a thank-you note` : `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
+    /* R8 #4: the card foot carries the state and the age only, so it never truncates; the round type is in the title */
+    const lead = thanks ? "Send thanks" : "Outcome?", rest = fmt.ago(past.at);
+    return { icon: thanks ? "send" : "flag", tone: "wait", lead, rest, text: `${lead} · ${plShortRound(past)}, ${rest}`, title: thanks ? `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: send a thank-you note` : `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
   }
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
@@ -576,7 +577,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
   </article>`;
 }
 
-function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
+function PlMoveMenu({ label, current, anchor, onPick, onClose, extra, stages = STAGES }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useLayoutEffect(() => {
@@ -605,7 +606,7 @@ function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
   };
   return html`<div class="menu pl-menu" role="menu" aria-label=${label} ref=${ref} onKeyDown=${nav} style=${pos ? `left:${pos.left}px;top:${pos.top}px` : "visibility:hidden;left:0;top:0"}>
     <div class="pl-menu-label">Move to</div>
-    ${STAGES.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
+    ${stages.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
       <span class=${cx("dot", st.id)}></span><span style="flex:1">${st.label}</span>${current === st.id && html`<${Icon} name="check" size=${14} />`}
     </button>`)}
     ${extra && extra.length > 0 && html`<div class="pl-menu-sep"></div>`}
@@ -740,7 +741,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
     setT(nx); setTimeout(() => document.getElementById(`pl-tab-${nx}`)?.focus(), 0);
   };
   return html`<${Drawer} onClose=${closeDrawer} label=${`${a.company}: ${a.title}`} head=${head} foot=${foot}>
-    <${PlStepper} a=${a} />
+    <${PlStepper} a=${a} hideGhost=${takedown && a.stage !== "screen"} />
     <div class="tabs pl-dtabs" role="tablist" aria-label="Sections" onKeyDown=${onTabKey}>
       ${PL_TABS.map((x) => html`<button type="button" role="tab" key=${x.id} id=${`pl-tab-${x.id}`} aria-selected=${t === x.id ? "true" : "false"} aria-controls="pl-tabpanel" tabindex=${t === x.id ? "0" : "-1"} onClick=${() => setT(x.id)}>${x.label}${counts[x.id] ? html`<span class="count">${counts[x.id]}</span>` : null}</button>`)}
     </div>
@@ -753,12 +754,18 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   </${Drawer}>`;
 };
 
-function PlStepper({ a }) {
+function PlStepper({ a, hideGhost }) {
+  const [menu, setMenu] = useState(null);
   const cur = STAGE[a.stage].i;
   const far = plFurthest(a);
   const closed = PL_CLOSED.includes(a.stage);
   /* Applied reads the editable applied date, so editing it updates the header */
   const since = a.stage === "applied" && a.appliedAt ? a.appliedAt : plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
+  /* R8 #7: an offer you hold can't be ghosted; it closes as declined or rescinded (Rejected). The takedown block already offers
+     Mark as ghosted, so the header doesn't repeat it. On phones two closers fold into one menu button. */
+  const closers = a.stage === "offer"
+    ? [{ id: "rejected", icon: "x", label: "Close offer", title: "Declined it, or it was rescinded: moves it to Rejected" }]
+    : PL_CLOSED.filter((id) => id !== "ghosted" || !hideGhost || a.stage === id).map((id) => ({ id, icon: id === "ghosted" ? "ghost" : "x", label: a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted", title: `Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})` }));
   return html`<div class="pl-stepper" role="group" aria-label="Stage">
     <div class="pl-steps">
       ${PL_MAIN.map((id, i) => {
@@ -772,9 +779,11 @@ function PlStepper({ a }) {
     <div class="pl-stage-line">
       <span class="pl-small muted"><span class=${cx("dot", a.stage)}></span>${STAGE[a.stage].label}${since ? ` since ${fmt.date(since)}` : ""}</span>
       <span class="spacer" style="flex:1"></span>
-      ${PL_CLOSED.map((id) => html`<button type="button" key=${id} class=${cx("pl-close-btn", id, a.stage === id && "on")} aria-pressed=${a.stage === id ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})`}>
-        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted"}
+      ${closers.map((c) => html`<button type="button" key=${c.id} class=${cx("pl-close-btn", c.id, a.stage === c.id && "on", closers.length > 1 && "pl-close-wide")} aria-pressed=${a.stage === c.id ? "true" : "false"} onClick=${() => Apps.move(a.id, c.id)} title=${c.title}>
+        <${Icon} name=${c.icon} size=${14} />${c.label}
       </button>`)}
+      ${closers.length > 1 && html`<button type="button" class="pl-close-btn pl-close-more" aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"} aria-label="Close this application" title="Mark as rejected or ghosted" onClick=${(e) => { const el = e.currentTarget; setMenu((m) => (m ? null : el)); }}><${Icon} name="more" size=${16} /></button>`}
+      ${menu && html`<${PlMoveMenu} label=${`Close ${a.company}`} current=${a.stage} anchor=${menu} stages=${closers.map((c) => STAGE[c.id])} onPick=${(to) => Apps.move(a.id, to)} onClose=${() => setMenu(null)} />`}
     </div>
   </div>`;
 }

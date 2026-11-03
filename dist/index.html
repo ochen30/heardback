@@ -1022,7 +1022,7 @@ button.pl-rail:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-num { text-align: right; }
 .pl-table th.pl-num { text-align: right; }
 .pl-table th.pl-num button { position: relative; }
-.pl-table th.pl-num button .ico { position: absolute; left: 100%; margin-left: 2px; }
+.pl-table th.pl-num button .ico { position: absolute; right: 100%; margin-right: 4px; }
 .pl-sort { transition: transform var(--t-fast); transform: rotate(180deg); }
 .pl-sort.desc { transform: none; }
 .pl-sort-idle { opacity: 0; }
@@ -1084,6 +1084,8 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 }
 .pl-close-btn:hover { border-color: var(--line-strong); color: var(--fg); }
 .pl-close-btn.rejected.on { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.pl-close-btn.pl-close-more { display: none; width: 36px; height: 36px; padding: 0; justify-content: center; border-color: transparent; background: none; color: var(--fg-3); }
+.pl-close-btn.pl-close-more:hover, .pl-close-btn.pl-close-more[aria-expanded="true"] { background: var(--surface-2); color: var(--fg); }
 .pl-close-btn.ghosted.on { background: var(--ghost-soft); color: var(--ghost); border-color: transparent; }
 
 .pl-dtabs { margin-bottom: -4px; flex: none; }
@@ -1230,9 +1232,9 @@ tr:hover .pl-stage-sel .select { border-color: var(--line); }
 @media (max-width: 520px) {
   .pl-dhead .logo { display: none; }
   .pl-steps { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, .8fr); }
-  .pl-stage-line > .pl-small { flex-basis: 100%; margin-bottom: 2px; }
-  .pl-stage-line > .spacer { display: none; }
-  .pl-close-btn { flex: 1; justify-content: center; }
+  /* R8 #7: the closers fold into one menu button at the end of the stage line, below the stepper rather than above the tabs */
+  .pl-close-btn.pl-close-wide { display: none; }
+  .pl-close-btn.pl-close-more { display: inline-flex; }
   .pl-col { flex-basis: 82%; }
   .pl-round-name { min-width: 0; }
   .pl-round-sum { flex-wrap: wrap; row-gap: 4px; }
@@ -1335,6 +1337,8 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pl-table td.pl-chk-cell { width: 40px; padding: 14px 0 0 12px; vertical-align: top; }
   /* Stage shows as its dot only; titles get the width back */
   .pl-table th:nth-child(3) { width: 52px; }
+  /* The Sort by select above the table carries the sort state; header icons would spill past the 52px column */
+  .pl-table th button .ico { display: none; }
   .pl-table td:nth-child(3) { padding-right: 8px; vertical-align: top; padding-top: 0; }
   .pl-stage-sel .select { width: 40px; min-height: 40px; height: 40px; padding: 0; color: transparent; background-size: 0 0; border-color: transparent; }
   .pl-stage-sel .select option { color: var(--fg); }
@@ -1358,6 +1362,24 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 /* Phones: the icon column gives its width back so the two actions share one line */
 @media (max-width: 520px) { .pl-next-card .pl-next-ico { display: none; } .pl-removed-actions { flex-wrap: wrap; } .pl-removed-actions .btn { flex: 0 0 auto; } }
 
+
+/* R8 #2: tablet / small laptop. The table fits its card instead of scrolling inside it.
+   Applied (a date, also in the drawer) gives its width to Next step; every other column stays. */
+@media (min-width: 521px) and (max-width: 1100px) {
+  .pl-table { min-width: 0; table-layout: fixed; }
+  .pl-table th.pl-chk-cell { width: 44px; }
+  .pl-table th:nth-child(4), .pl-table td:nth-child(4) { display: none; }
+  .pl-table th:nth-child(3) { width: 116px; }
+  .pl-table th:nth-child(5) { width: 96px; }
+  .pl-table th:nth-child(6) { width: 22%; }
+  .pl-table th:nth-child(7) { width: 92px; }
+  .pl-table th + th, .pl-table td + td { padding-left: 8px; }
+  .pl-table th button { white-space: nowrap; }
+  .pl-table td:nth-child(6) .pl-next { white-space: normal; align-items: baseline; }
+  .pl-table td:nth-child(6) .pl-next > .dot { flex: none; transform: translateY(-1px); }
+  .pl-tcell { max-width: none; }
+  .pl-ttitle, .pl-tco { display: block; }
+}
 
 /* ===== Onboarding, Settings, Interview prep (prep.css) ===== */
 
@@ -1434,7 +1456,8 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .onb-big { font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.025em; line-height: 1.1; }
 .onb-big-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); }
 .onb-count + .callout { margin: 16px 20px; }
-.onb-job { width: 100%; padding: 12px 20px; border: 0; text-align: left; min-height: 56px; }
+.onb-job { width: 100%; padding: 12px 20px; border-width: 0; text-align: left; min-height: 56px; }
+.list > .onb-job + .onb-job { border-top: 1px solid var(--line); }
 .onb-job:hover { background: var(--surface-2); }
 .onb-reason { font-size: var(--fs-xs); color: var(--fg-2); }
 .onb-flag-h { display: flex; flex-direction: column; gap: 2px; padding: 14px 20px 6px; border-top: 1px solid var(--line); }
@@ -1736,6 +1759,12 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 .chip.onb-skill[aria-pressed="true"] { background: var(--surface-2); border-color: var(--line); color: var(--fg); }
 .chip.onb-skill .ico { color: var(--fg-3); opacity: 1; }
 .pf-statement { text-wrap: pretty; }
+.onb-deg { max-width: 100%; overflow-x: auto; }
+.onb-deg .seg { flex-wrap: nowrap; }
+@media (max-width: 520px) {
+  .onb-deg .seg { display: flex; width: 100%; }
+  .onb-deg .seg button { flex: 1; min-height: 44px; padding: 0 6px; justify-content: center; }
+}
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -2038,6 +2067,15 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
 @media (max-width: 640px) { .st-insight-act { display: flex; width: fit-content; margin: 2px 0 0; min-height: 36px; } }
 @media (max-width: 640px) and (min-width: 360px) { .td-task-actions.is-outcome { gap: 4px; flex-wrap: nowrap; } }
 @media (max-width: 640px) { .td-batch-list .td-act { margin-left: -10px; } }
+
+/* First-run Today: fresh roles + the two ways in */
+.td-start-sub { padding: 10px 16px 4px; }
+.td-start-foot { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--line); }
+.td-start-acts { gap: 8px; flex: none; }
+@media (max-width: 520px) {
+  .td-start-acts { width: 100%; }
+  .td-start-acts .btn { flex: 1; height: 44px; justify-content: center; }
+}
 
 </style>
 <div id="app"><div style="display:grid;place-items:center;height:100vh;color:#6b7482;font:14px system-ui">Loading Heardback…</div></div>
@@ -4489,6 +4527,7 @@ function OnbLocChecklist({ idp, value, onChange, label, roles = [], levels = [] 
 }
 
 /* ---------- Steps ---------- */
+const ONB_DEGREES = [{ id: "AS", label: "Associate" }, { id: "BS", label: "Bachelor’s" }, { id: "MS", label: "Master’s" }, { id: "PhD", label: "PhD" }];
 const ONB_OTHER_NOTE = "Most listings here are technical roles. You can still track any application.";
 function OnbGroup({ title, hint, children, id }) {
   return html`<section class="onb-group" aria-labelledby=${id}>
@@ -4501,6 +4540,9 @@ function OnbStepTargets({ d, set }) {
   return html`<div class="card onb-card">
     <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
+    </${OnbGroup}>
+    <${OnbGroup} id="onb-g-deg" title="Degree by graduation" hint="Roles that ask for a higher degree get a low fit.">
+      <div class="onb-deg"><${Seg} label="Degree by graduation" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-role" title="Roles" hint="Tech-focused for now: software, data and AI, product, quant and hardware.">
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}<${Chip} key="other" on=${!!d.other} onClick=${() => set({ other: !d.other })}>Something else</${Chip}></div>
@@ -4588,7 +4630,7 @@ VIEWS.__onboarding = function Onboarding() {
   const [d, setD] = useState(() => saved ? { ...saved.d } : ({
     // no level pre-picked: empty means both, like Roles and Locations
     levels: !start.onboarded && (start.levels || []).length === LEVELS.length ? [] : start.levels || [], roles: start.roles || [], locations: start.locations || [],
-    remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "",
+    remote: start.remote !== false, needsSponsor: !!start.needsSponsor, name: start.name || "", degree: start.degree || "BS",
   }));
   const [res, setRes] = useState(() => (saved ? saved.res : onbEditorInit(start)));
   const [examples, setExamples] = useState(saved ? saved.examples : false);
@@ -4619,7 +4661,15 @@ VIEWS.__onboarding = function Onboarding() {
   const browse = () => { commit(true); go("find"); };
   const sample = () => { commit(true); if (!hasExamples()) loadExamples(); go("pipeline"); };
   // Tapping a preview finishes setup and opens that listing over Find (after the route change, which closes drawers).
-  const openPreview = (id) => { finish("find"); setTimeout(() => openJob(id), 80); };
+  const openPreview = (id) => {
+    const open = () => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      openJob(id);
+      setTimeout(() => { if (!ui.state.drawer) openJob(id); }, 300); // in case the route's reset landed after us
+    }, 0)));
+    if (location.hash === "#find") { finish("find"); open(); return; }
+    window.addEventListener("hashchange", open, { once: true });
+    finish("find");
+  };
   const S = ONB_STEPS[step];
   return html`<div class="onboard-wrap" ref=${top} role="dialog" aria-modal="true" aria-label="Set up Heardback">
     <div class="onboard">
@@ -4649,12 +4699,12 @@ VIEWS.__onboarding = function Onboarding() {
       ${step === 1 && html`<div class="card onb-card onb-card-pad"><${OnbResumeEditor} value=${res} onChange=${setRes} idp="onb-res" /></div>`}
       ${step === 2 && html`<${OnbStepMatches} d=${draft} examples=${examples} setExamples=${setExamples} onOpen=${openPreview} />`}
       <footer class="onb-foot">
-        ${step > 0 ? html`<${Btn} icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<button type="button" class="onb-link onb-sample" onClick=${sample}>See a sample tracker first</button>`}
-        <span class="spacer"></span>
-        ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
+        ${step > 0 ? html`<${Btn} key="back" icon="chevL" onClick=${() => setStep(step - 1)}>Back</${Btn}>` : html`<button key="sample" type="button" class="onb-link onb-sample" onClick=${sample}>See a sample tracker first</button>`}
+        <span class="spacer" key="sp"></span>
+        ${step === 1 && !res.text.trim() && !res.added.length ? html`<${Btn} key="skip" kind="ghost" onClick=${() => setStep(2)}>Skip this step</${Btn}>` : null}
         ${step < 2
-          ? html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
-          : html`<${Btn} kind="primary" iconRight="arrowR" onClick=${() => finish()} id="onb-finish">Start using Heardback</${Btn}>`}
+          ? html`<${Btn} key="next" kind="primary" iconRight="arrowR" onClick=${() => setStep(step + 1)} id="onb-next">Continue</${Btn}>`
+          : html`<${Btn} key="finish" kind="primary" iconRight="arrowR" onClick=${() => finish()} id="onb-finish">Start using Heardback</${Btn}>`}
       </footer>
     </div>
   </div>`;
@@ -4737,8 +4787,9 @@ function plStatus(a, st) {
   const past = ["screen", "interview"].includes(a.stage) ? plPastPending(a, t) : null;
   if (past) {
     const thanks = past.type !== "assessment" && !past.thanked && t - past.at < 2 * DAY;
-    const lead = thanks ? "Send thanks" : "Outcome?", rest = `${plShortRound(past)}, ${fmt.ago(past.at)}`;
-    return { icon: thanks ? "send" : "flag", tone: "wait", lead, rest, text: `${lead} · ${rest}`, title: thanks ? `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: send a thank-you note` : `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
+    /* R8 #4: the card foot carries the state and the age only, so it never truncates; the round type is in the title */
+    const lead = thanks ? "Send thanks" : "Outcome?", rest = fmt.ago(past.at);
+    return { icon: thanks ? "send" : "flag", tone: "wait", lead, rest, text: `${lead} · ${plShortRound(past)}, ${rest}`, title: thanks ? `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: send a thank-you note` : `${plRoundLabel(past)} on ${fmt.dateTime(past.at)}: outcome not logged yet` };
   }
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
@@ -5239,7 +5290,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
   </article>`;
 }
 
-function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
+function PlMoveMenu({ label, current, anchor, onPick, onClose, extra, stages = STAGES }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useLayoutEffect(() => {
@@ -5268,7 +5319,7 @@ function PlMoveMenu({ label, current, anchor, onPick, onClose, extra }) {
   };
   return html`<div class="menu pl-menu" role="menu" aria-label=${label} ref=${ref} onKeyDown=${nav} style=${pos ? `left:${pos.left}px;top:${pos.top}px` : "visibility:hidden;left:0;top:0"}>
     <div class="pl-menu-label">Move to</div>
-    ${STAGES.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
+    ${stages.map((st) => html`<button type="button" role="menuitemradio" key=${st.id} aria-checked=${current === st.id ? "true" : "false"} onClick=${() => { onClose(); onPick(st.id); }}>
       <span class=${cx("dot", st.id)}></span><span style="flex:1">${st.label}</span>${current === st.id && html`<${Icon} name="check" size=${14} />`}
     </button>`)}
     ${extra && extra.length > 0 && html`<div class="pl-menu-sep"></div>`}
@@ -5403,7 +5454,7 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
     setT(nx); setTimeout(() => document.getElementById(`pl-tab-${nx}`)?.focus(), 0);
   };
   return html`<${Drawer} onClose=${closeDrawer} label=${`${a.company}: ${a.title}`} head=${head} foot=${foot}>
-    <${PlStepper} a=${a} />
+    <${PlStepper} a=${a} hideGhost=${takedown && a.stage !== "screen"} />
     <div class="tabs pl-dtabs" role="tablist" aria-label="Sections" onKeyDown=${onTabKey}>
       ${PL_TABS.map((x) => html`<button type="button" role="tab" key=${x.id} id=${`pl-tab-${x.id}`} aria-selected=${t === x.id ? "true" : "false"} aria-controls="pl-tabpanel" tabindex=${t === x.id ? "0" : "-1"} onClick=${() => setT(x.id)}>${x.label}${counts[x.id] ? html`<span class="count">${counts[x.id]}</span>` : null}</button>`)}
     </div>
@@ -5416,12 +5467,18 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
   </${Drawer}>`;
 };
 
-function PlStepper({ a }) {
+function PlStepper({ a, hideGhost }) {
+  const [menu, setMenu] = useState(null);
   const cur = STAGE[a.stage].i;
   const far = plFurthest(a);
   const closed = PL_CLOSED.includes(a.stage);
   /* Applied reads the editable applied date, so editing it updates the header */
   const since = a.stage === "applied" && a.appliedAt ? a.appliedAt : plStageAt(a, a.stage) || (a.stage === "saved" ? a.createdAt : a.appliedAt);
+  /* R8 #7: an offer you hold can't be ghosted; it closes as declined or rescinded (Rejected). The takedown block already offers
+     Mark as ghosted, so the header doesn't repeat it. On phones two closers fold into one menu button. */
+  const closers = a.stage === "offer"
+    ? [{ id: "rejected", icon: "x", label: "Close offer", title: "Declined it, or it was rescinded: moves it to Rejected" }]
+    : PL_CLOSED.filter((id) => id !== "ghosted" || !hideGhost || a.stage === id).map((id) => ({ id, icon: id === "ghosted" ? "ghost" : "x", label: a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted", title: `Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})` }));
   return html`<div class="pl-stepper" role="group" aria-label="Stage">
     <div class="pl-steps">
       ${PL_MAIN.map((id, i) => {
@@ -5435,9 +5492,11 @@ function PlStepper({ a }) {
     <div class="pl-stage-line">
       <span class="pl-small muted"><span class=${cx("dot", a.stage)}></span>${STAGE[a.stage].label}${since ? ` since ${fmt.date(since)}` : ""}</span>
       <span class="spacer" style="flex:1"></span>
-      ${PL_CLOSED.map((id) => html`<button type="button" key=${id} class=${cx("pl-close-btn", id, a.stage === id && "on")} aria-pressed=${a.stage === id ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${STAGE[id].label} (press ${STAGE[id].i + 1})`}>
-        <${Icon} name=${id === "ghosted" ? "ghost" : "x"} size=${14} />${a.stage === id ? STAGE[id].label : id === "rejected" ? "Mark as rejected" : "Mark as ghosted"}
+      ${closers.map((c) => html`<button type="button" key=${c.id} class=${cx("pl-close-btn", c.id, a.stage === c.id && "on", closers.length > 1 && "pl-close-wide")} aria-pressed=${a.stage === c.id ? "true" : "false"} onClick=${() => Apps.move(a.id, c.id)} title=${c.title}>
+        <${Icon} name=${c.icon} size=${14} />${c.label}
       </button>`)}
+      ${closers.length > 1 && html`<button type="button" class="pl-close-btn pl-close-more" aria-haspopup="menu" aria-expanded=${menu ? "true" : "false"} aria-label="Close this application" title="Mark as rejected or ghosted" onClick=${(e) => { const el = e.currentTarget; setMenu((m) => (m ? null : el)); }}><${Icon} name="more" size=${16} /></button>`}
+      ${menu && html`<${PlMoveMenu} label=${`Close ${a.company}`} current=${a.stage} anchor=${menu} stages=${closers.map((c) => STAGE[c.id])} onPick=${(to) => Apps.move(a.id, to)} onClose=${() => setMenu(null)} />`}
     </div>
   </div>`;
 }
@@ -7959,22 +8018,81 @@ function today_matches(jobs, profile, apps) {
   return { list: fresh.concat(older).slice(0, 6), recentCount: recent.length, noProfile: false };
 }
 
-function today_NewForYou({ jobs, m }) {
-  const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
-    <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
-  let body;
-  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
-  else if (!m) body = html`<${Skeleton} rows=${4} />`;
-  else if (m.noProfile) body = html`<div class="td-mini-empty"><${Icon} name="target" cls="faint" /><span class="muted td-small td-grow">Add target roles and locations so Heardback can pick roles that fit you.</span><${Btn} size="sm" onClick=${() => go("prefs")}>Set preferences</${Btn}></div>`;
-  else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
-  else body = html`<div class="list">${m.list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
+/* Newest listings with no ghost signals, inside whatever targets the profile sets (empty = everything, as in
+   onboarding). Used when there is no fit score yet (no skills) and on a first-run Today. `today` counts the ones
+   posted since midnight, so the heading never claims "today" for older roles. */
+function today_fresh(jobs, profile, apps, n = 5) {
+  if (jobs.status !== "ready") return null;
+  const tracked = new Set(Object.values(apps || {}).map((a) => a.jobId).filter(Boolean));
+  const lv = profile.levels || [], roles = profile.roles || [];
+  const locs = (profile.locations || []).slice();
+  if (profile.remote && locs.length && !locs.includes("remote")) locs.push("remote");
+  const okLoc = (j) => !locs.length || locs.some((l) => (l === "remote" ? jobRemoteUS(j) : jobInLoc(j, l)));
+  const day0 = fmt.startOfDay(now());
+  const list = [], seen = new Set(), seenCo = new Set();
+  for (const j of jobs.jobs) { // newest first
+    if ((j.g || 0) >= 25 || tracked.has(j.id)) continue;
+    if (lv.length && !lv.includes(j.lvl)) continue;
+    if (roles.length && !roles.includes(j.cat)) continue;
+    if (!okLoc(j)) continue;
+    const dk = j.co + "|" + norm(j.t);
+    if (seen.has(dk) || seenCo.has(j.co)) continue; // one per company keeps the list varied
+    seen.add(dk); seenCo.add(j.co);
+    const city = locs.length ? (j.l || []).find((l) => locs.some((id) => id !== "remote" && jobInLoc({ ...j, l: [l] }, id))) : null;
+    const loc = city || (j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0]) || "Location not listed";
+    list.push({ j, f: fitScore(j, profile), loc });
+    if (list.length >= n) break;
+  }
+  return { list, today: list.filter((x) => x.j.p >= day0).length, targets: !!(lv.length || roles.length || locs.length) };
+}
+
+function today_JobRows({ list }) {
+  return html`<div class="list">${list.map(({ j, f, loc }) => html`<div class="job-row td-job" key=${j.id} role="button" tabindex="0" onClick=${() => openJob(j.id)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJob(j.id); } }}>
       <${Logo} name=${j.co} />
       <div class="stack-sm" style="gap:2px">
         <span class="job-title truncate">${String(j.t || "").replace(/\s+-\s+/g, " – ")}</span>
         ${today_meta([j.co, `${loc}${j.nl > 1 ? ` +${j.nl - 1} more` : ""}`], "job-meta")}
       </div>
-      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
-    </div>`)}</div>
+      <div class="job-side"><${Fresh} ts=${j.p} />${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span>`}</div>
+    </div>`)}</div>`;
+}
+
+/* First run (nothing tracked yet): real roles up top and the two ways in, so Today is never an empty screen. */
+function today_Start({ jobs, fr }) {
+  const allToday = fr && fr.list.length && fr.today >= Math.min(3, fr.list.length);
+  const title = !fr || allToday ? "Fresh roles posted today" : "Newest roles";
+  let body;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (!fr) body = html`<${Skeleton} rows=${4} />`;
+  else if (!fr.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">Nothing new inside your targets right now. Find has every open listing.</span></div>`;
+  else body = html`<${today_JobRows} list=${fr.list} />`;
+  return html`<section class="card td-start" aria-labelledby="td-start-h">
+    <div class="card-head"><h2 id="td-start-h">${title}</h2>
+      <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all<${Icon} name="arrowR" size=${14} /></a></div>
+    <p class="td-start-sub muted td-small">${fr && fr.targets ? "Newest roles in your targets with no ghost-job signals." : "Showing the newest roles with no ghost signals. Set targets to narrow these."}</p>
+    ${body}
+    <div class="td-start-foot">
+      <span class="muted td-small td-grow">Applied somewhere already? Paste the confirmation email and Heardback starts tracking it.</span>
+      <div class="row td-start-acts">
+        <${Btn} kind="primary" icon="find" onClick=${() => go("find")}>Find jobs</${Btn}>
+        <${Btn} icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
+      </div>
+    </div>
+  </section>`;
+}
+
+function today_NewForYou({ jobs, m, fr }) {
+  const head = html`<div class="card-head"><h2 id="td-new-h">New for you</h2>
+    <span class="spacer"></span><a href="#find" class="td-link" onClick=${(e) => { e.preventDefault(); go("find"); }}>See all in Find<${Icon} name="arrowR" size=${14} /></a></div>`;
+  let body;
+  if (jobs.status === "error") body = html`<div class="td-mini-empty"><${Icon} name="alert" cls="faint" /><span class="muted td-small td-grow">Job listings didn’t load. Check your connection, then try again.</span><${Btn} size="sm" icon="refresh" onClick=${() => loadJobs()}>Try again</${Btn}></div>`;
+  else if (!m) body = html`<${Skeleton} rows=${4} />`;
+  else if (m.noProfile) body = fr && fr.list.length
+    ? html`<${today_JobRows} list=${fr.list} />
+      <div class="td-card-foot faint td-small">${fr.targets ? "Newest roles in your targets with no ghost signals. Add your resume in Settings to rank them by fit." : "Showing the newest roles with no ghost signals. Set targets to narrow these."}</div>`
+    : html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">Nothing new inside your targets right now. Find has every open listing.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
+  else if (!m.list.length) body = html`<div class="td-mini-empty"><${Icon} name="find" cls="faint" /><span class="muted td-small td-grow">No new strong matches right now. Broaden your roles or locations, or browse everything in Find.</span><${Btn} size="sm" onClick=${() => go("find")}>Browse all jobs</${Btn}></div>`;
+  else body = html`<${today_JobRows} list=${m.list} />
     <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer’s own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
 }
@@ -8072,6 +8190,7 @@ function today_View() {
   const st = useMemo(() => computeStats(s, apps), [s]);
   const up = useMemo(() => today_upcoming(apps), [s]);
   const m = useMemo(() => today_matches(jobs, s.profile, s.apps), [jobs.status, s.profile, s.apps]);
+  const fr = useMemo(() => (!apps.length || m?.noProfile ? today_fresh(jobs, s.profile, s.apps) : null), [jobs.status, s.profile, s.apps, apps.length, m]);
   const name = today_firstName(s.profile.name);
   const goal = s.profile.weeklyGoal || 10;
   const parts = [];
@@ -8102,9 +8221,10 @@ function today_View() {
     ${hasExamples(s) && s.settings.showExamples ? html`<${today_ExampleBanner} />` : null}
     <div class="split">
       <div class="stack td-col">
+        ${!apps.length ? html`<${today_Start} jobs=${jobs} fr=${fr} />` : null}
         <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
-        <${today_NewForYou} jobs=${jobs} m=${m} />
+        ${apps.length || (m && !m.noProfile) ? html`<${today_NewForYou} jobs=${jobs} m=${m} fr=${fr} />` : null}
       </div>
       <aside class="stack td-col" aria-label="Your week">
         <${today_ThisWeek} apps=${apps} goal=${goal} thisWeek=${st.thisWeek} />

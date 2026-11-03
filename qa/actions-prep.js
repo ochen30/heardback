@@ -20,7 +20,7 @@ const wait = (p, ms = 300) => p.waitForTimeout(ms);
 async function onbReset(page) {
   await page.evaluate(() => store.set((s) => ({ ...s, profile: { ...s.profile, onboarded: true } })));
   await wait(page, 120);
-  await page.evaluate(() => store.set((s) => ({ ...s, profile: { ...s.profile, onboarded: false, roles: [], levels: [], locations: [], remote: true, needsSponsor: false, name: '', resume: '', skills: [] } })));
+  await page.evaluate(() => store.set((s) => ({ ...s, ui: (({ onboardDraft, ...u }) => u)(s.ui || {}), profile: { ...s.profile, onboarded: false, roles: [], levels: [], locations: [], remote: true, needsSponsor: false, name: '', resume: '', skills: [], degree: 'BS' } })));
   await page.waitForSelector('#onb-title', { timeout: 4000 });
   await page.evaluate(() => { const w = document.querySelector('.onboard-wrap'); w && w.scrollTo(0, 0); });
 }
@@ -269,3 +269,62 @@ const mockActions = {
   },
 };
 Object.assign(module.exports, Object.fromEntries(Object.entries(mockActions).map(([k, fn]) => [k, async (page) => { await resetMock(page); return fn(page); }])));
+
+/* ---- First-run polish (cold-visitor report). Run with SETUP=fresh; each starts from a clean step 1. ---- */
+const firstRun = {
+  async firstStep1(page) {
+    await onbReset(page);
+    const t = await page.evaluate(() => ({ value: document.querySelector('.onb-value')?.textContent, trust: document.querySelector('.onb-trust')?.textContent, browse: document.querySelector('.onb-browse')?.getBoundingClientRect().height, sample: !!document.querySelector('.onb-sample'), deg: document.querySelector('.onb-deg .seg [aria-pressed="true"]')?.textContent }));
+    console.log('[first]', /ghost jobs/.test(t.value || '') && /Free/.test(t.trust || '') && t.browse >= 44 && t.sample && t.deg === 'Bachelor’s' ? 'ok' : 'FAIL', 'step 1 pitch, trust, browse 44px, sample link, degree default', JSON.stringify(t));
+  },
+  async firstOther(page) {
+    await onbReset(page);
+    await page.getByRole('button', { name: 'Something else', exact: true }).click(); await wait(page);
+    const note = await page.locator('.onb-note').first().innerText().catch(() => '');
+    console.log('[first]', /technical roles/.test(note) ? 'ok' : 'FAIL', 'something else shows note', note);
+    await page.getByRole('button', { name: 'Master’s', exact: true }).click(); await wait(page);
+    await page.click('#onb-next'); await wait(page); await page.click('#onb-next'); await wait(page, 600);
+    const n3 = await page.locator('.onb-matches .onb-note').count();
+    console.log('[first]', n3 === 1 ? 'ok' : 'FAIL', 'note repeated on step 3');
+    await page.click('#onb-finish'); await wait(page, 400);
+    const p = await page.evaluate(() => store.get().profile);
+    console.log('[first]', p.onboarded && !('other' in p) && p.roles.length === 0 && p.degree === 'MS' ? 'ok' : 'FAIL', 'finish: no stray "other", roles empty, degree MS', JSON.stringify({ roles: p.roles, degree: p.degree }));
+  },
+  async firstStep3(page) {
+    await onbReset(page);
+    await page.click('#onb-next'); await wait(page); await page.click('#onb-next');
+    await page.waitForSelector('.onb-job', { timeout: 10000 }); await wait(page, 300);
+    const st = await page.evaluate(() => ({ rows: document.querySelectorAll('.onb-job').length, flagged: document.querySelector('.onb-flag-h + .list .onb-reason')?.textContent, ghost: !!document.querySelector('.onb-flag-h + .list .gscore'), fit: document.querySelectorAll('.onb-job .fit').length }));
+    console.log('[first]', st.rows >= 6 && st.flagged && st.ghost && st.fit === 0 ? 'ok' : 'FAIL', 'step 3: 5 + flagged row with reason, no Fit without skills', JSON.stringify(st));
+  },
+  async firstStep3Flag(page) { await firstRun.firstStep3(page); await page.locator('.onb-flag-h').scrollIntoViewIfNeeded(); },
+  async firstTapPreview(page) {
+    await firstRun.firstStep3(page);
+    const id = await page.evaluate(() => { const t = document.querySelector('.onb-flag-h + .list .onb-job .job-title')?.textContent; return t; });
+    await page.locator('.onb-flag-h + .list .onb-job').click();
+    await wait(page, 700);
+    const st = await page.evaluate(() => ({ onb: store.get().profile.onboarded, hash: location.hash, drawer: ui.state.drawer?.kind, title: document.querySelector('.drawer h2, .drawer h1')?.textContent }));
+    console.log('[first]', st.onb && st.hash === '#find' && st.drawer === 'job' ? 'ok' : 'FAIL', 'tap preview -> finish + job drawer', JSON.stringify(st), id);
+  },
+  async firstBrowse(page) {
+    await onbReset(page);
+    await page.click('.onb-browse'); await wait(page, 600);
+    const st = await page.evaluate(() => ({ onb: store.get().profile.onboarded, hash: location.hash }));
+    console.log('[first]', st.onb && st.hash === '#find' ? 'ok' : 'FAIL', 'Just browse jobs -> Find', JSON.stringify(st));
+  },
+  async firstSample(page) {
+    await onbReset(page);
+    await page.click('.onb-sample'); await wait(page, 600);
+    const st = await page.evaluate(() => ({ onb: store.get().profile.onboarded, hash: location.hash, ex: hasExamples() }));
+    console.log('[first]', st.onb && st.hash === '#pipeline' && st.ex ? 'ok' : 'FAIL', 'sample tracker -> Pipeline with examples', JSON.stringify(st));
+  },
+  async firstToday(page) {
+    await page.evaluate(() => store.set((s) => ({ ...s, apps: {} })));
+    await onbReset(page);
+    await page.click('.onb-browse'); await wait(page, 300);
+    await page.evaluate(() => (location.hash = 'today')); await page.waitForSelector('.td-start .td-job', { timeout: 8000 }).catch(() => {});
+    const st = await page.evaluate(() => ({ h: document.querySelector('#td-start-h')?.textContent, rows: document.querySelectorAll('.td-start .td-job').length, acts: [...document.querySelectorAll('.td-start-acts .btn')].map((b) => b.textContent.trim()), newFor: !!document.querySelector('#td-new-h'), maxG: Math.max(...[...document.querySelectorAll('.td-start .td-job')].map(() => 0)) }));
+    console.log('[first]', st.rows > 0 && st.acts.join('|') === 'Find jobs|Log an email' && !st.newFor ? 'ok' : 'FAIL', 'Today first run: fresh roles + Find jobs / Log an email', JSON.stringify(st));
+  },
+};
+Object.assign(module.exports, firstRun);
