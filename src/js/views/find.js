@@ -23,7 +23,7 @@ function find_prefFilters(p) {
 }
 const find_hasPrefs = (p) => !!((p.roles || []).length || (p.locations || []).filter((id) => LOC_OPTIONS.some((o) => o.id === id)).length || ((p.levels || []).length === 1));
 /* "Hide strong ghost signals" is its own setting (store.ui.findHideGhost), on until the user turns it off,
-   so "Clear filters", "Show all" and "Use my preferences" never quietly flip it. */
+   so "Clear filters", "Show all" and "Use your preferences" never quietly flip it. */
 const find_hideGhostOn = (s) => s.ui.findHideGhost !== false;
 const find_pfC = { p: null, f: null };
 const find_fC = { base: null, hg: null, f: null };
@@ -188,7 +188,7 @@ const find_typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEX
 
 /* ---------- shared bits ---------- */
 /* Accent only for a standout fit: never on a listing with ghost signals (we would be promoting what we warn
-   about), and in a company's role list only for its top few (hiMin), so the pill never becomes wallpaper. */
+   about), and never inside a company's role list, where identical scores made it look random. */
 const find_fitHi = (score, job, hiMin) => score >= Math.max(95, hiMin ?? 0) && (!job || ghostLevel(job.g || 0) === "low");
 function find_hiMin(jobsArr, profile) {
   const sc = jobsArr.filter((j) => ghostLevel(j.g || 0) === "low").map((j) => find_fit(j, profile)?.score ?? -1).sort((a, b) => b - a);
@@ -210,7 +210,8 @@ function find_GhostHint({ g }) {
 }
 
 /* Phone count bar: two deliberate lines. Line 1 is the count and sort; line 2 is one quiet line that says
-   what's filtering the list ("Your preferences · Hiding 220 likely stale · Show"), each part a 44px target. */
+   what's filtering the list ("Your preferences · Hiding 220 with strong ghost signals · Show"), each part a
+   44px target. Same words as the wider count line and the ghostLabel() vocabulary. */
 function find_BarNarrow({ list, f, counts, profile, usingPrefs, sort }) {
   const fresh = visit.since && f.posted !== "since" ? list.filter((j) => j.p > visit.since).length : 0;
   const prefs = find_hasPrefs(profile);
@@ -218,8 +219,8 @@ function find_BarNarrow({ list, f, counts, profile, usingPrefs, sort }) {
   const parts = [];
   if (prefs) parts.push(usingPrefs
     ? html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" title="Filtered by your preferences. Tap to change filters" aria-label="Filtered by your preferences. Change filters" onClick=${() => openModal("findFilters")}>Your preferences</button>`
-    : html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" onClick=${() => find_setFilters(null)}>Use my preferences</button>`);
-  if (hid > 0) parts.push(html`<span class="find-bar-ghost" title="Listings with strong ghost signals: likely stale or not actively hiring"><span>${f.hideGhost ? "Hiding " : ""}<span class="num">${fmt.num(hid)}</span> likely stale</span><span class="find-bar-dot" aria-hidden="true">·</span><button type="button" class="find-link find-bar-btn" id="find-bar-ghost" aria-label=${f.hideGhost ? `Show ${hid} listings with strong ghost signals` : `Hide ${hid} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: !f.hideGhost })}>${f.hideGhost ? "Show" : "Hide"}</button></span>`);
+    : html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" onClick=${() => find_setFilters(null)}>Use your preferences</button>`);
+  if (hid > 0) parts.push(html`<span class="find-bar-ghost"><span class="find-bar-gl">${f.hideGhost ? html`<span class="find-bar-hiding">Hiding </span>` : ""}<span class="num">${fmt.num(hid)}</span> with ${ghostLabel(100).toLowerCase()}</span><span class="find-bar-dot" aria-hidden="true">·</span><button type="button" class="find-link find-bar-btn" id="find-bar-ghost" aria-label=${f.hideGhost ? `Show ${hid} listings with strong ghost signals` : `Hide ${hid} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: !f.hideGhost })}>${f.hideGhost ? "Show" : "Hide"}</button></span>`);
   return html`<div class="find-bar2">
     <div class="find-bar2-top">
       <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
@@ -258,7 +259,7 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
     <div class="find-side">
       <span class="find-c-ghost"><${find_GhostHint} g=${job.g} /></span>
       <span class="find-c-fresh"><${Fresh} ts=${job.p} /></span>
-      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} job=${job} hiMin=${hiMin} /></span>
+      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} job=${job} hiMin=${inCompany ? 101 : hiMin} /></span>
       <span class="find-c-act" onClick=${(e) => e.stopPropagation()}>
         ${app && !saved
           ? html`<button type="button" class="find-stage" onClick=${() => openApp(app.id)} title="Open in pipeline"><${StageBadge} stage=${app.stage} /></button>`
@@ -474,10 +475,10 @@ VIEWS.find = function FindView() {
             <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
             ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
             ${find_hasPrefs(profile) && (usingPrefs
-              ? [html`<span class="find-prefs" key="up">Using your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
-              : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
-            ${f.hideGhost && counts.ghostHidden > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">Hiding ${fmt.num(counts.ghostHidden)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: false })}>Show them</button></span>`]}
-            ${!f.hideGhost && counts.ghostShown > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">${fmt.num(counts.ghostShown)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: true })}>Hide them</button></span>`]}
+              ? [html`<span class="find-prefs" key="up">Your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
+              : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use your preferences</button></span>`)}
+            ${f.hideGhost && counts.ghostHidden > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">Hiding ${fmt.num(counts.ghostHidden)} with ${ghostLabel(100).toLowerCase()}</span>`, html`<span class="find-prefs find-ghost-act" key="gs"><button type="button" class="find-link" aria-label=${`Show ${counts.ghostHidden} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: false })}>Show</button></span>`]}
+            ${!f.hideGhost && counts.ghostShown > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">${fmt.num(counts.ghostShown)} with ${ghostLabel(100).toLowerCase()}</span>`, html`<span class="find-prefs find-ghost-act" key="gs"><button type="button" class="find-link" aria-label=${`Hide ${counts.ghostShown} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: true })}>Hide</button></span>`]}
           </div>
           <span class="spacer"></span>
           <div class="find-sort hide-sm"><${Seg} label="Sort by" value=${sort} options=${FIND_SORTS} onChange=${(v) => store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } }))} /></div>

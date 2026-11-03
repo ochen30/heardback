@@ -879,6 +879,23 @@ a.find-link { cursor: pointer; }
 .find-bar2-sub .find-bar-btn { padding-inline: 2px; min-width: 44px; }
 .find-bar-new { padding-inline: 4px; }
 .find-bar-dot { color: var(--fg-3); }
+/* The sidebar switch owns the ghost toggle while it is on screen, so the count line only states it there. */
+@media (min-width: 1101px) { .find-count .find-ghost-act { display: none; } }
+/* Tablet: one sort control, and it stays on the count row instead of stranding on a row of its own. */
+@media (max-width: 860px) { .find-bar .find-sort { display: none; } }
+@media (min-width: 521px) and (max-width: 1100px) {
+  .find-bar { flex-wrap: nowrap; align-items: flex-start; }
+  .find-bar .spacer { display: none; }
+  .find-bar .find-count { flex: 1; min-width: 0; padding-top: 7px; line-height: 1.5; }
+  .find-bar .find-sort-sm, .find-bar .find-sort { flex: none; margin-left: auto; }
+  .find-bar .find-sort-sm { min-width: 0; }
+}
+/* Phone: the ghost clause may shorten with an ellipsis, never change words. */
+.find-bar-gl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.find-bar-ghost .find-bar-btn { flex: none; }
+.find-bar2-sub > .find-bar-btn { flex: none; }
+/* Smallest phones only: drop the leading "Hiding" (the Show/Hide verb carries the state) so the clause fits whole. */
+@media (max-width: 410px) { .find-bar-hiding { display: none; } }
 
 /* ===== Pipeline ===== */
 .pl-page.wide { max-width: 1680px; }
@@ -1677,6 +1694,19 @@ body:has(.pl-bulk) .toasts { bottom: calc(max(20px, calc(env(safe-area-inset-bot
   .pf-imp-row { grid-template-columns: minmax(0, 1fr) 128px; padding: 10px 12px; gap: 8px 10px; }
   .pf-imp-sel { min-height: 44px; }
 }
+/* Settings: the checklist fills its cell (it shrink-wrapped to 288px), two columns from 640px. */
+.pf-row .onb-locs { width: 100%; min-width: 0; justify-self: stretch; }
+@media (min-width: 640px) { .pf-row .onb-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* CSV preview: focus lands on the lead line, not a ringed first row; phones stack the stage under the row. */
+.pf-imp-lead:focus, .pf-imp-lead:focus-visible { outline: none; box-shadow: none; }
+@media (max-width: 520px) {
+  .pf-imp-row { grid-template-columns: minmax(0, 1fr); }
+  .pf-imp-row .pf-imp-sel { width: 100%; }
+}
+/* Skill chips are things you have, not selected toggles: neutral, not accent. */
+.chip.onb-skill[aria-pressed="true"] { background: var(--surface-2); border-color: var(--line); color: var(--fg); }
+.chip.onb-skill .ico { color: var(--fg-3); opacity: 1; }
+.pf-statement { text-wrap: pretty; }
 
 /* ===== Share your progress ===== */
 @media (min-width: 861px) { .modal.share-modal { top: 8vh; max-height: 86vh; } }
@@ -3189,7 +3219,7 @@ function find_prefFilters(p) {
 }
 const find_hasPrefs = (p) => !!((p.roles || []).length || (p.locations || []).filter((id) => LOC_OPTIONS.some((o) => o.id === id)).length || ((p.levels || []).length === 1));
 /* "Hide strong ghost signals" is its own setting (store.ui.findHideGhost), on until the user turns it off,
-   so "Clear filters", "Show all" and "Use my preferences" never quietly flip it. */
+   so "Clear filters", "Show all" and "Use your preferences" never quietly flip it. */
 const find_hideGhostOn = (s) => s.ui.findHideGhost !== false;
 const find_pfC = { p: null, f: null };
 const find_fC = { base: null, hg: null, f: null };
@@ -3354,7 +3384,7 @@ const find_typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEX
 
 /* ---------- shared bits ---------- */
 /* Accent only for a standout fit: never on a listing with ghost signals (we would be promoting what we warn
-   about), and in a company's role list only for its top few (hiMin), so the pill never becomes wallpaper. */
+   about), and never inside a company's role list, where identical scores made it look random. */
 const find_fitHi = (score, job, hiMin) => score >= Math.max(95, hiMin ?? 0) && (!job || ghostLevel(job.g || 0) === "low");
 function find_hiMin(jobsArr, profile) {
   const sc = jobsArr.filter((j) => ghostLevel(j.g || 0) === "low").map((j) => find_fit(j, profile)?.score ?? -1).sort((a, b) => b - a);
@@ -3376,7 +3406,8 @@ function find_GhostHint({ g }) {
 }
 
 /* Phone count bar: two deliberate lines. Line 1 is the count and sort; line 2 is one quiet line that says
-   what's filtering the list ("Your preferences · Hiding 220 likely stale · Show"), each part a 44px target. */
+   what's filtering the list ("Your preferences · Hiding 220 with strong ghost signals · Show"), each part a
+   44px target. Same words as the wider count line and the ghostLabel() vocabulary. */
 function find_BarNarrow({ list, f, counts, profile, usingPrefs, sort }) {
   const fresh = visit.since && f.posted !== "since" ? list.filter((j) => j.p > visit.since).length : 0;
   const prefs = find_hasPrefs(profile);
@@ -3384,8 +3415,8 @@ function find_BarNarrow({ list, f, counts, profile, usingPrefs, sort }) {
   const parts = [];
   if (prefs) parts.push(usingPrefs
     ? html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" title="Filtered by your preferences. Tap to change filters" aria-label="Filtered by your preferences. Change filters" onClick=${() => openModal("findFilters")}>Your preferences</button>`
-    : html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" onClick=${() => find_setFilters(null)}>Use my preferences</button>`);
-  if (hid > 0) parts.push(html`<span class="find-bar-ghost" title="Listings with strong ghost signals: likely stale or not actively hiring"><span>${f.hideGhost ? "Hiding " : ""}<span class="num">${fmt.num(hid)}</span> likely stale</span><span class="find-bar-dot" aria-hidden="true">·</span><button type="button" class="find-link find-bar-btn" id="find-bar-ghost" aria-label=${f.hideGhost ? `Show ${hid} listings with strong ghost signals` : `Hide ${hid} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: !f.hideGhost })}>${f.hideGhost ? "Show" : "Hide"}</button></span>`);
+    : html`<button type="button" class="find-link find-bar-btn" id="find-bar-prefs" onClick=${() => find_setFilters(null)}>Use your preferences</button>`);
+  if (hid > 0) parts.push(html`<span class="find-bar-ghost"><span class="find-bar-gl">${f.hideGhost ? html`<span class="find-bar-hiding">Hiding </span>` : ""}<span class="num">${fmt.num(hid)}</span> with ${ghostLabel(100).toLowerCase()}</span><span class="find-bar-dot" aria-hidden="true">·</span><button type="button" class="find-link find-bar-btn" id="find-bar-ghost" aria-label=${f.hideGhost ? `Show ${hid} listings with strong ghost signals` : `Hide ${hid} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: !f.hideGhost })}>${f.hideGhost ? "Show" : "Hide"}</button></span>`);
   return html`<div class="find-bar2">
     <div class="find-bar2-top">
       <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
@@ -3424,7 +3455,7 @@ function find_Row({ job, app, profile, i, sel, onSelect, inCompany, hiMin }) {
     <div class="find-side">
       <span class="find-c-ghost"><${find_GhostHint} g=${job.g} /></span>
       <span class="find-c-fresh"><${Fresh} ts=${job.p} /></span>
-      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} job=${job} hiMin=${hiMin} /></span>
+      <span class="find-c-fit"><${find_FitPill} fit=${fit} sponsor=${profile && profile.needsSponsor} job=${job} hiMin=${inCompany ? 101 : hiMin} /></span>
       <span class="find-c-act" onClick=${(e) => e.stopPropagation()}>
         ${app && !saved
           ? html`<button type="button" class="find-stage" onClick=${() => openApp(app.id)} title="Open in pipeline"><${StageBadge} stage=${app.stage} /></button>`
@@ -3640,10 +3671,10 @@ VIEWS.find = function FindView() {
             <span class="find-n"><strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}</span>
             ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
             ${find_hasPrefs(profile) && (usingPrefs
-              ? [html`<span class="find-prefs" key="up">Using your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
-              : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
-            ${f.hideGhost && counts.ghostHidden > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">Hiding ${fmt.num(counts.ghostHidden)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: false })}>Show them</button></span>`]}
-            ${!f.hideGhost && counts.ghostShown > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">${fmt.num(counts.ghostShown)} with strong ghost signals</span>`, html`<span class="find-prefs" key="gs"><button type="button" class="find-link" onClick=${() => find_setFilters({ hideGhost: true })}>Hide them</button></span>`]}
+              ? [html`<span class="find-prefs" key="up">Your preferences</span>`, html`<span class="find-prefs" key="sa"><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`]
+              : html`<span class="find-prefs"><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use your preferences</button></span>`)}
+            ${f.hideGhost && counts.ghostHidden > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">Hiding ${fmt.num(counts.ghostHidden)} with ${ghostLabel(100).toLowerCase()}</span>`, html`<span class="find-prefs find-ghost-act" key="gs"><button type="button" class="find-link" aria-label=${`Show ${counts.ghostHidden} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: false })}>Show</button></span>`]}
+            ${!f.hideGhost && counts.ghostShown > 0 && [html`<span class="find-prefs find-ghost-note" key="gh">${fmt.num(counts.ghostShown)} with ${ghostLabel(100).toLowerCase()}</span>`, html`<span class="find-prefs find-ghost-act" key="gs"><button type="button" class="find-link" aria-label=${`Hide ${counts.ghostShown} listings with strong ghost signals`} onClick=${() => find_setFilters({ hideGhost: true })}>Hide</button></span>`]}
           </div>
           <span class="spacer"></span>
           <div class="find-sort hide-sm"><${Seg} label="Sort by" value=${sort} options=${FIND_SORTS} onChange=${(v) => store.set((x) => ({ ...x, ui: { ...x.ui, findSort: v } }))} /></div>
@@ -5813,7 +5844,7 @@ function pfParseCSV(text) {
     const company = get(r, "company").slice(0, 120), title = get(r, "title").slice(0, 200);
     if (!company && !title) { skipped++; continue; }
     const appliedAt = pfDate(get(r, "applied"));
-    apps.push({ key: "r" + apps.length, company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, rawStage: get(r, "stage").slice(0, 60), stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) });
+    apps.push({ key: "r" + apps.length, company: company || "Unknown company", title: title ? title.replace(/\s+-\s+/g, " – ") : "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, rawStage: get(r, "stage").slice(0, 60), stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) });
   }
   return { apps, skipped };
 }
@@ -5877,7 +5908,7 @@ MODALS.pfImport = function PfImport({ rows, dup, skipped }) {
   const extra = [dup && `${dup} already tracked`, skipped && `${skipped} without a company or title`].filter(Boolean).join(" and ");
   return html`<${Modal} title="Import from spreadsheet" size="lg" onClose=${closeModal}
     foot=${html`<${Btn} onClick=${closeModal}>Cancel</${Btn}><${Btn} kind="primary" id="pf-imp-go" onClick=${doImport}>Import ${n}</${Btn}>`}>
-    <p class="pf-imp-lead"><b>${pluralize(n, "row")} found.</b> Check the stages:${extra ? html` <span class="muted">Skipping ${extra}.</span>` : null}</p>
+    <p class="pf-imp-lead" tabIndex="-1" data-autofocus><b>${pluralize(n, "row")} found.</b> Check the stages:${extra ? html` <span class="muted">Skipping ${extra}.</span>` : null}</p>
     <div class="pf-imp" role="list" aria-label="Rows to import">
       ${rows.map((r, i) => html`<div class="pf-imp-row" role="listitem" key=${r.key}>
         <div class="pf-imp-main">

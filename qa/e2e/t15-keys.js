@@ -32,10 +32,13 @@ async function trapped(page, sel, n = 30, key = 'Tab') {
       T.check(`modal ${kind}: Escape closes`, !(await state(page)).modal);
     }
     // focus restore after modal opened from a button
-    await page.locator('button[aria-label="Add application"]').first().focus();
+    // header Add button (label "Add an application or log an email"; opens quick add at <=860px)
+    await page.locator('button[aria-label="Add an application or log an email"]').first().focus();
     await page.keyboard.press('Enter'); await page.waitForTimeout(250);
+    const addKind = (await state(page)).modal;
+    T.check('header Add opens add (desktop) / quickadd (<=860px)', addKind === (W <= 860 ? 'quickadd' : 'add'), addKind);
     await page.keyboard.press('Escape'); await page.waitForTimeout(250);
-    T.check('modal close restores focus to opener', await page.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Add application'));
+    T.check('modal close restores focus to opener', await page.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Add an application or log an email'));
     // ---- Drawers ----
     const nw = await page.evaluate(() => Apps.list().find((a) => a.company === 'Northwind Labs').id);
     await page.evaluate((id) => openApp(id), nw); await page.waitForTimeout(300);

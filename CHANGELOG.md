@@ -113,3 +113,10 @@ A second usability test played a graduating senior on a phone, looking for new-g
 
 ### 04:35 PT — accessibility
 - Automated axe-core scan (WCAG 2 A/AA) on every route in light and dark: fixed page language, progress bar names, an invalid ARIA attribute on job rows, chip-count contrast, and inline links that relied on color alone. Result: zero violations.
+
+### 04:45 PT — v10 published (design review 6: 9.0/10, accessibility)
+- Accessibility: zero axe-core WCAG 2 A/AA violations on every route and overlay, light and dark.
+- Silence respects interview rounds (an app with a round tomorrow is never "8 days silent"); rounds count as contact.
+- Imported applications never produce a fake "first reply in 0 days".
+- Share card opens on the shortest period with real activity.
+- Find says "Hiding N with strong ghost signals" consistently at every width; sort stays on the count row on tablets; Settings locations in two columns.

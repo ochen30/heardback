@@ -93,7 +93,7 @@ function pfParseCSV(text) {
     const company = get(r, "company").slice(0, 120), title = get(r, "title").slice(0, 200);
     if (!company && !title) { skipped++; continue; }
     const appliedAt = pfDate(get(r, "applied"));
-    apps.push({ key: "r" + apps.length, company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, rawStage: get(r, "stage").slice(0, 60), stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) });
+    apps.push({ key: "r" + apps.length, company: company || "Unknown company", title: title ? title.replace(/\s+-\s+/g, " – ") : "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, rawStage: get(r, "stage").slice(0, 60), stage: pfStage(get(r, "stage"), !!appliedAt), example: /^(yes|true|1)$/i.test(get(r, "example")) });
   }
   return { apps, skipped };
 }
@@ -157,7 +157,7 @@ MODALS.pfImport = function PfImport({ rows, dup, skipped }) {
   const extra = [dup && `${dup} already tracked`, skipped && `${skipped} without a company or title`].filter(Boolean).join(" and ");
   return html`<${Modal} title="Import from spreadsheet" size="lg" onClose=${closeModal}
     foot=${html`<${Btn} onClick=${closeModal}>Cancel</${Btn}><${Btn} kind="primary" id="pf-imp-go" onClick=${doImport}>Import ${n}</${Btn}>`}>
-    <p class="pf-imp-lead"><b>${pluralize(n, "row")} found.</b> Check the stages:${extra ? html` <span class="muted">Skipping ${extra}.</span>` : null}</p>
+    <p class="pf-imp-lead" tabIndex="-1" data-autofocus><b>${pluralize(n, "row")} found.</b> Check the stages:${extra ? html` <span class="muted">Skipping ${extra}.</span>` : null}</p>
     <div class="pf-imp" role="list" aria-label="Rows to import">
       ${rows.map((r, i) => html`<div class="pf-imp-row" role="listitem" key=${r.key}>
         <div class="pf-imp-main">

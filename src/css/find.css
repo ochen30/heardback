@@ -262,3 +262,20 @@ a.find-link { cursor: pointer; }
 .find-bar2-sub .find-bar-btn { padding-inline: 2px; min-width: 44px; }
 .find-bar-new { padding-inline: 4px; }
 .find-bar-dot { color: var(--fg-3); }
+/* The sidebar switch owns the ghost toggle while it is on screen, so the count line only states it there. */
+@media (min-width: 1101px) { .find-count .find-ghost-act { display: none; } }
+/* Tablet: one sort control, and it stays on the count row instead of stranding on a row of its own. */
+@media (max-width: 860px) { .find-bar .find-sort { display: none; } }
+@media (min-width: 521px) and (max-width: 1100px) {
+  .find-bar { flex-wrap: nowrap; align-items: flex-start; }
+  .find-bar .spacer { display: none; }
+  .find-bar .find-count { flex: 1; min-width: 0; padding-top: 7px; line-height: 1.5; }
+  .find-bar .find-sort-sm, .find-bar .find-sort { flex: none; margin-left: auto; }
+  .find-bar .find-sort-sm { min-width: 0; }
+}
+/* Phone: the ghost clause may shorten with an ellipsis, never change words. */
+.find-bar-gl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.find-bar-ghost .find-bar-btn { flex: none; }
+.find-bar2-sub > .find-bar-btn { flex: none; }
+/* Smallest phones only: drop the leading "Hiding" (the Show/Hide verb carries the state) so the clause fits whole. */
+@media (max-width: 410px) { .find-bar-hiding { display: none; } }

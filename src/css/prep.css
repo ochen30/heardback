@@ -350,3 +350,16 @@
   .pf-imp-row { grid-template-columns: minmax(0, 1fr) 128px; padding: 10px 12px; gap: 8px 10px; }
   .pf-imp-sel { min-height: 44px; }
 }
+/* Settings: the checklist fills its cell (it shrink-wrapped to 288px), two columns from 640px. */
+.pf-row .onb-locs { width: 100%; min-width: 0; justify-self: stretch; }
+@media (min-width: 640px) { .pf-row .onb-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* CSV preview: focus lands on the lead line, not a ringed first row; phones stack the stage under the row. */
+.pf-imp-lead:focus, .pf-imp-lead:focus-visible { outline: none; box-shadow: none; }
+@media (max-width: 520px) {
+  .pf-imp-row { grid-template-columns: minmax(0, 1fr); }
+  .pf-imp-row .pf-imp-sel { width: 100%; }
+}
+/* Skill chips are things you have, not selected toggles: neutral, not accent. */
+.chip.onb-skill[aria-pressed="true"] { background: var(--surface-2); border-color: var(--line); color: var(--fg); }
+.chip.onb-skill .ico { color: var(--fg-3); opacity: 1; }
+.pf-statement { text-wrap: pretty; }

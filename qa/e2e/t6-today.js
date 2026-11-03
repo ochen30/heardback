@@ -128,6 +128,18 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
       return { days: Apps.daysSilent(Apps.get(a.id)), kind: t && t.kind, title: t && t.title };
     });
     T.check('silence counts from appliedAt (25 days despite recent activity)', sil.days === 25 && sil.kind === 'ghost' && sil.title === 'No reply from Quiet Notes Co in 25 days', JSON.stringify(sil));
+    // Screen/Interviews with nothing scheduled: "What's next with X?" (nextround) until 2x ghost threshold, then ghost
+    const nr = await page.evaluate(() => {
+      const d = (n) => Date.now() - n * 864e5, st = store.get().settings;
+      const mid = Math.max(st.followUpDays, st.ghostDays) + 1, late = st.ghostDays * 2 + 1;
+      const a1 = Apps.create({ company: 'Midway Screen Co', title: 'SWE Intern', stage: 'screen', appliedAt: d(mid), createdAt: d(mid), lastActivityAt: d(mid) });
+      const a2 = Apps.create({ company: 'Long Quiet Co', title: 'SWE Intern', stage: 'interview', appliedAt: d(late), createdAt: d(late), lastActivityAt: d(late) });
+      ui.set({ toasts: [] });
+      const ts = computeTasks(); const k = (id) => ts.filter((t) => t.app.id === id).map((t) => `${t.kind}:${t.title}`);
+      return { mid: k(a1.id), late: k(a2.id), lateDays: late };
+    });
+    T.check('screen app silent past ghostDays -> only "What’s next with X?" (no ghost/follow)', nr.mid.length === 1 && /^nextround:What.s next with Midway Screen Co\?$/.test(nr.mid[0]), nr.mid.join(' | '));
+    T.check('interview app silent past 2x ghostDays -> ghost task', nr.late.length === 1 && nr.late[0] === `ghost:No reply from Long Quiet Co in ${nr.lateDays} days`, nr.late.join(' | '));
     // Upcoming lists the next rounds whatever the date, including beyond 7 days
     await page.evaluate(() => {
       const H = 36e5, D = 864e5, base = Math.ceil(Date.now() / D) * D;
