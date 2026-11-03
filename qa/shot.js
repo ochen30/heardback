@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs'); const http = require('http');
 const root = path.resolve(__dirname, '..'); const dist = path.join(root, 'dist'); const nm = path.join(root, 'tools', 'node_modules');
 const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
-const types = { '.html': 'text/html', '.json': 'application/json', '.js': 'text/javascript' };
+const types = { '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.js': 'text/javascript' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const f = path.join(dist, p);
@@ -25,7 +25,13 @@ const server = http.createServer((req, res) => {
     const m = route.request().url().match(/npm\/(preact|htm)@[\d.]+\/(.*)$/);
     route.fulfill({ path: path.join(nm, m[1], m[2]), contentType: 'text/javascript' });
   });
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => {
+    const u = route.request().url(); const fd = path.join(__dirname, 'fonts');
+    const m = u.match(/__fonts\/([a-f0-9]+\.woff2)/);
+    if (m && fs.existsSync(path.join(fd, m[1]))) return route.fulfill({ path: path.join(fd, m[1]), contentType: 'font/woff2' });
+    if (/css2/.test(u) && fs.existsSync(path.join(fd, 'fonts.css'))) return route.fulfill({ path: path.join(fd, 'fonts.css'), contentType: 'text/css' });
+    return route.fulfill({ status: 200, contentType: 'text/css', body: '' });
+  });
   if (process.env.MOCK) await page.addInitScript({ path: path.join(__dirname, 'mock-claude.js') });
   const setup = process.env.SETUP || 'examples';
   if (setup !== 'fresh') {

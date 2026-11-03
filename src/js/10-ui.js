@@ -155,7 +155,7 @@ function Drawer({ onClose, head, children, foot, label }) {
 }
 /* In-page confirm (the frame blocks window.confirm) */
 function Confirm({ title, body, confirmLabel = "Confirm", danger, onConfirm, onClose }) {
-  return html`<${Modal} title=${title} onClose=${onClose} foot=${html`<${Btn} onClick=${onClose}>Cancel</${Btn}><${Btn} kind=${danger ? "primary" : "primary"} onClick=${() => { onConfirm(); onClose(); }}>${confirmLabel}</${Btn}>`}>
+  return html`<${Modal} title=${title} onClose=${onClose} foot=${html`<${Btn} onClick=${onClose}>Cancel</${Btn}><${Btn} kind=${danger ? "primary danger-solid" : "primary"} onClick=${() => { onConfirm(); onClose(); }}>${confirmLabel}</${Btn}>`}>
     <p class="muted">${body}</p>
   </${Modal}>`;
 }

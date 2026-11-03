@@ -3,3 +3,5 @@ data/raw/
 qa/out/
 *.pyc
 __pycache__/
+qa/fonts/
+publish/

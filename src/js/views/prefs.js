@@ -1,0 +1,313 @@
+/* ===== Settings ===== */
+const PF_VERSION = "1.0";
+
+function pfSetProfile(patch) { store.set((s) => ({ ...s, profile: { ...s.profile, ...patch } })); }
+function pfSetSettings(patch) { store.set((s) => ({ ...s, settings: { ...s.settings, ...patch } })); }
+
+function PfRow({ label, hint, id, children, top }) {
+  return html`<div class=${cx("pf-row", top && "top")}>
+    <div class="pf-label">${id ? html`<label class="label" for=${id}>${label}</label>` : html`<span class="label">${label}</span>`}${hint && html`<span class="hint">${hint}</span>`}</div>
+    <div class="pf-control">${children}</div>
+  </div>`;
+}
+function PfCard({ icon, title, children, aside, sub }) {
+  return html`<section class="card pf-card" aria-label=${title}>
+    <div class="card-head"><${Icon} name=${icon} /><h2>${title}</h2><span class="spacer"></span>${aside}</div>
+    ${sub && html`<p class="pf-sub">${sub}</p>`}
+    <div class="pf-rows">${children}</div>
+  </section>`;
+}
+function PfNumber({ id, value, min, max, onChange, suffix }) {
+  const [v, setV] = useState(String(value));
+  useEffect(() => setV(String(value)), [value]);
+  const commit = (raw) => { const n = parseInt(raw, 10); if (!isNaN(n)) onChange(clamp(n, min, max)); else setV(String(value)); };
+  return html`<div class="row pf-num"><input id=${id} class="input num" type="number" inputmode="numeric" min=${min} max=${max} value=${v}
+    onInput=${(e) => { setV(e.currentTarget.value); const n = parseInt(e.currentTarget.value, 10); if (!isNaN(n) && n >= min && n <= max) onChange(n); }}
+    onBlur=${(e) => commit(e.currentTarget.value)} />${suffix && html`<span class="muted" style="font-size:var(--fs-sm)">${suffix}</span>`}</div>`;
+}
+
+/* ---------- Export / import ---------- */
+function pfExportJSON() {
+  const s = store.get();
+  const data = { app: "Heardback", kind: "backup", exportedAt: new Date().toISOString(), v: s.v || 1, profile: s.profile, settings: s.settings, apps: s.apps, dismissed: s.dismissed };
+  saveFile("heardback-backup.json", JSON.stringify(data, null, 2), "application/json");
+}
+function pfExportCSV() {
+  const apps = Object.values(store.get().apps).sort((a, b) => (b.lastActivityAt || 0) - (a.lastActivityAt || 0));
+  const head = ["company", "title", "location", "stage", "applied", "last activity", "url", "rounds"];
+  const iso = (t) => (t ? fmt.toDateInput(t) : "");
+  const rows = apps.map((a) => [a.company, a.title, a.location, STAGE[a.stage]?.label || a.stage, iso(a.appliedAt), iso(a.lastActivityAt), a.url, (a.rounds || []).length]);
+  saveFile("heardback-applications.csv", [head, ...rows].map((r) => r.map(csvEscape).join(",")).join("\n"), "text/csv");
+}
+const PF_STAGE_WORDS = [
+  [/offer|accepted/i, "offer"], [/reject|declin|no longer|not selected|turned down/i, "rejected"], [/ghost|no response|no reply|silent/i, "ghosted"],
+  [/interview|onsite|final|technical|superday/i, "interview"], [/screen|recruiter|phone/i, "screen"], [/appl|submitted|sent|waiting/i, "applied"], [/save|wish|bookmark|interested|to apply/i, "saved"],
+];
+function pfStage(raw, hasDate) {
+  const t = (raw || "").trim();
+  if (t) { const id = t.toLowerCase(); if (STAGE[id]) return id; const hit = PF_STAGE_WORDS.find(([re]) => re.test(t)); if (hit) return hit[1]; }
+  return hasDate ? "applied" : "saved";
+}
+function pfDate(raw) {
+  const t = (raw || "").trim(); if (!t) return null;
+  const m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const ts = m ? new Date(+m[1], +m[2] - 1, +m[3], 12).getTime() : Date.parse(t);
+  return isNaN(ts) || ts > now() + 30 * DAY || ts < Date.UTC(2000, 0, 1) ? null : ts;
+}
+function pfAppKey(a) { return norm(`${a.company}|${a.title}`); }
+function pfBuildApp(o) {
+  const t = now();
+  const stage = o.stage;
+  const created = o.appliedAt || t;
+  const ev = [{ id: uid("e_"), at: created, kind: "created", text: "Imported from CSV" }];
+  if (stage !== "saved" && stage !== "applied") ev.push({ id: uid("e_"), at: created, kind: "stage", from: "applied", to: stage, text: `Moved to ${STAGE[stage].label}` });
+  return {
+    id: uid("a_"), company: o.company, title: o.title, location: o.location || "", url: o.url || "", jobId: null, stage,
+    createdAt: created, appliedAt: stage === "saved" ? null : created, lastActivityAt: created, lastReplyAt: ["screen", "interview", "offer", "rejected"].includes(stage) ? created : null,
+    notes: "", contacts: [], rounds: [], events: ev, salary: "", source: "import", example: false,
+  };
+}
+function pfParseCSV(text) {
+  const rows = parseCSV(text.replace(/^﻿/, ""));
+  if (rows.length < 2) return { error: "That CSV has no data rows. The first row should be headers like company, title, stage." };
+  const head = rows[0].map((h) => norm(h));
+  const col = (...names) => head.findIndex((h) => names.some((n) => h === n || h.replace(/ /g, "") === n.replace(/ /g, "")));
+  const colLike = (re) => head.findIndex((h) => re.test(h));
+  const ix = {
+    company: col("company", "company name", "employer", "organization"),
+    title: col("title", "job title", "role", "position", "job"),
+    stage: col("stage", "status"),
+    applied: col("applied date", "applied", "date applied", "applied at", "applied on", "date"),
+    url: col("url", "link", "job url", "posting url", "job link"),
+    location: col("location", "city"),
+  };
+  if (ix.applied < 0) ix.applied = colLike(/appl.*date|date.*appl/);
+  if (ix.company < 0 && ix.title < 0) return { error: "Couldn't find a company or title column. Name the first row's columns company, title, stage, applied date, url, location." };
+  const get = (r, k) => (ix[k] >= 0 ? (r[ix[k]] || "").trim() : "");
+  const apps = []; let skipped = 0;
+  for (const r of rows.slice(1)) {
+    const company = get(r, "company").slice(0, 120), title = get(r, "title").slice(0, 200);
+    if (!company && !title) { skipped++; continue; }
+    const appliedAt = pfDate(get(r, "applied"));
+    apps.push(pfBuildApp({ company: company || "Unknown company", title: title || "Untitled role", location: get(r, "location").slice(0, 120), url: /^https?:\/\//i.test(get(r, "url")) ? get(r, "url") : "", appliedAt, stage: pfStage(get(r, "stage"), !!appliedAt) }));
+  }
+  return { apps, skipped };
+}
+function pfCleanApp(a) {
+  if (!a || typeof a !== "object" || typeof a.id !== "string") return null;
+  if (typeof a.company !== "string" && typeof a.title !== "string") return null;
+  const t = now();
+  return {
+    jobId: null, location: "", url: "", notes: "", salary: "", source: "import", example: false, lastReplyAt: null, appliedAt: null, ...a,
+    company: String(a.company || ""), title: String(a.title || ""), stage: STAGE[a.stage] ? a.stage : "saved",
+    createdAt: +a.createdAt || t, lastActivityAt: +a.lastActivityAt || +a.createdAt || t,
+    contacts: Array.isArray(a.contacts) ? a.contacts : [], rounds: Array.isArray(a.rounds) ? a.rounds.filter((r) => r && r.id) : [], events: Array.isArray(a.events) ? a.events : [],
+  };
+}
+function pfImportFile(file) {
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { toast("That file is over 8 MB. Import a smaller backup or CSV."); return; }
+  const r = new FileReader();
+  r.onerror = () => toast(`Couldn't read ${file.name}. Try again.`);
+  r.onload = () => {
+    const text = String(r.result || "");
+    if (/\.json$/i.test(file.name) || /^\s*[{[]/.test(text)) {
+      let data; try { data = JSON.parse(text); } catch { toast("That JSON file couldn't be read. Use a backup exported from Heardback."); return; }
+      const rawApps = Array.isArray(data) ? data : Array.isArray(data?.apps) ? data.apps : data?.apps && typeof data.apps === "object" ? Object.values(data.apps) : null;
+      if (!rawApps) { toast("That file isn't a Heardback backup. It needs an apps list."); return; }
+      const apps = rawApps.map(pfCleanApp).filter(Boolean);
+      const bad = rawApps.length - apps.length;
+      const cur = store.get().apps;
+      const replace = apps.filter((a) => cur[a.id]).length;
+      askConfirm({
+        title: `Import ${pluralize(apps.length, "application")}?`,
+        body: `They'll be merged with what's here${replace ? `; ${pluralize(replace, "application")} with the same ID will be replaced by the backup's version` : ""}.${data.profile ? " Your profile and settings will be updated from the backup." : ""}${bad ? ` ${pluralize(bad, "entry", "entries")} couldn't be read and will be skipped.` : ""}`,
+        confirmLabel: "Import and merge",
+        onConfirm: () => {
+          store.set((s) => ({
+            ...s,
+            apps: { ...s.apps, ...Object.fromEntries(apps.map((a) => [a.id, a])) },
+            profile: data.profile && typeof data.profile === "object" ? { ...s.profile, ...data.profile, onboarded: true } : s.profile,
+            settings: data.settings && typeof data.settings === "object" ? { ...s.settings, ...data.settings } : s.settings,
+            dismissed: { ...s.dismissed, ...(data.dismissed && typeof data.dismissed === "object" ? data.dismissed : {}) },
+          }));
+          toast(`Imported ${pluralize(apps.length, "application")}`);
+        },
+      });
+      return;
+    }
+    const res = pfParseCSV(text);
+    if (res.error) { toast(res.error, { ms: 6000 }); return; }
+    const existing = new Set(Object.values(store.get().apps).map(pfAppKey));
+    const fresh = []; let dup = 0;
+    for (const a of res.apps) { const k = pfAppKey(a); if (existing.has(k)) { dup++; continue; } existing.add(k); fresh.push(a); }
+    if (!fresh.length) { toast(dup ? `Nothing new to import. All ${pluralize(dup, "row")} are already tracked.` : "No rows with a company or title were found."); return; }
+    store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(fresh.map((a) => [a.id, a])) } }));
+    const extra = [dup && `${dup} already tracked`, res.skipped && `${res.skipped} without a company or title`].filter(Boolean).join(", ");
+    toast(`Imported ${pluralize(fresh.length, "application")}${extra ? `. Skipped ${extra}.` : ""}`, { ms: 6000, undo: () => store.set((s) => { const apps = { ...s.apps }; fresh.forEach((a) => delete apps[a.id]); return { ...s, apps }; }) });
+  };
+  r.readAsText(file);
+}
+function pfDeleteAll() {
+  askConfirm({
+    title: "Delete all your data?",
+    body: "This removes every application, round, note, your resume and your settings from this browser. It can't be undone. Export a backup first if you might want it later.",
+    confirmLabel: "Delete everything",
+    danger: true,
+    onConfirm: () => { store.set(() => defaultState()); toast("All data deleted from this browser"); },
+  });
+}
+
+/* ---------- Sections ---------- */
+function PfProfile() {
+  const p = useStore((s) => s.profile);
+  const locs = p.locations || [];
+  return html`<${PfCard} icon="user" title="Profile" sub="Your targets shape fit scores, the jobs you see first, and Today's suggestions.">
+    <${PfRow} label="First name" hint="Only used to greet you." id="pf-name">
+      <input id="pf-name" class="input pf-input" autocomplete="given-name" maxlength="40" placeholder="Your first name" value=${p.name || ""} onInput=${(e) => pfSetProfile({ name: e.currentTarget.value })} />
+    </${PfRow}>
+    <${PfRow} label="Weekly goal" hint="Applications per week. Shown in the sidebar." id="pf-goal">
+      <${PfNumber} id="pf-goal" value=${p.weeklyGoal || 10} min=${1} max=${100} onChange=${(n) => pfSetProfile({ weeklyGoal: n })} suffix="applications" />
+    </${PfRow}>
+    <${PfRow} label="Level">
+      <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${(p.levels || []).includes(l.id)} onClick=${() => pfSetProfile({ levels: onbToggle(p.levels || [], l.id) })}>${l.label}</${Chip}>`)}</div>
+    </${PfRow}>
+    <${PfRow} label="Roles" hint="None selected means all roles.">
+      <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${(p.roles || []).includes(c)} onClick=${() => pfSetProfile({ roles: onbToggle(p.roles || [], c) })}>${c}</${Chip}>`)}</div>
+    </${PfRow}>
+    <${PfRow} label="Locations" hint="None selected means anywhere." top=${true}>
+      <div class="chips">${onbLocChoices().map((o) => html`<${Chip} key=${o.id} on=${locs.includes(o.id)} onClick=${() => pfSetProfile({ locations: onbToggle(locs, o.id) })}>${o.label}</${Chip}>`)}</div>
+    </${PfRow}>
+    <${PfRow} label="Remote" hint="Include remote roles wherever they're based.">
+      <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
+    </${PfRow}>
+    <${PfRow} label="Visa sponsorship" hint="Flags roles that say they don't sponsor.">
+      <${Switch} id="pf-sponsor" checked=${!!p.needsSponsor} onChange=${(v) => pfSetProfile({ needsSponsor: v })} label="I'll need sponsorship" />
+    </${PfRow}>
+  </${PfCard}>`;
+}
+function PfResume() {
+  const p = useStore((s) => s.profile);
+  const words = ((p.resume || "").trim().match(/\S+/g) || []).length;
+  const sk = p.skills || [];
+  return html`<${PfCard} icon="doc" title="Resume" aside=${html`<${Btn} size="sm" icon="edit" onClick=${() => openModal("resume")} id="pf-edit-resume">${p.resume || sk.length ? "Edit resume" : "Add resume"}</${Btn}>`}>
+    <${PfRow} label="Resume text">
+      <span class=${cx("pf-value num", !words && "faint")}>${words ? `${pluralize(words, "word")} saved in this browser` : "Not added yet"}</span>
+    </${PfRow}>
+    <${PfRow} label="Skills" hint=${sk.length ? `${sk.length} used for fit scores` : "Used for fit scores and prep"} top=${true}>
+      ${sk.length ? html`<div class="chips">${sk.slice(0, 16).map((s) => html`<span class="badge outline" key=${s}>${s}</span>`)}${sk.length > 16 && html`<span class="badge">+${sk.length - 16} more</span>`}</div>` : html`<span class="pf-value faint">None yet</span>`}
+    </${PfRow}>
+  </${PfCard}>`;
+}
+function PfReminders() {
+  const st = useStore((s) => s.settings);
+  return html`<${PfCard} icon="clock" title="Reminders" sub="Today uses these to suggest follow-ups and keep your board honest.">
+    <${PfRow} label="Suggest a follow-up" hint="After this many days without a reply." id="pf-follow">
+      <${PfNumber} id="pf-follow" value=${st.followUpDays ?? 7} min=${1} max=${60} onChange=${(n) => pfSetSettings({ followUpDays: n })} suffix="days" />
+    </${PfRow}>
+    <${PfRow} label="Mark as likely ghosted" hint="After this many days of silence." id="pf-ghost">
+      <${PfNumber} id="pf-ghost" value=${st.ghostDays ?? 21} min=${3} max=${120} onChange=${(n) => pfSetSettings({ ghostDays: n })} suffix="days" />
+    </${PfRow}>
+  </${PfCard}>`;
+}
+function PfAppearance() {
+  const theme = useStore((s) => s.settings.theme);
+  return html`<${PfCard} icon="sun" title="Appearance">
+    <${PfRow} label="Theme" hint="System follows your device setting.">
+      <${Seg} label="Theme" value=${theme || "system"} onChange=${(v) => pfSetSettings({ theme: v })} options=${[{ id: "system", label: "System", icon: "eye" }, { id: "light", label: "Light", icon: "sun" }, { id: "dark", label: "Dark", icon: "moon" }]} />
+    </${PfRow}>
+  </${PfCard}>`;
+}
+function PfExamples() {
+  const s = useStore();
+  const has = hasExamples(s);
+  const n = Object.values(s.apps).filter((a) => a.example).length;
+  return html`<${PfCard} icon="layers" title="Example data" sub="Fictional applications that show how Heardback works. Always labeled Example and never counted as real.">
+    <${PfRow} label="Show examples" hint=${has ? `${pluralize(n, "example application")} loaded` : "None loaded"}>
+      <${Switch} id="pf-show-ex" checked=${!!s.settings.showExamples} onChange=${(v) => pfSetSettings({ showExamples: v })} label=${s.settings.showExamples ? "Shown" : "Hidden"} />
+    </${PfRow}>
+    <${PfRow} label="Manage">
+      <div class="row wrap"><${Btn} icon="plus" onClick=${loadExamples} disabled=${has} id="pf-load-ex">Load examples</${Btn}><${Btn} icon="trash" onClick=${clearExamples} disabled=${!has} id="pf-clear-ex">Clear examples</${Btn}></div>
+    </${PfRow}>
+  </${PfCard}>`;
+}
+function PfData() {
+  const n = useStore((s) => Object.keys(s.apps).length);
+  return html`<${PfCard} icon="download" title="Your data" sub="Everything lives in this browser. Export a backup to move it to another device.">
+    <${PfRow} label="Backup" hint="Applications, rounds, notes, profile and settings.">
+      <${Btn} icon="download" onClick=${pfExportJSON} id="pf-export-json">Export JSON backup</${Btn}>
+    </${PfRow}>
+    <${PfRow} label="Spreadsheet" hint=${`${pluralize(n, "application")}, one per row.`}>
+      <${Btn} icon="download" onClick=${pfExportCSV} disabled=${!n} id="pf-export-csv">Export CSV</${Btn}>
+    </${PfRow}>
+    <${PfRow} label="Import" hint="A Heardback .json backup, or a .csv with company, title, stage, applied date, url, location." top=${true}>
+      <div class="stack-sm">
+        <label class="btn pf-file"><${Icon} name="upload" />Choose file to import<input id="pf-import" class="sr" type="file" accept=".json,.csv,application/json,text/csv" onChange=${(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; e.currentTarget.value = ""; pfImportFile(f); }} /></label>
+      </div>
+    </${PfRow}>
+    <${PfRow} label="Delete all my data" hint="Removes everything from this browser.">
+      <${Btn} cls="danger" icon="trash" onClick=${pfDeleteAll} id="pf-delete">Delete all data</${Btn}>
+    </${PfRow}>
+  </${PfCard}>`;
+}
+function PfPrivacy() {
+  return html`<section class="card pf-card" aria-label="Privacy">
+    <div class="card-head"><${Icon} name="shield" /><h2>Privacy</h2></div>
+    <div class="card-body stack">
+      <p class="pf-statement">Your applications, notes and resume are stored only in this browser on this device. Nothing is shared unless you turn on anonymous reply data below. Claude features run on your own Claude account and only when you click them.</p>
+      <ul class="pf-facts">
+        <li><${Icon} name="check" size=${14} />No Heardback account to create, and no ads.</li>
+        <li><${Icon} name="check" size=${14} />Clearing this site's data in your browser also deletes your Heardback data, so export a backup now and then.</li>
+      </ul>
+    </div>
+  </section>`;
+}
+function PfSource() {
+  const J = useJobs();
+  const ts = onbGenTs(J.meta);
+  const st = J.meta?.stats;
+  return html`<section class="card pf-card" aria-label="Data source">
+    <div class="card-head"><${Icon} name="link" /><h2>Where job listings come from</h2></div>
+    <div class="card-body stack">
+      <p class="muted pf-text">Listings come from the <a href="https://github.com/SimplifyJobs" target="_blank" rel="noopener">SimplifyJobs community lists on GitHub</a>, refreshed by the Heardback team. Every listing links to the employer's own application page. Ghost-job signals are estimates from posting history, not facts about any company.</p>
+      <div class="row wrap pf-meta">
+        <span class="hint num">${J.status === "ready" ? `${fmt.num(st?.active ?? J.jobs.length)} open listings${st?.companies ? ` from ${fmt.num(st.companies)} companies` : ""}` : J.status === "error" ? "Listings couldn't load" : "Loading listings…"}</span>
+        ${ts && html`<span class="hint num">Last refreshed ${fmt.dateY(ts)}, ${fmt.time(ts)}</span>`}
+      </div>
+    </div>
+  </section>`;
+}
+
+VIEWS.prefs = function PrefsView() {
+  return html`<div class="page pf-page">
+    <div class="page-head"><div><h1>Settings</h1><p>Your profile, reminders, and data. Changes save automatically.</p></div></div>
+    <nav class="card pf-more show-sm" aria-label="More pages">
+      ${[{ id: "companies", label: "Companies", sub: "Who's hiring and how they respond", icon: "companies" }, { id: "stats", label: "Insights", sub: "Your reply rate, funnel and weekly activity", icon: "stats" }].map((n) => html`<button type="button" key=${n.id} class="pf-more-item" onClick=${() => go(n.id)}>
+        <span class="pf-more-ico"><${Icon} name=${n.icon} /></span><span class="stack-sm" style="gap:0;flex:1;min-width:0"><span class="pf-more-title">${n.label}</span><span class="hint">${n.sub}</span></span><${Icon} name="chevR" cls="faint" />
+      </button>`)}
+    </nav>
+    <div class="pf-layout">
+      <div class="stack pf-col">
+        <${PfProfile} />
+        <${PfResume} />
+        <${PfReminders} />
+        <${PfAppearance} />
+        <${PfExamples} />
+        <${PfData} />
+      </div>
+      <div class="stack pf-col pf-aside">
+        <${PfPrivacy} />
+        ${typeof PoolSettingsCard === "function" && html`<${PoolSettingsCard} />`}
+        <${PfSource} />
+        <section class="card pf-card" aria-label="Help">
+          <div class="card-head"><${Icon} name="keyboard" /><h2>Shortcuts</h2></div>
+          <div class="card-body stack">
+            <p class="muted pf-text">Press <${Kbd}>?</${Kbd}> anywhere, or <${Kbd}>${/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl"} K</${Kbd}> to search and run commands.</p>
+            <div><${Btn} icon="keyboard" onClick=${() => openModal("shortcuts")} id="pf-shortcuts">Keyboard shortcuts</${Btn}></div>
+          </div>
+        </section>
+        <p class="pf-version num">Heardback ${PF_VERSION} · Your data stays on this device</p>
+      </div>
+    </div>
+  </div>`;
+};

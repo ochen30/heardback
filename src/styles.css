@@ -177,6 +177,8 @@ p { margin: 0; }
 .btn.ghost { border-color: transparent; background: transparent; color: var(--fg-2); }
 .btn.ghost:hover { background: var(--surface-2); color: var(--fg); }
 .btn.danger { color: var(--bad); }
+.btn.primary.danger-solid { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.btn.primary.danger-solid:hover { filter: brightness(.94); background: var(--bad); }
 .btn.sm { height: 28px; padding: 0 9px; font-size: var(--fs-xs); border-radius: var(--r-sm); }
 .btn.icon { width: 34px; padding: 0; }
 .btn.sm.icon { width: 28px; }
@@ -498,6 +500,7 @@ p { margin: 0; }
   .drawer { width: 100vw; border-left: 0; }
   .kv { grid-template-columns: 110px minmax(0, 1fr); }
   .hide-sm { display: none !important; }
+  .toasts { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   .modal { top: auto; bottom: 0; transform: translateX(-50%); width: 100vw; border-radius: var(--r-lg) var(--r-lg) 0 0; max-height: 88vh; padding-bottom: env(safe-area-inset-bottom, 0px); }
   .palette { top: 8px; bottom: auto; border-radius: var(--r-lg); width: calc(100vw - 16px); }
 }

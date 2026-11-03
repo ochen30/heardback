@@ -56,10 +56,22 @@ function Topbar({ route }) {
   </header>`;
 }
 
+MODALS.more = () => {
+  const items = [
+    { icon: "companies", label: "Companies", run: () => go("companies") },
+    { icon: "stats", label: "Insights", run: () => go("stats") },
+    { icon: "mail", label: "Paste an email", run: () => openModal("paste") },
+    { icon: "prefs", label: "Settings", run: () => go("prefs") },
+    { icon: "keyboard", label: "Keyboard shortcuts", run: () => openModal("shortcuts") },
+  ];
+  return html`<${Modal} title="More" onClose=${closeModal}>
+    <div class="list">${items.map((it) => html`<button type="button" class="nav-item" style="min-height:48px" onClick=${() => { closeModal(); setTimeout(it.run, 0); }}><${Icon} name=${it.icon} />${it.label}<span style="margin-left:auto" class="faint"><${Icon} name="chevR" /></span></button>`)}</div>
+  </${Modal}>`;
+};
 function BottomNav({ route }) {
   const items = [NAV[0], NAV[1], NAV[2], NAV[4], { id: "prefs", label: "More", icon: "menu" }];
   return html`<nav class="bottom-nav" aria-label="Main">
-    ${items.map((n) => html`<button type="button" aria-current=${route === n.id || (n.id === "prefs" && ["companies", "stats", "prefs"].includes(route)) ? "page" : undefined} onClick=${() => go(n.id)}><${Icon} name=${n.icon} size=${20} />${n.id === "find" ? "Find" : n.id === "prep" ? "Prep" : n.label}</button>`)}
+    ${items.map((n) => html`<button type="button" aria-current=${route === n.id || (n.id === "prefs" && ["companies", "stats", "prefs"].includes(route)) ? "page" : undefined} onClick=${() => (n.id === "prefs" ? openModal("more") : go(n.id))}><${Icon} name=${n.icon} size=${20} />${n.id === "find" ? "Find" : n.id === "prep" ? "Prep" : n.label}</button>`)}
   </nav>`;
 }
 
@@ -138,8 +150,9 @@ function useShortcuts() {
     let gPending = 0;
     const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); ui.set({ palette: !ui.state.palette }); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && store.get().profile.onboarded) { e.preventDefault(); ui.set({ palette: !ui.state.palette }); return; }
       if (typing(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!store.get().profile.onboarded) return;
       if (ui.state.palette || ui.state.modal) return;
       const k = e.key;
       if (gPending && now() - gPending < 1200) {

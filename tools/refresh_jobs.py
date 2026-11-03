@@ -583,6 +583,24 @@ def build(now_ts):
         cand = (e["openInDataset"], e["seenInDataset"])
         if cur is None or cand > cur[0]:
             board_for_c[ck] = (cand, e)
+    # ---- Hiring-season progress (Heardback wedge): per company, this season's intern postings and recency.
+    term_c = Counter()
+    for p_ in postings.values():
+        if p_["active"]:
+            for r_ in p_["recs"]:
+                for t_ in (r_.get("terms") or []):
+                    term_c[t_] += 1
+    season_term = term_c.most_common(1)[0][0] if term_c else ""
+    season = defaultdict(lambda: {"posted": 0, "open": 0, "lastNew": 0})
+    new30 = Counter()
+    for p_ in postings.values():
+        if p_["posted"] >= now_ts - 30 * DAY:
+            new30[p_["ck"]] += 1
+        if season_term and any(season_term in (r_.get("terms") or []) for r_ in p_["recs"]):
+            s_ = season[p_["ck"]]
+            s_["posted"] += 1
+            s_["open"] += 1 if p_["active"] else 0
+            s_["lastNew"] = max(s_["lastNew"], int(p_["posted"]))
     companies = {}
     for ck in open_cks:
         js = by_c[ck]
@@ -612,6 +630,9 @@ def build(now_ts):
             "board": None,
             "site": next((j["_site"] for j in js if j["_site"]), ""),
         }
+        rec["new30"] = new30.get(ck, 0)
+        if ck in season and season[ck]["posted"]:
+            rec["season"] = {"term": season_term, **season[ck]}
         if ck in board_for_c:
             e = board_for_c[ck][1]
             rec["board"] = e["board"]
