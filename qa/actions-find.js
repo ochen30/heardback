@@ -27,10 +27,20 @@ module.exports = {
   async jobAI(p) {
     await ready(p); await fakeClaude(p);
     await p.click('.find-results .find-row'); await wait(p);
-    await p.click('text=Why you, why not you'); await wait(p, 300);
+    await p.click('text=Weigh my strengths and gaps'); await wait(p, 300);
     await p.click('text=Tailor my resume'); await wait(p, 300);
     await p.evaluate(() => { document.querySelector('#find-ai-h').scrollIntoView(); });
   },
+  async jobAIRegen(p) {
+    await ready(p); await fakeClaude(p);
+    await p.click('.find-results .find-row'); await wait(p);
+    await p.click('text=Weigh my strengths and gaps'); await wait(p, 300);
+    await p.click('text=Tailor my resume'); await wait(p, 300);
+    await p.click('#find-ai-h button:has-text("Regenerate")'); await wait(p, 400);
+    await p.evaluate(() => { document.querySelector('#find-ai-h').scrollIntoView(); });
+  },
+  async dupJob(p) { await ready(p); await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.dup >= 1); if (j) openJob(j.id); }); await wait(p); },
+  async searchQuant(p) { await ready(p); await p.click('text=Show all'); await wait(p, 200); await p.fill('#find-q', 'frontend'); await wait(p, 500); },
   async saveFirst(p) { await ready(p); await p.click('.find-results .find-row .find-save'); await wait(p); await p.click('.find-results .find-row:nth-child(2) .find-save'); await wait(p); await p.keyboard.press('j'); await p.keyboard.press('j'); await p.keyboard.press('j'); await wait(p, 200); },
   async keyboardOpen(p) { await ready(p); await p.click('.page-head h1'); await p.keyboard.press('j'); await p.keyboard.press('j'); await p.keyboard.press('Enter'); await wait(p); },
   async openCompany(p) { await ready(p); await p.evaluate(() => openCompany('TikTok')); await wait(p); },

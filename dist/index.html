@@ -582,6 +582,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .find-fgroups .hint { line-height: 1.4; }
 .chip .find-chip-n { font-size: var(--fs-xs); color: var(--fg-3); font-variant-numeric: tabular-nums; font-weight: 400; }
 .chip[aria-pressed="true"] .find-chip-n { color: var(--accent-text); opacity: .75; }
+.find-chip:disabled { opacity: .45; cursor: default; pointer-events: none; }
 .find-fgroups .chips { gap: 6px; }
 .find-fgroups .chip { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
 .find-fgroups .filter-group h4 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -601,7 +602,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .find-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .find-search { flex: 1; min-width: 200px; }
 .find-search .input { height: 40px; font-size: var(--fs-md); padding-right: 36px; }
-.find-search .input::-webkit-search-cancel-button { cursor: pointer; }
+.find-search .input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.find-search .find-qclear { position: absolute; right: 4px; width: 32px; height: 32px; color: var(--fg-3); }
+.find-search .find-qclear:hover { color: var(--fg); }
+.find-search .find-qclear .ico { position: static; }
 .find-kbd { position: absolute; right: 10px; pointer-events: none; }
 .find-fbtn { display: none; height: 40px; }
 .find-fcount { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-fg); font-size: var(--fs-xs); font-weight: 600; }
@@ -624,8 +628,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
   font-weight: 500; font-size: var(--fs-md); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
 .find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
-.find-side { display: grid; grid-template-columns: 112px 60px 84px 92px; align-items: center; gap: 8px; justify-items: end; }
-.find-c-ghost:empty { visibility: hidden; }
+/* Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
+.find-side { display: grid; grid-template-columns: auto 60px 84px 36px; align-items: center; gap: 8px; justify-items: end; }
+.find-has-stage .find-side { grid-template-columns: auto 60px 84px 92px; }
+.find-c-ghost { grid-column: 1; } .find-c-fit { grid-column: 2; } .find-c-fresh { grid-column: 3; } .find-c-act { grid-column: 4; }
+.find-c-ghost:empty { display: none; }
 .find-c-fit, .find-c-ghost, .find-c-fresh, .find-c-act { display: inline-flex; align-items: center; justify-content: flex-end; }
 .find-c-fit .fit { min-width: 56px; white-space: nowrap; }
 .find-c-fresh .fresh { text-align: right; }
@@ -637,7 +644,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .find-keys .kbd { margin-left: 6px; }
 .find-foot { padding-top: 0; }
 .find-row-co { grid-template-columns: minmax(0, 1fr) auto; }
-.find-results-tight .find-side { grid-template-columns: auto 60px 64px 28px; }
+.find-results-tight .find-side { grid-template-columns: auto 60px 64px 36px; }
 .find-results-tight .find-c-act .badge { display: none; }
 
 /* drawer */
@@ -676,11 +683,6 @@ button.find-h-meta { font-size: var(--fs-sm); }
 .find-fit-ico.bad { background: var(--bad-soft); color: var(--bad); }
 .find-fit-ico.none { background: var(--surface-2); color: var(--fg-3); font-size: var(--fs-xs); }
 .find-fit-list + .stack-sm { margin-top: 4px; }
-/* company mini stats inside the job drawer */
-.find-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.find-mini-s { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.find-mini-s .stat-label { font-size: var(--fs-xs); color: var(--fg-3); }
-.find-mini-v { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
 .find-season-line { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; line-height: 1.5; }
 a.find-link { cursor: pointer; }
 .find-dsub-co { column-gap: 14px; }
@@ -692,8 +694,7 @@ a.find-link { cursor: pointer; }
 @keyframes find-pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
 .find-ai-out { display: flex; flex-direction: column; gap: 10px; }
 .find-yn { gap: 16px; }
-.find-yn-h { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 600; margin-bottom: 6px; }
-.find-yn-h.ok { color: var(--ok); } .find-yn-h.bad { color: var(--bad); }
+.find-yn-h { font-size: var(--fs-xs); font-weight: 600; color: var(--fg-2); margin-bottom: 6px; }
 .find-yn .reason-list li { display: list-item; margin-left: 16px; list-style: disc; color: var(--fg-2); }
 .find-yn ul.reason-list { list-style: disc; }
 .find-bullets { display: flex; flex-direction: column; }
@@ -701,7 +702,8 @@ a.find-link { cursor: pointer; }
 .find-bullet + .find-bullet { border-top: 1px solid var(--line); }
 .find-bullet:first-child { padding-top: 0; }
 .find-bullet-row { display: flex; align-items: flex-start; gap: 8px; }
-.find-bullet-from { font-size: var(--fs-xs); color: var(--fg-3); }
+.find-bullet-from { font-size: var(--fs-xs); color: var(--fg-3); line-height: 1.45; }
+.dsec > h3 .find-h-btn { margin: -6px -8px -6px 0; }
 .find-bullet-to { flex: 1; font-size: var(--fs-sm); color: var(--fg); }
 .find-brief { font-size: var(--fs-sm); line-height: 1.6; color: var(--fg); display: flex; flex-direction: column; gap: 6px; }
 .find-brief .reason-list { color: var(--fg); }
@@ -746,7 +748,6 @@ a.find-link { cursor: pointer; }
 }
 @media (max-width: 860px) {
   .find-kv { grid-template-columns: 110px minmax(0, 1fr); }
-  .find-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .find-yn { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
@@ -767,8 +768,9 @@ a.find-link { cursor: pointer; }
   .find-c-act { margin-left: auto; }
   .find-c-act .btn.sm.icon { width: 36px; height: 36px; }
   .find-c-fit .fit { min-width: 0; }
-  .find-mini { gap: 12px; }
-  .find-mini-v, .find-stat-v { font-size: var(--fs-md); }
+  .find-stats { gap: 12px; }
+  .find-stat-v { font-size: var(--fs-md); }
+  .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }
 
@@ -1376,9 +1378,11 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .td-act.primary .ico { color: inherit; }
 .td-more { width: 28px; color: var(--fg-3); }
 .td-more:hover, .td-more[aria-expanded="true"] { color: var(--fg); background: var(--surface-2); }
+/* Hover devices: the "more" button floats just left of the action, so it reserves no width and every action ends flush with the card edge. */
 @media (hover: hover) and (pointer: fine) and (min-width: 641px) {
-  .td-more { opacity: 0; transition: opacity var(--t-fast); }
-  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; }
+  .td-task-actions { position: relative; }
+  .td-more { position: absolute; right: calc(100% + 4px); top: 50%; translate: 0 -50%; background: var(--surface); opacity: 0; pointer-events: none; transition: opacity var(--t-fast); }
+  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
 }
 .td-menu { min-width: 180px; }
 .td-menu-hint { font-size: var(--fs-xs); }
@@ -1410,7 +1414,13 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .td-job .job-meta { flex-wrap: nowrap; font-size: var(--fs-xs); }
 .td-job .job-side { display: flex; align-items: center; gap: 12px; }
 
-/* this week */
+/* this week: one compact widget (the sidebar goal card is hidden on Today) */
+.td-week { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.td-week-top { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.td-week-top h2 { font-size: var(--fs-md); font-weight: 600; }
+.td-week-top .spacer { flex: 1; }
+.td-goal-edit { margin-right: -8px; color: var(--fg-2); }
+.td-week-zero { font-size: var(--fs-sm); color: var(--fg-2); margin-top: -4px; }
 .td-week-num { display: flex; align-items: baseline; gap: 2px; font-size: var(--fs-sm); }
 .td-big { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--fg); }
 .td-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; }
@@ -1421,7 +1431,6 @@ tr:hover .pl-stage-sel .select, .pl-stage-sel .select:focus, .pl-round-type:hove
 .td-bar.future .td-bar-track { border-bottom-style: dashed; border-bottom-color: var(--line); }
 .td-bar-lbl { font-size: var(--fs-xs); color: var(--fg-3); }
 .td-bar.today .td-bar-lbl { color: var(--fg); font-weight: 600; }
-.td-week-zero p { font-size: var(--fs-sm); color: var(--fg-2); }
 .td-link-quiet { color: var(--fg-2); font-weight: 500; }
 .td-link-quiet:hover { color: var(--fg); }
 .td-unit { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); margin-left: 4px; letter-spacing: 0; }
@@ -2963,9 +2972,13 @@ function find_CheckRow({ id, type = "checkbox", name, checked, onChange, label, 
     ${n != null && html`<span class="find-opt-n">${fmt.num(n)}</span>`}
   </label>`;
 }
+/* Facet chip: a zero-count option that isn't selected can't add anything, so it's disabled. */
+function find_FacetChip({ on, n, onClick, children }) {
+  const dead = !on && !n;
+  return html`<button type="button" class="chip find-chip" aria-pressed=${on ? "true" : "false"} disabled=${dead} title=${dead ? "No matches with the current search and filters" : null} onClick=${onClick}>${on && html`<${Icon} name="check" size=${13} />`}${children}<span class="find-chip-n">${fmt.num(n || 0)}</span></button>`;
+}
 function find_FilterControls({ px, f, counts, jobs }) {
   const [moreLocs, setMoreLocs] = useState(false);
-  const n = (x) => html`<span class="find-chip-n">${fmt.num(x || 0)}</span>`;
   const roles = CATS.concat(counts.cRole.Other ? ["Other"] : []);
   // Locations by count; the top few always show, plus anything selected.
   // Sorted by the current count. Location counts ignore the location filter itself, so ticking a box never reorders the list.
@@ -2977,11 +2990,11 @@ function find_FilterControls({ px, f, counts, jobs }) {
   return html`<div class="find-fgroups">
     <div class="filter-group" role="group" aria-labelledby=${px + "-lv"}>
       <h4 id=${px + "-lv"}>Level</h4>
-      <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${f.lv.includes(l.id)} onClick=${() => find_setFilters({ lv: find_toggle(f.lv, l.id) })}>${l.label}${n(counts.cLv[l.id])}</${Chip}>`)}</div>
+      <div class="chips">${LEVELS.map((l) => html`<${find_FacetChip} key=${l.id} on=${f.lv.includes(l.id)} n=${counts.cLv[l.id]} onClick=${() => find_setFilters({ lv: find_toggle(f.lv, l.id) })}>${l.label}</${find_FacetChip}>`)}</div>
     </div>
     <div class="filter-group" role="group" aria-labelledby=${px + "-role"}>
       <h4 id=${px + "-role"}>Role</h4>
-      <div class="chips">${roles.map((r) => html`<${Chip} key=${r} on=${f.roles.includes(r)} onClick=${() => find_setFilters({ roles: find_toggle(f.roles, r) })}>${r}${n(counts.cRole[r])}</${Chip}>`)}</div>
+      <div class="chips">${roles.map((r) => html`<${find_FacetChip} key=${r} on=${f.roles.includes(r)} n=${counts.cRole[r]} onClick=${() => find_setFilters({ roles: find_toggle(f.roles, r) })}>${r}</${find_FacetChip}>`)}</div>
     </div>
     <div class="filter-group" role="group" aria-labelledby=${px + "-loc"}>
       <h4 id=${px + "-loc"}>Location${f.locs.length > 0 && html` <button type="button" class="find-link find-h-clear" onClick=${() => find_setFilters({ locs: [] })}>Clear</button>`}</h4>
@@ -3127,7 +3140,7 @@ VIEWS.find = function FindView() {
           <div class="input-icon find-search">
             <${Icon} name="search" />
             <input id="find-q" class="input" type="search" placeholder="Search title, company or location" value=${qIn} onInput=${(e) => setQIn(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Escape" && qIn) { e.stopPropagation(); setQIn(""); } else if (e.key === "Enter") { setQ(qIn); find_state.q = qIn; } }} aria-label="Search jobs" autocomplete="off" />
-            ${!qIn && html`<span class="kbd find-kbd hide-sm">/</span>`}
+            ${qIn ? html`<${Btn} kind="ghost" size="sm" icon="x" cls="find-qclear" aria-label="Clear search" onClick=${() => { setQIn(""); setQ(""); find_state.q = ""; document.getElementById("find-q")?.focus(); }} />` : html`<span class="kbd find-kbd hide-sm">/</span>`}
           </div>
           <${Btn} cls="find-fbtn" icon="filter" onClick=${() => openModal("findFilters")} aria-label=${`Filters${nActive ? `, ${nActive} active` : ""}`}>Filters${nActive ? html`<span class="find-fcount num">${nActive}</span>` : null}</${Btn}>
         </div>
@@ -3146,7 +3159,7 @@ VIEWS.find = function FindView() {
           </select>
         </div>
         ${list.length
-          ? html`<div class="card find-results"><div class="list" role="list" aria-label="Job results">
+          ? html`<div class=${cx("card find-results", rows.some((j) => { const a = byJob.get(j.id); return a && a.stage !== "saved"; }) && "find-has-stage")}><div class="list" role="list" aria-label="Job results">
               ${rows.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${profile} i=${i} sel=${i === sel} onSelect=${setSel} />`)}
             </div></div>
             ${shown < list.length && html`<div class="find-more" ref=${sentinel}><${Btn} onClick=${() => setShown((n) => n + FIND_PAGE)}>Show ${Math.min(FIND_PAGE, list.length - shown)} more</${Btn}><span class="faint num">Showing ${fmt.num(shown)} of ${fmt.num(list.length)}</span></div>`}
@@ -3188,10 +3201,10 @@ const find_hasResume = (p) => (p.resume || "").trim().length >= 40;
 const find_jobBrief = (job) => `Title: ${job.t}\nCompany: ${job.co}\nLevel: ${FIND_LV[job.lvl]}${job.term ? ` (${job.term})` : ""}\nCategory: ${job.cat}\nLocations: ${(job.l || []).slice(0, 6).join("; ") || "not listed"}${job.nl > 6 ? ` and ${job.nl - 6} more` : ""}\nDegrees listed: ${(job.deg || []).join(", ") || "not stated"}`;
 
 const FIND_AI_NOTE = "Drafted by Claude · review before using.";
-function find_WhyYou({ job, profile, onOut }) {
+function find_WhyYou({ job, profile, onOut, regen }) {
   const [st, run, stop] = find_useAI();
   const [jd, setJd] = useState("");
-  useEffect(() => { onOut && onOut(!!st.out); }, [st.out]);
+  useEffect(() => { onOut && onOut(st.out ? "out" : st.busy ? "busy" : ""); }, [st.out, st.busy]);
   if (!find_hasResume(profile)) return null;
   const go = () => run(async (signal) => {
     const prompt = `You help a student or new grad decide whether a job is worth applying to.
@@ -3207,27 +3220,28 @@ ${profile.resume.slice(0, 8000)}
 Return JSON: {"why": [2-4 strings: reasons this resume fits], "whyNot": [2-4 strings: gaps or risks], "note": "one sentence on what would sharpen this read"}`;
     return askClaudeJSON(prompt, { signal, modelTier: "quick" });
   });
+  if (regen) regen.current.a = go;
   const o = st.out;
   return html`<div class="stack">
     <div class="field">
       <label for="find-jd">Job description <span class="faint">(optional)</span></label>
       <textarea id="find-jd" class="textarea find-jd" placeholder="Paste the job description for a sharper read." value=${jd} onInput=${(e) => setJd(e.currentTarget.value)}></textarea>
     </div>
-    ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : html`<div><${Btn} icon="spark" onClick=${go}>${o ? "Ask again" : "Why you, why not you"}</${Btn}></div>`}
+    ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : !o && html`<div><${Btn} icon="spark" onClick=${go}>Weigh my strengths and gaps</${Btn}></div>`}
     ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err} The fit check above works without Claude.</span></div>`}
     ${o && html`<div class="find-ai-out">
       <div class="grid cols-2 find-yn">
-        <div><div class="find-yn-h ok"><${Icon} name="check" size=${14} />Why you</div><ul class="reason-list">${(o.why || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
-        <div><div class="find-yn-h bad"><${Icon} name="x" size=${14} />Why not you (yet)</div><ul class="reason-list">${(o.whyNot || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
+        <div><div class="find-yn-h">Strengths</div><ul class="reason-list">${(o.why || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
+        <div><div class="find-yn-h">Gaps</div><ul class="reason-list">${(o.whyNot || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
       </div>
       ${o.note && html`<p class="hint">${o.note}</p>`}
     </div>`}
   </div>`;
 }
 
-function find_Tailor({ job, profile, onOut }) {
+function find_Tailor({ job, profile, onOut, regen }) {
   const [st, run, stop] = find_useAI();
-  useEffect(() => { onOut && onOut(!!(st.out?.bullets || []).length); }, [st.out]);
+  useEffect(() => { onOut && onOut((st.out?.bullets || []).length ? "out" : st.busy ? "busy" : ""); }, [st.out, st.busy]);
   const go = () => run(async (signal) => {
     const prompt = `Rewrite lines from a candidate's EXISTING resume so they fit this role better.
 Rules: only rework lines that are already in the resume. Never invent experience, employers, numbers, tools or results. If a line has no metric, do not add one. Keep each rewritten bullet under 30 words, start with a strong verb, and keep it truthful to the original.
@@ -3242,13 +3256,14 @@ ${profile.resume.slice(0, 8000)}
 Return JSON: {"bullets": [3-5 items of {"from": "the original resume line, quoted exactly or nearly", "to": "the rewritten bullet", "why": "under 12 words on why it fits this role"}]}`;
     return askClaudeJSON(prompt, { signal, modelTier: "default" });
   });
+  if (regen) regen.current.b = go;
   const bl = st.out?.bullets || [];
   return html`<div class="stack">
-    ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : html`<div><${Btn} icon="doc" onClick=${go}>${st.out ? "Suggest again" : "Tailor my resume"}</${Btn}></div>`}
+    ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : !bl.length && html`<div><${Btn} icon="doc" onClick=${go}>Tailor my resume</${Btn}></div>`}
     ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err}</span></div>`}
     ${bl.length > 0 && html`<div class="find-bullets">
       ${bl.map((b, i) => html`<div class="find-bullet" key=${i}>
-        <div class="find-bullet-from"><span class="faint">From</span> ${b.from}</div>
+        <div class="find-bullet-from">From “${String(b.from || "").replace(/^["“”']+|["“”']+$/g, "")}”</div>
         <div class="find-bullet-row"><div class="find-bullet-to">${b.to}</div><${Btn} kind="ghost" size="sm" icon="copy" aria-label="Copy bullet" title="Copy" onClick=${() => copyText(b.to, "Bullet copied")} /></div>
         ${b.why && html`<div class="hint">${b.why}</div>`}
       </div>`)}
@@ -3257,13 +3272,19 @@ Return JSON: {"bullets": [3-5 items of {"from": "the original resume line, quote
 }
 
 function find_AskClaude({ job, profile }) {
-  const [a, setA] = useState(false);
-  const [b, setB] = useState(false);
+  const [a, setA] = useState("");
+  const [b, setB] = useState("");
+  const regen = useRef({});
+  const anyOut = a === "out" || b === "out";
+  const busy = a === "busy" || b === "busy";
+  const again = () => { if (a === "out") regen.current.a?.(); if (b === "out") regen.current.b?.(); };
   return html`<section class="dsec" aria-labelledby="find-ai-h">
-    <h3 id="find-ai-h">Ask Claude<span class="spacer"></span><span class="ai-label find-h-meta"><${Icon} name="spark" />Uses your Claude account</span></h3>
+    <h3 id="find-ai-h">Ask Claude<span class="spacer"></span>${anyOut && !busy
+      ? html`<${Btn} kind="ghost" size="sm" icon="refresh" cls="find-h-btn" onClick=${again}>Regenerate</${Btn}>`
+      : html`<span class="ai-label find-h-meta"><${Icon} name="spark" />Uses your Claude account</span>`}</h3>
     ${find_hasResume(profile)
-      ? html`<${find_WhyYou} job=${job} profile=${profile} onOut=${setA} /><${find_Tailor} job=${job} profile=${profile} onOut=${setB} />
-        ${(a || b) && html`<span class="ai-label"><${Icon} name="spark" />${FIND_AI_NOTE}</span>`}`
+      ? html`<${find_WhyYou} job=${job} profile=${profile} onOut=${setA} regen=${regen} /><${find_Tailor} job=${job} profile=${profile} onOut=${setB} regen=${regen} />
+        ${anyOut && html`<span class="ai-label"><${Icon} name="spark" />${FIND_AI_NOTE}</span>`}`
       : html`<p class="muted find-small">Add your resume and Claude can weigh your fit or suggest stronger bullets from what's already there. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button></p>`}
   </section>`;
 }
@@ -3348,7 +3369,7 @@ DRAWERS.job = ({ id }) => {
       <h3 id="find-gh-h">Listing check</h3>
       <div class=${cx("find-gline", lv)}><span class=${cx("gscore", lv)} aria-hidden="true"><span class="gbars"><i></i><i></i><i></i></span></span><span>${find_ghostLine(job)}</span></div>
       ${lv !== "low" && (job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${r}</li>`)}</ul>`}
-      ${job.dup ? html`<p class="muted find-small">Listed ${pluralize(job.dup, "more time")} with the same title and locations. Shown once here.</p>` : null}
+      ${job.dup ? html`<p class="muted find-small">Also posted ${job.dup === 1 ? "once more" : job.dup === 2 ? "twice more" : `${fmt.num(job.dup)} more times`} with the same title. Shown once.</p>` : null}
       <details class="find-details">
         <summary>How this works</summary>
         <div class="find-details-body">
@@ -3381,12 +3402,10 @@ DRAWERS.job = ({ id }) => {
 
     <section class="dsec" aria-labelledby="find-co-h">
       <h3 id="find-co-h"><span class="truncate">${job.co}</span><span class="spacer"></span><button type="button" class="find-link find-h-meta" onClick=${() => openCompany(job.co)}>View company</button></h3>
-      ${cs ? html`<div class="find-mini">
-        <div class="find-mini-s"><span class="find-mini-v num">${fmt.num(coOpen || cs.open)}</span><span class="stat-label">open roles</span></div>
-        ${cs.medOpenDays != null
-          ? html`<div class="find-mini-s" title=${cs.closedTimed ? `Median from ${pluralize(cs.closedTimed, "closed listing")}` : ""}><span class="find-mini-v num">${find_daysText(cs.medOpenDays)}</span><span class="stat-label">typical time open</span></div>`
-          : html`<div class="find-mini-s"><span class="find-mini-v num">${cs.new30 != null ? fmt.num(cs.new30) : "–"}</span><span class="stat-label">new in last 30 days</span></div>`}
-        <div class="find-mini-s"><span class="find-mini-v num">${fmt.pct(cs.repostShare)}</span><span class="stat-label">reposted titles</span></div>
+      ${cs ? html`<div class="find-stats">
+        <${find_Stat} label="Open roles" value=${fmt.num(coOpen || cs.open)} />
+        <${find_TimeOpenStat} cs=${cs} />
+        <${find_Stat} label="Reposted" value=${fmt.pct(find_repostShare(jobs, job.co))} title=${FIND_REPOST_HELP} />
       </div>
       ${season && html`<p class="find-small find-season-line"><span class="muted">${season.term} hiring:</span> <span class="num">${fmt.num(season.open)} of ${fmt.num(season.posted)} postings still open</span>${season.read && html` <span class=${cx("badge", season.tone)}>${season.read}</span>`}</p>`}` : html`<p class="muted find-small">No company history for this listing yet.</p>`}
     </section>
@@ -3397,15 +3416,20 @@ DRAWERS.job = ({ id }) => {
 const CO_SORTS = [{ id: "open", label: "Most open roles" }, { id: "hiring", label: "Still hiring" }, { id: "fast", label: "Fastest to close" }, { id: "ghost", label: "Most likely real" }, { id: "az", label: "A–Z" }];
 const find_openN = (jobsState, name, c) => (jobsState.byCompany.get(name) || []).length || c.open || 0;
 const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.season.posted : null);
-const find_ghostShareC = { jobs: null, m: null };
-function find_ghostShare(jobsState) {
-  if (find_ghostShareC.jobs !== jobsState.jobs) {
+/* One definition of "Reposted", used by the Companies table and both drawers:
+   share of a company's open roles (as listed in Find) whose title it posted and closed before. */
+const FIND_REPOST_HELP = "Share of this company's open roles whose title it posted and closed at least once before. Grey under 20%, amber from 20%, red from 50%. Not proof either way.";
+const find_repC = { jobs: null, m: null };
+function find_repostMap(jobsState) {
+  if (find_repC.jobs !== jobsState.jobs) {
     const m = new Map();
-    for (const [co, list] of jobsState.byCompany) { let g = 0; for (const j of list) if (j.g >= 50) g++; m.set(co, list.length ? g / list.length : 0); }
-    find_ghostShareC.jobs = jobsState.jobs; find_ghostShareC.m = m;
+    for (const [co, list] of jobsState.byCompany) { let r = 0; for (const j of list) if (j.rp >= 1) r++; m.set(co, list.length ? r / list.length : 0); }
+    find_repC.jobs = jobsState.jobs; find_repC.m = m;
   }
-  return find_ghostShareC.m;
+  return find_repC.m;
 }
+const find_repostShare = (jobsState, name) => find_repostMap(jobsState).get(name) ?? jobsState.cstats[name]?.repostShare ?? 0;
+const find_repTone = (r) => (r >= 0.5 ? "high" : r >= 0.2 ? "mid" : "");
 function find_useAppsByCompany() {
   const s = useStore();
   return useMemo(() => { const m = new Map(); for (const a of Apps.list(s)) { const k = norm(a.company); m.set(k, (m.get(k) || 0) + 1); } return m; }, [s.apps, s.settings.showExamples]);
@@ -3420,7 +3444,7 @@ VIEWS.companies = function CompaniesView() {
   const [shown, setShown] = useState(50);
   useEffect(() => { const t = setTimeout(() => setQ(qIn), 120); return () => clearTimeout(t); }, [qIn]);
   const ready = jobs.status === "ready";
-  const gs = ready ? find_ghostShare(jobs) : null;
+  const rs = ready ? find_repostMap(jobs) : null;
   const list = useMemo(() => {
     if (!ready) return [];
     const words = norm(q).split(" ").filter(Boolean);
@@ -3430,7 +3454,7 @@ VIEWS.companies = function CompaniesView() {
       open: (a, b) => b.open - a.open || a.name.localeCompare(b.name),
       hiring: (a, b) => (find_stillShare(b.c) ?? -1) - (find_stillShare(a.c) ?? -1) || (b.c.season?.open || 0) - (a.c.season?.open || 0),
       fast: (a, b) => (a.c.medOpenDays ?? 1e9) - (b.c.medOpenDays ?? 1e9) || b.open - a.open,
-      ghost: (a, b) => (gs.get(a.name) ?? 0) - (gs.get(b.name) ?? 0) || a.c.avgGhost - b.c.avgGhost || b.open - a.open,
+      ghost: (a, b) => (rs.get(a.name) ?? 0) - (rs.get(b.name) ?? 0) || a.c.avgGhost - b.c.avgGhost || b.open - a.open,
       az: (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
     }[sort];
     return arr.sort(by);
@@ -3449,7 +3473,7 @@ VIEWS.companies = function CompaniesView() {
   return html`<div class="page">
     ${head}
     <div class="find-toolbar find-co-toolbar">
-      <div class="input-icon find-search"><${Icon} name="search" /><input id="co-q" class="input" type="search" placeholder="Search companies" value=${qIn} onInput=${(e) => setQIn(e.currentTarget.value)} aria-label="Search companies" autocomplete="off" /></div>
+      <div class="input-icon find-search"><${Icon} name="search" /><input id="co-q" class="input" type="search" placeholder="Search companies" value=${qIn} onInput=${(e) => setQIn(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Escape" && qIn) { e.stopPropagation(); setQIn(""); } }} aria-label="Search companies" autocomplete="off" />${qIn && html`<${Btn} kind="ghost" size="sm" icon="x" cls="find-qclear" aria-label="Clear search" onClick=${() => { setQIn(""); setQ(""); document.getElementById("co-q")?.focus(); }} />`}</div>
       <div class="hide-sm"><${Seg} label="Sort companies" value=${sort} options=${CO_SORTS} onChange=${setSort} /></div>
       <select id="co-sort-sm" class="select show-sm find-sort-sm" aria-label="Sort companies" value=${sort} onChange=${(e) => setSort(e.currentTarget.value)}>${CO_SORTS.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select>
     </div>
@@ -3457,18 +3481,18 @@ VIEWS.companies = function CompaniesView() {
     <div class="card hide-sm">
       <table class="table find-cotable">
         <thead><tr>
-          <th>Company</th><th class="r">Open roles</th><th>Intern / new grad</th><th class="r" title="Median days a closed listing stayed open"><span class="find-th-help">Typical time open<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this season's internship postings still open"><span class="find-th-help">Still hiring<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this company's open roles with several stale-listing signals (score 50 or more). Grey under 20%, amber from 20%, red from 50%. Signals, not proof."><span class="find-th-help">Stale signals<${Icon} name="info" size=${12} /></span></th>${anyApps && html`<th class="r">Your apps</th>`}
+          <th>Company</th><th class="r">Open roles</th><th>Intern / new grad</th><th class="r" title="Median days a closed listing stayed open"><span class="find-th-help">Typical time open<${Icon} name="info" size=${12} /></span></th><th class="r" title="Share of this season's internship postings still open"><span class="find-th-help">Still hiring<${Icon} name="info" size=${12} /></span></th><th class="r" title=${FIND_REPOST_HELP}><span class="find-th-help">Reposted<${Icon} name="info" size=${12} /></span></th>${anyApps && html`<th class="r">Your apps</th>`}
         </tr></thead>
         <tbody>${rows.map((x) => {
           const n = appsBy.get(x.k) || 0;
-          const g = gs.get(x.name) ?? 0;
+          const g = rs.get(x.name) ?? 0;
           return html`<tr key=${x.name} tabindex="0" onClick=${() => openCompany(x.name)} onKeyDown=${(e) => { if (e.key === "Enter") openCompany(x.name); }}>
             <td><div class="row"><${Logo} name=${x.name} size="sm" /><span class="truncate find-coname">${x.name}</span></div></td>
             <td class="r num">${fmt.num(x.open)}</td>
             <td><div class="find-split" title=${`${x.c.intern} internships · ${x.c.newgrad} new grad`}><span class="find-split-bar"><i style=${`width:${x.c.open ? (x.c.intern / x.c.open) * 100 : 0}%`}></i></span><span class="num muted">${x.c.intern} / ${x.c.newgrad}</span></div></td>
             <td class="r num">${lifetime(x.c)}</td>
             <td class="r num">${find_stillShare(x.c) != null ? html`<span title=${`${x.c.season.open} of ${x.c.season.posted} ${x.c.season.term} postings open`}>${fmt.pct(find_stillShare(x.c))}</span>` : html`<span class="faint">–</span>`}</td>
-            <td class="r num"><span class=${cx("find-gshare", g >= 0.5 ? "high" : g >= 0.2 ? "mid" : "")}>${fmt.pct(g)}</span></td>
+            <td class="r num"><span class=${cx("find-gshare", find_repTone(g))}>${fmt.pct(g)}</span></td>
             ${anyApps && html`<td class="r num">${n ? html`<span class="badge accent" title=${pluralize(n, "application")}>${n}</span>` : null}</td>`}
           </tr>`;
         })}</tbody>
@@ -3478,7 +3502,7 @@ VIEWS.companies = function CompaniesView() {
       const n = appsBy.get(x.k) || 0;
       return html`<button type="button" class="find-corow" key=${x.name} onClick=${() => openCompany(x.name)}>
         <${Logo} name=${x.name} />
-        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta">${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (gs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(gs.get(x.name))} with stale signals` : ""].filter(Boolean).join(" · ")}</span></div>
+        <div class="find-row-main"><span class="find-row-title">${x.name}</span><span class="find-row-meta">${[pluralize(x.open, "open role"), x.c.medOpenDays != null ? `usually open ${find_daysText(x.c.medOpenDays)}` : "", (rs.get(x.name) ?? 0) >= 0.2 ? `${fmt.pct(rs.get(x.name))} reposted` : ""].filter(Boolean).join(" · ")}</span></div>
         ${n ? html`<span class="badge accent">${n}</span>` : html`<${Icon} name="chevR" cls="faint" />`}
       </button>`;
     })}</div></div>
@@ -3497,6 +3521,11 @@ function find_Stat({ label, value, sub, title }) {
     <span class="find-stat-v num">${value}</span>
     ${sub && html`<span class="stat-sub">${sub}</span>`}
   </div>`;
+}
+function find_TimeOpenStat({ cs }) {
+  const nClosed = cs?.closedTimed || 0;
+  const fromClosed = nClosed ? `From ${pluralize(nClosed, "closed listing")}` : "";
+  return html`<${find_Stat} label="Typical time open" value=${find_daysText(cs.medOpenDays) || html`<span class="faint find-nd">Not enough data</span>`} title=${cs.medOpenDays != null ? `Median days a closed listing stayed open. ${fromClosed}.` : "Needs at least 5 closed listings with dates."} />`;
 }
 function find_BriefText({ text }) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -3551,7 +3580,7 @@ DRAWERS.company = ({ id }) => {
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${name}</h2>
       <div class="row wrap find-dsub find-dsub-co">
-        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
+        ${cs || open.length ? html`<span class="muted">${pluralize(nOpen, "open role")}${cs && (cs.intern || cs.newgrad) ? html`<span class="sep"> · </span>${fmt.num(cs.intern)} internship, ${fmt.num(cs.newgrad)} new grad` : null}</span>` : html`<span class="muted">${loading ? "Loading…" : "No open listings right now"}</span>`}
         ${cs?.site && html`<a href=${cs.site} target="_blank" rel="noopener" class="find-ext">Profile on Simplify<${Icon} name="ext" size=${13} /></a>`}
       </div>
     </div>
@@ -3559,23 +3588,18 @@ DRAWERS.company = ({ id }) => {
 
   const roles = allRoles ? open : open.slice(0, 8);
   const season = find_season(cs);
-  const nClosed = cs?.closedTimed || 0;
-  const fromClosed = nClosed ? `From ${pluralize(nClosed, "closed listing")}` : "";
   return html`<${Drawer} onClose=${closeDrawer} label=${name} head=${head}>
     ${loading && html`<${Skeleton} rows=${4} />`}
     ${cs && html`<section class="dsec" aria-labelledby="find-cs-h">
       <h3 id="find-cs-h">Listing history</h3>
       <div class="find-stats">
-        <${find_Stat} label="Open roles" value=${fmt.num(nOpen)} sub=${`${fmt.num(cs.intern)} internship · ${fmt.num(cs.newgrad)} new grad`} />
-        <${find_Stat} label="Typical time open" value=${find_daysText(cs.medOpenDays) || html`<span class="faint find-nd">Not enough data</span>`} sub=${cs.medOpenDays != null ? fromClosed : ""} title=${cs.medOpenDays != null ? `Median days a closed listing stayed open. ${fromClosed}.` : "Needs at least 5 closed listings with dates."} />
-        <${find_Stat} label="Closed within 14 days" value=${cs.fastClose != null ? fmt.pct(cs.fastClose) : html`<span class="faint find-nd">Not enough data</span>`} title=${cs.fastClose != null ? `Share of closed listings that came down within two weeks. ${fromClosed}.` : ""} />
-        <${find_Stat} label="Reposted titles" value=${fmt.pct(cs.repostShare)} title="Share of open roles whose title this company listed before." />
+        <${find_TimeOpenStat} cs=${cs} />
+        <${find_Stat} label="Reposted" value=${fmt.pct(find_repostShare(jobs, name))} title=${FIND_REPOST_HELP} />
         <${find_Stat} label="New in last 30 days" value=${cs.new30 != null ? fmt.num(cs.new30) : "–"} title="Postings added in the last 30 days, open or closed." />
-        <${find_Stat} label="First seen" value=${cs.first ? fmt.date(cs.first * 1000, { month: "short", year: "numeric" }) : "–"} title="Earliest listing in the dataset, which starts Mar 2026." />
       </div>
       <details class="find-details">
         <summary>How these are calculated</summary>
-        <div class="find-details-body"><p>From public SimplifyJobs listing history. Times open use closed listings that stayed up at least a day; listings still open aren't counted, so typical times may run short. The data starts in March 2026.</p></div>
+        <div class="find-details-body"><p>From public SimplifyJobs listing history. Typical time open is the median for closed listings that stayed up at least a day${cs.closedTimed ? ` (${pluralize(cs.closedTimed, "listing")} here)` : ""}; listings still open aren't counted, so it may run short. Reposted is the share of open roles whose title was posted and closed before. The data starts in March 2026${cs.first ? `; this company first appears ${fmt.date(cs.first * 1000, { month: "short", year: "numeric" })}` : ""}.</p></div>
       </details>
     </section>`}
 
@@ -3601,7 +3625,7 @@ DRAWERS.company = ({ id }) => {
     ${capsNow.sample && html`<${find_Brief} name=${name} cs=${cs} />`}
 
     ${(open.length > 0 || !loading) && html`<section class="dsec" aria-labelledby="find-open-h">
-      <h3 id="find-open-h">Open roles <span class="count">${fmt.num(open.length)}</span></h3>
+      <h3 id="find-open-h">Roles</h3>
       ${open.length
         ? html`<div class="find-dlist find-results-tight"><div class="list" role="list">${roles.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${s.profile} i=${i} inCompany />`)}</div></div>
           ${open.length > 8 && html`<div><${Btn} size="sm" onClick=${() => setAllRoles(!allRoles)}>${allRoles ? "Show fewer" : `Show all ${fmt.num(open.length)}`}</${Btn}></div>`}`
@@ -3932,7 +3956,7 @@ function plFirstName(s) { return (s || "").replace(/\([^)]*\)/g, "").split(/[,&;
 function plStatus(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
-  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: fmt.dateTime(up.at) };
+  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", main: plWhen(up.at), extra: ROUND[up.type]?.label || "Round", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: `${ROUND[up.type]?.label || "Round"} · ${fmt.dateTime(up.at)}` };
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
@@ -4227,7 +4251,7 @@ function PlCard({ a, settings, dragging, onMenu, ...rest }) {
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} /><span class="truncate">${stt.text}</span></span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="truncate pl-status-extra">· ${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -4295,7 +4319,7 @@ function PlTable({ apps, settings, sort }) {
     <div class="table-wrap">
       <table class="table pl-table">
         <thead><tr>${PL_COLS.map((c) => html`<th key=${c.k} class=${cx(c.num && "pl-num")} aria-sort=${sort.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : "none"}>
-          <button type="button" onClick=${() => setSort(c.k)}>${c.label}${sort.k === c.k ? html`<${Icon} name=${sort.dir > 0 ? "chevD" : "chevD"} size=${12} cls=${cx("pl-sort", sort.dir < 0 && "desc")} />` : html`<${Icon} name="sort" size=${12} cls="pl-sort-idle" />`}</button>
+          <button type="button" onClick=${() => setSort(c.k)}><span>${c.label}</span>${sort.k === c.k ? html`<${Icon} name=${sort.dir > 0 ? "chevD" : "chevD"} size=${12} cls=${cx("pl-sort", sort.dir < 0 && "desc")} />` : html`<${Icon} name="sort" size=${12} cls="pl-sort-idle" />`}</button>
         </th>`)}</tr></thead>
         <tbody>
           ${rows.map((a) => {
@@ -4401,7 +4425,7 @@ function PlStepper({ a }) {
         const st = STAGE[id];
         const state = !closed && i === cur ? "cur" : (!closed && i < cur) || (closed && i <= far) ? "done" : "";
         return html`<button type="button" key=${id} class=${cx("pl-step", state, closed && "muted-done")} aria-pressed=${!closed && i === cur ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${st.label} (press ${i + 1})`}>
-          <i></i><span class="pl-step-l">${st.label}</span><span class="pl-step-s">${st.short}</span>
+          <i></i><span>${st.label}</span>
         </button>`;
       })}
     </div>
@@ -4444,7 +4468,7 @@ function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.repl
 function PlOverview({ a, ns, settings, jobs, setTab }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${pluralize(fmt.days(a.lastReplyAt), "day")} · last reply ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
+  const replyTxt = a.lastReplyAt ? `${fmt.days(a.lastReplyAt) < 1 ? "Today" : `${pluralize(fmt.days(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
     thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
@@ -4503,68 +4527,109 @@ function plPrep(a, r) {
 }
 
 function PlContacts({ a }) {
+  const [open, setOpen] = useState(false);
   const [f, setF] = useState({ name: "", role: "", email: "" });
   const [err, setErr] = useState("");
+  const show = () => { setOpen(true); setTimeout(() => document.getElementById("pl-c-name")?.focus(), 0); };
+  const hide = () => { setOpen(false); setF({ name: "", role: "", email: "" }); setErr(""); setTimeout(() => document.getElementById("pl-c-add")?.focus(), 0); };
   const add = (e) => {
     e?.preventDefault();
     if (!f.name.trim()) { setErr("Add a name first."); document.getElementById("pl-c-name")?.focus(); return; }
     Apps.update(a.id, (x) => ({ contacts: [...(x.contacts || []), { name: f.name.trim(), role: f.role.trim(), email: f.email.trim() }] }));
-    setF({ name: "", role: "", email: "" }); setErr("");
-    document.getElementById("pl-c-name")?.focus();
+    hide();
   };
   const rm = (i) => { const c = a.contacts[i]; Apps.update(a.id, (x) => ({ contacts: x.contacts.filter((_, j) => j !== i) })); toast(`Removed ${c.name}`, { undo: () => Apps.update(a.id, (x) => { const n = [...x.contacts]; n.splice(i, 0, c); return { contacts: n }; }) }); };
   const contacts = a.contacts || [];
   return html`<section class="dsec">
-    <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}</h3>
+    <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}<span class="spacer"></span>
+      ${!open && html`<${Btn} kind="ghost" size="sm" icon="plus" id="pl-c-add" onClick=${show}>Add contact</${Btn}>`}</h3>
     ${contacts.length > 0 && html`<div class="list pl-contacts">${contacts.map((c, i) => html`<div class="pl-contact" key=${c.name + i}>
       <span class="pl-avatar" aria-hidden="true">${initials(c.name)}</span>
       <div class="stack-sm" style="gap:0;flex:1;min-width:0"><span class="truncate" style="font-weight:500">${c.name}</span><span class="truncate muted pl-small">${[c.role, c.email].filter(Boolean).join(" · ") || "No role or email"}</span></div>
       ${c.email && html`<${Btn} kind="ghost" size="sm" icon="copy" aria-label=${`Copy ${c.name}'s email`} title="Copy email" onClick=${() => copyText(c.email, "Email copied")} />`}
       <${Btn} kind="ghost" size="sm" icon="x" aria-label=${`Remove ${c.name}`} title="Remove" onClick=${() => rm(i)} />
     </div>`)}</div>`}
-    <form class="pl-contact-form" onSubmit=${add}>
+    ${!contacts.length && !open && html`<p class="pl-none">No contacts yet. Add the recruiter or interviewers so follow-ups have a name.</p>`}
+    ${open && html`<form class="pl-contact-form" onSubmit=${add}>
       <input id="pl-c-name" class="input" placeholder="Name" aria-label="Contact name" value=${f.name} onInput=${(e) => { setF({ ...f, name: e.currentTarget.value }); setErr(""); }} aria-invalid=${err ? "true" : undefined} />
-      <input id="pl-c-role" class="input" placeholder="Role" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
-      <input id="pl-c-email" class="input" type="email" placeholder="Email" aria-label="Contact email" value=${f.email} onInput=${(e) => setF({ ...f, email: e.currentTarget.value })} />
-      <button type="submit" class="btn"><${Icon} name="plus" />Add</button>
-    </form>
-    ${err && html`<span class="pl-err" role="alert">${err}</span>`}
+      <input id="pl-c-role" class="input" placeholder="Role, e.g. Recruiter" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
+      <input id="pl-c-email" class="input pl-span2" type="email" placeholder="Email" aria-label="Contact email" value=${f.email} onInput=${(e) => setF({ ...f, email: e.currentTarget.value })} />
+      <div class="pl-contact-actions pl-span2">
+        ${err && html`<span class="pl-err" role="alert">${err}</span>`}
+        <span class="spacer" style="flex:1"></span>
+        <button type="button" class="btn ghost sm" onClick=${hide}>Cancel</button>
+        <button type="submit" class="btn sm">Save contact</button>
+      </div>
+      <${PlEscape} onEscape=${hide} />
+    </form>`}
   </section>`;
 }
 
-/* Rounds */
+/* Rounds: each one is a summary row; one is expanded at a time by default */
+const PL_OUT_BADGE = { passed: "ok", failed: "bad", cancelled: "" };
+function plDefaultOpen(rounds, t = now()) {
+  const up = rounds.filter((r) => r.at && r.at > t && r.outcome !== "cancelled").sort((x, y) => x.at - y.at)[0];
+  if (up) return up.id;
+  const past = rounds.filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0];
+  return past ? past.id : null;
+}
 function PlRounds({ a }) {
   const rounds = [...(a.rounds || [])].sort((x, y) => (x.at || 9e15) - (y.at || 9e15));
+  const [open, setOpen] = useState(() => { const d = plDefaultOpen(rounds); return d ? { [d]: true } : {}; });
   const add = () => {
     const r = Apps.addRound(a.id, { type: a.stage === "screen" || a.stage === "applied" ? "recruiter" : "technical" });
+    setOpen((o) => ({ ...o, [r.id]: true }));
     setTimeout(() => { const el = document.getElementById(`pl-r-${r.id}-type`); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.focus(); }, 60);
   };
-  return html`<div class="stack">
-    ${rounds.length > 0 && html`<div class="row"><span class="spacer" style="flex:1"></span><${Btn} size="sm" icon="plus" onClick=${add}>Add round</${Btn}></div>`}
+  const toggle = (id, v) => { setOpen((o) => ({ ...o, [id]: v })); if (!v) setTimeout(() => document.getElementById(`pl-r-${id}-sum`)?.focus(), 0); };
+  return html`<div class="stack pl-rounds">
+    ${rounds.length > 0 && html`<div class="row"><span class="pl-small muted" style="flex:1">${pluralize(rounds.length, "round")}</span><${Btn} size="sm" icon="plus" onClick=${add}>Add round</${Btn}></div>`}
     ${!rounds.length && html`<${Empty} icon="cal" title="No rounds yet" action=${html`<${Btn} icon="plus" onClick=${add}>Add round</${Btn}>`}>Log each interview with its date, type and interviewers.</${Empty}>`}
-    ${rounds.map((r) => html`<${PlRound} key=${r.id} a=${a} r=${r} />`)}
+    ${rounds.length > 0 && html`<div class="pl-round-list">${rounds.map((r) => open[r.id]
+      ? html`<${PlRound} key=${r.id} a=${a} r=${r} onDone=${() => toggle(r.id, false)} />`
+      : html`<${PlRoundRow} key=${r.id} r=${r} onEdit=${() => toggle(r.id, true)} />`)}</div>`}
   </div>`;
 }
 
-function PlRound({ a, r }) {
+function plOutcomeBadge(r, t = now()) {
+  if (r.outcome === "pending") {
+    if (!r.at) return { kind: "", text: "No date" };
+    return r.at > t ? { kind: "info", text: fmt.until(r.at) } : { kind: "wait", text: "Outcome pending" };
+  }
+  return { kind: PL_OUT_BADGE[r.outcome] ?? "", text: PL_OUTCOMES.find((o) => o.id === r.outcome)?.label || "Pending" };
+}
+function PlRoundRow({ r, onEdit }) {
+  const b = plOutcomeBadge(r);
+  const who = plFirstName(r.interviewers);
+  const when = r.at ? fmt.date(r.at, { weekday: "short", month: "short", day: "numeric" }) : "";
+  return html`<div class="pl-round pl-round-row" data-round=${r.id}>
+    <button type="button" id=${`pl-r-${r.id}-sum`} class="pl-round-sum" onClick=${onEdit} aria-label=${`${ROUND[r.type]?.label || "Round"}${when ? ", " + when : ""}, ${b.text}${who ? ", with " + who : ""}. Edit`}>
+      <span class="pl-round-name">${ROUND[r.type]?.label || "Round"}</span>
+      <span class="pl-round-meta num">
+        ${when && html`<span>${when}</span>`}
+        <span class=${cx("badge", b.kind)}>${b.text}</span>
+        ${who && html`<span class="truncate">${who}</span>`}
+      </span>
+      <span class="pl-round-edit"><${Icon} name="edit" size=${13} />Edit</span>
+    </button>
+  </div>`;
+}
+
+function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
   const t = now();
-  const when = r.at ? (r.at > t ? html`<span class="badge info">${fmt.until(r.at)}</span>` : null) : null;
   const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can't be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
-  return html`<div class="round pl-round" data-round=${r.id}>
+  return html`<div class="round pl-round pl-round-open" data-round=${r.id}>
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
-      <${PlInline} id=${pid + "-at"} label="Date and time" type="datetime-local" value=${r.at || null} display=${r.at ? `${plLongWhen(r.at)}` : ""} placeholder="Add date and time"
-        toInput=${(v) => fmt.toInput(v)} fromInput=${(v) => fmt.fromInput(v) || null} onSave=${(v) => upd({ at: v })} />
-      ${when}
+      <span class="spacer" style="flex:1"></span>
+      <${Btn} kind="ghost" size="sm" icon="chevU" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
     </div>
-    <div class="pl-round-out">
-      <span class="label" id=${pid + "-out-l"}>Outcome</span>
-      <div class="seg pl-outcome" role="group" aria-labelledby=${pid + "-out-l"}>${PL_OUTCOMES.map((o) => html`<button type="button" key=${o.id} class=${"o-" + o.id} aria-pressed=${r.outcome === o.id ? "true" : "false"} onClick=${() => upd({ outcome: o.id })}>${o.label}</button>`)}</div>
-    </div>
-    <${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}>
     <div class="pl-round-grid">
+      <${Field} label="Date and time" id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
+      <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => upd({ outcome: e.currentTarget.value })}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
+      <div class="pl-span2"><${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}></div>
       <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics, stories, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
       <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
     </div>
@@ -4854,10 +4919,10 @@ ${raw.slice(0, 12000)}
       <span class="truncate">${plEmailSummary(raw)}</span>
       <button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(true)} aria-expanded="false" aria-controls="pl-p-raw">Show</button>
     </div>` : html`<div class="field">
-      <div class="row"><label for="pl-p-raw" class="label" style="flex:1">Email</label>
-        ${f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(false)} aria-expanded="true">Hide</button>`}
-        ${raw && !f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => { setRaw(""); setF(null); setErr(""); document.getElementById("pl-p-raw")?.focus(); }}>Clear</button>`}</div>
-      <textarea id="pl-p-raw" class=${cx("textarea pl-raw", f && "short")} value=${raw} autofocus onInput=${(e) => { setRaw(e.currentTarget.value); setErr(""); }}
+      ${(f || raw) && html`<div class="row pl-raw-tools">
+        ${f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(false)} aria-expanded="true">Hide email</button>`}
+        ${raw && !f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => { setRaw(""); setF(null); setErr(""); document.getElementById("pl-p-raw")?.focus(); }}>Clear</button>`}</div>`}
+      <textarea id="pl-p-raw" aria-label="Email text" class=${cx("textarea pl-raw", f && "short")} value=${raw} autofocus onInput=${(e) => { setRaw(e.currentTarget.value); setErr(""); }}
         placeholder=${"Paste the whole email here, including the From and Subject lines if you can.\n\nWorks with application confirmations, interview invites, rejections and offers."}></textarea>
       ${html`<div class="pl-samples"><span class="hint">Try a sample:</span>${Object.entries(PL_SAMPLES).map(([key, x]) => html`<button type="button" key=${key} class="chip" id=${"pl-sample-" + key} onClick=${() => sample(key)}>${x.label}</button>`)}</div>`}
     </div>`}
@@ -6242,26 +6307,25 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
   });
   const max = Math.max(1, ...days.map((x) => x.n));
   const left = Math.max(0, goal - thisWeek);
-  const editGoal = html`<a href="#prefs" class="td-link td-link-quiet" onClick=${(e) => { e.preventDefault(); go("prefs"); }}>Edit goal</a>`;
-  return html`<section class="card" aria-labelledby="td-week-h">
-    <div class="card-head"><h2 id="td-week-h">This week</h2><span class="spacer"></span>${editGoal}</div>
+  return html`<section class="card td-week" aria-labelledby="td-week-h">
+    <div class="td-week-top">
+      <h2 id="td-week-h">This week</h2>
+      ${thisWeek > 0 ? html`<span class="td-count num">${thisWeek} of ${goal}</span>` : null}
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost sm td-goal-edit" onClick=${() => go("prefs")}>Edit goal</button>
+    </div>
     ${thisWeek === 0
-      ? html`<div class="card-body td-week-zero">
-          <p>No applications yet this week<span class="faint"> · goal ${goal}</span></p>
-        </div>`
-      : html`<div class="card-body stack" style="gap:16px">
-          <div>
-            <div class="td-week-num"><span class="td-big num">${thisWeek}</span><span class="muted"> of ${goal} applications</span></div>
-            <div style="margin-top:10px"><${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} /></div>
-            <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
-          </div>
-          <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
-            ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
-              <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
-              <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
-              <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
-            </div>`)}
-          </div>
+      ? html`<p class="td-week-zero">No applications yet. Your goal is ${goal}.</p>`
+      : html`<div>
+          <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
+          <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
+        </div>
+        <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
+          ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
+            <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
+            <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
+            <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
+          </div>`)}
         </div>`}
   </section>`;
 }
@@ -6408,6 +6472,61 @@ function CalendarButton({ appId, round, size = "sm" }) {
   if (!round?.at || round.at < now() - DAY) return null;
   const done = round.calendar;
   return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? "In calendar" : "Add to calendar"}</${Btn}>`;
+}
+
+/* --- js/views/zz-pdf.js --- */
+/* ===== Read a resume file locally (PDF, TXT, MD). Nothing leaves the browser. =====
+   pdf.js loads only when someone picks a PDF. Its worker script is loaded as a plain script
+   (allowed by the page's CSP), so pdf.js runs it on the main thread. */
+const PDFJS_BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/";
+let pdf_loading = null;
+function pdf_loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.async = true; s.onload = res; s.onerror = () => rej(new Error("load " + src)); document.head.appendChild(s); });
+}
+function pdf_lib() {
+  if (window.pdfjsLib && window.pdfjsWorker) return Promise.resolve(window.pdfjsLib);
+  if (!pdf_loading) pdf_loading = pdf_loadScript(PDFJS_BASE + "pdf.min.js")
+    .then(() => pdf_loadScript(PDFJS_BASE + "pdf.worker.min.js"))
+    .then(() => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + "pdf.worker.min.js"; return window.pdfjsLib; })
+    .catch((e) => { pdf_loading = null; throw e; });
+  return pdf_loading;
+}
+async function pdf_text(file) {
+  const lib = await pdf_lib();
+  const data = new Uint8Array(await file.arrayBuffer());
+  const doc = await lib.getDocument({ data, isEvalSupported: false, disableFontFace: true }).promise;
+  const pages = [];
+  for (let i = 1; i <= Math.min(doc.numPages, 8); i++) {
+    const page = await doc.getPage(i);
+    const tc = await page.getTextContent();
+    // Rebuild lines from text items using their vertical position.
+    const lines = []; let lastY = null, cur = "";
+    for (const it of tc.items) {
+      const y = Math.round(it.transform[5]);
+      if (lastY !== null && Math.abs(y - lastY) > 2) { if (cur.trim()) lines.push(cur.trim()); cur = ""; }
+      cur += (cur && !cur.endsWith(" ") && !it.str.startsWith(" ") ? " " : "") + it.str;
+      lastY = y;
+    }
+    if (cur.trim()) lines.push(cur.trim());
+    pages.push(lines.join("\n"));
+  }
+  try { doc.destroy(); } catch {}
+  return pages.join("\n\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+/* Returns {text} or throws {message} with plain copy. */
+async function readResumeFile(file) {
+  if (!file) throw { message: "No file selected." };
+  if (file.size > 10 * 1024 * 1024) throw { message: "That file is over 10 MB. Try a smaller PDF or paste the text." };
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".pdf") || file.type === "application/pdf") {
+    let text;
+    try { text = await pdf_text(file); }
+    catch (e) { throw { message: "Couldn't read that PDF here. Paste the text instead." }; }
+    if (text.length < 40) throw { message: "That PDF looks like a scanned image with no text. Paste the text instead." };
+    return { text };
+  }
+  if (/\.(txt|md|markdown|text)$/.test(name) || /^text\//.test(file.type)) return { text: (await file.text()).trim() };
+  throw { message: "Use a PDF, .txt or .md file, or paste the text. Word files: save as PDF first." };
 }
 
 /* --- js/views/zz-pool.js --- */

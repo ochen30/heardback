@@ -244,26 +244,25 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
   });
   const max = Math.max(1, ...days.map((x) => x.n));
   const left = Math.max(0, goal - thisWeek);
-  const editGoal = html`<a href="#prefs" class="td-link td-link-quiet" onClick=${(e) => { e.preventDefault(); go("prefs"); }}>Edit goal</a>`;
-  return html`<section class="card" aria-labelledby="td-week-h">
-    <div class="card-head"><h2 id="td-week-h">This week</h2><span class="spacer"></span>${editGoal}</div>
+  return html`<section class="card td-week" aria-labelledby="td-week-h">
+    <div class="td-week-top">
+      <h2 id="td-week-h">This week</h2>
+      ${thisWeek > 0 ? html`<span class="td-count num">${thisWeek} of ${goal}</span>` : null}
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost sm td-goal-edit" onClick=${() => go("prefs")}>Edit goal</button>
+    </div>
     ${thisWeek === 0
-      ? html`<div class="card-body td-week-zero">
-          <p>No applications yet this week<span class="faint"> · goal ${goal}</span></p>
-        </div>`
-      : html`<div class="card-body stack" style="gap:16px">
-          <div>
-            <div class="td-week-num"><span class="td-big num">${thisWeek}</span><span class="muted"> of ${goal} applications</span></div>
-            <div style="margin-top:10px"><${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} /></div>
-            <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
-          </div>
-          <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
-            ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
-              <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
-              <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
-              <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
-            </div>`)}
-          </div>
+      ? html`<p class="td-week-zero">No applications yet. Your goal is ${goal}.</p>`
+      : html`<div>
+          <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
+          <div class="hint" style="margin-top:6px">${thisWeek >= goal ? "Goal reached." : `${left} more to reach your goal`}</div>
+        </div>
+        <div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
+          ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
+            <span class="td-bar-val num">${x.n > 0 ? x.n : ""}</span>
+            <span class="td-bar-track"><i style=${`height:${x.n ? Math.max(8, (x.n / max) * 100) : 0}%`}></i></span>
+            <span class="td-bar-lbl">${x.label.slice(0, 2)}</span>
+          </div>`)}
         </div>`}
   </section>`;
 }

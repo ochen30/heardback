@@ -25,9 +25,11 @@
 .td-act.primary .ico { color: inherit; }
 .td-more { width: 28px; color: var(--fg-3); }
 .td-more:hover, .td-more[aria-expanded="true"] { color: var(--fg); background: var(--surface-2); }
+/* Hover devices: the "more" button floats just left of the action, so it reserves no width and every action ends flush with the card edge. */
 @media (hover: hover) and (pointer: fine) and (min-width: 641px) {
-  .td-more { opacity: 0; transition: opacity var(--t-fast); }
-  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; }
+  .td-task-actions { position: relative; }
+  .td-more { position: absolute; right: calc(100% + 4px); top: 50%; translate: 0 -50%; background: var(--surface); opacity: 0; pointer-events: none; transition: opacity var(--t-fast); }
+  .td-task:hover .td-more, .td-task:focus-within .td-more, .td-more[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
 }
 .td-menu { min-width: 180px; }
 .td-menu-hint { font-size: var(--fs-xs); }
@@ -59,7 +61,13 @@
 .td-job .job-meta { flex-wrap: nowrap; font-size: var(--fs-xs); }
 .td-job .job-side { display: flex; align-items: center; gap: 12px; }
 
-/* this week */
+/* this week: one compact widget (the sidebar goal card is hidden on Today) */
+.td-week { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.td-week-top { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.td-week-top h2 { font-size: var(--fs-md); font-weight: 600; }
+.td-week-top .spacer { flex: 1; }
+.td-goal-edit { margin-right: -8px; color: var(--fg-2); }
+.td-week-zero { font-size: var(--fs-sm); color: var(--fg-2); margin-top: -4px; }
 .td-week-num { display: flex; align-items: baseline; gap: 2px; font-size: var(--fs-sm); }
 .td-big { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--fg); }
 .td-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; }
@@ -70,7 +78,6 @@
 .td-bar.future .td-bar-track { border-bottom-style: dashed; border-bottom-color: var(--line); }
 .td-bar-lbl { font-size: var(--fs-xs); color: var(--fg-3); }
 .td-bar.today .td-bar-lbl { color: var(--fg); font-weight: 600; }
-.td-week-zero p { font-size: var(--fs-sm); color: var(--fg-2); }
 .td-link-quiet { color: var(--fg-2); font-weight: 500; }
 .td-link-quiet:hover { color: var(--fg); }
 .td-unit { font-size: var(--fs-md); font-weight: 500; color: var(--fg-2); margin-left: 4px; letter-spacing: 0; }

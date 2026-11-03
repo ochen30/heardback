@@ -21,8 +21,8 @@ const server = http.createServer((req, res) => {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
-  await page.route(/cdn\.jsdelivr\.net\/npm\/(preact@10\.19\.3|htm@3\.1\.1)\/(.*)/, (route) => {
-    const m = route.request().url().match(/npm\/(preact|htm)@[\d.]+\/(.*)$/);
+  await page.route(/cdn\.jsdelivr\.net\/npm\/(preact@10\.19\.3|htm@3\.1\.1|pdfjs-dist@3\.11\.174)\/(.*)/, (route) => {
+    const m = route.request().url().match(/npm\/(preact|htm|pdfjs-dist)@[\d.]+\/(.*)$/);
     route.fulfill({ path: path.join(nm, m[1], m[2]), contentType: 'text/javascript' });
   });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => {

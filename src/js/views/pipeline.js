@@ -51,7 +51,7 @@ function plFirstName(s) { return (s || "").replace(/\([^)]*\)/g, "").split(/[,&;
 function plStatus(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
-  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: fmt.dateTime(up.at) };
+  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", main: plWhen(up.at), extra: ROUND[up.type]?.label || "Round", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: `${ROUND[up.type]?.label || "Round"} · ${fmt.dateTime(up.at)}` };
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
@@ -346,7 +346,7 @@ function PlCard({ a, settings, dragging, onMenu, ...rest }) {
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} /><span class="truncate">${stt.text}</span></span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="truncate pl-status-extra">· ${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -414,7 +414,7 @@ function PlTable({ apps, settings, sort }) {
     <div class="table-wrap">
       <table class="table pl-table">
         <thead><tr>${PL_COLS.map((c) => html`<th key=${c.k} class=${cx(c.num && "pl-num")} aria-sort=${sort.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : "none"}>
-          <button type="button" onClick=${() => setSort(c.k)}>${c.label}${sort.k === c.k ? html`<${Icon} name=${sort.dir > 0 ? "chevD" : "chevD"} size=${12} cls=${cx("pl-sort", sort.dir < 0 && "desc")} />` : html`<${Icon} name="sort" size=${12} cls="pl-sort-idle" />`}</button>
+          <button type="button" onClick=${() => setSort(c.k)}><span>${c.label}</span>${sort.k === c.k ? html`<${Icon} name=${sort.dir > 0 ? "chevD" : "chevD"} size=${12} cls=${cx("pl-sort", sort.dir < 0 && "desc")} />` : html`<${Icon} name="sort" size=${12} cls="pl-sort-idle" />`}</button>
         </th>`)}</tr></thead>
         <tbody>
           ${rows.map((a) => {
@@ -520,7 +520,7 @@ function PlStepper({ a }) {
         const st = STAGE[id];
         const state = !closed && i === cur ? "cur" : (!closed && i < cur) || (closed && i <= far) ? "done" : "";
         return html`<button type="button" key=${id} class=${cx("pl-step", state, closed && "muted-done")} aria-pressed=${!closed && i === cur ? "true" : "false"} onClick=${() => Apps.move(a.id, id)} title=${`Move to ${st.label} (press ${i + 1})`}>
-          <i></i><span class="pl-step-l">${st.label}</span><span class="pl-step-s">${st.short}</span>
+          <i></i><span>${st.label}</span>
         </button>`;
       })}
     </div>
@@ -563,7 +563,7 @@ function plHost(u) { try { const x = new URL(plHref(u)); return (x.hostname.repl
 function PlOverview({ a, ns, settings, jobs, setTab }) {
   const job = a.jobId && jobs.status === "ready" ? jobs.byId.get(a.jobId) : null;
   const silent = Apps.daysSilent(a);
-  const replyTxt = a.lastReplyAt ? `${pluralize(fmt.days(a.lastReplyAt), "day")} · last reply ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
+  const replyTxt = a.lastReplyAt ? `${fmt.days(a.lastReplyAt) < 1 ? "Today" : `${pluralize(fmt.days(a.lastReplyAt), "day")} ago`} · ${fmt.date(a.lastReplyAt)}` : a.appliedAt ? `No reply in ${pluralize(fmt.days(a.appliedAt), "day")}` : "Not applied yet";
   const secondary = {
     upcoming: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>View rounds</button>`,
     thanks: html`<button type="button" class="pl-linkbtn" onClick=${() => setTab("rounds")}>Log the outcome instead</button>`,
@@ -622,68 +622,109 @@ function plPrep(a, r) {
 }
 
 function PlContacts({ a }) {
+  const [open, setOpen] = useState(false);
   const [f, setF] = useState({ name: "", role: "", email: "" });
   const [err, setErr] = useState("");
+  const show = () => { setOpen(true); setTimeout(() => document.getElementById("pl-c-name")?.focus(), 0); };
+  const hide = () => { setOpen(false); setF({ name: "", role: "", email: "" }); setErr(""); setTimeout(() => document.getElementById("pl-c-add")?.focus(), 0); };
   const add = (e) => {
     e?.preventDefault();
     if (!f.name.trim()) { setErr("Add a name first."); document.getElementById("pl-c-name")?.focus(); return; }
     Apps.update(a.id, (x) => ({ contacts: [...(x.contacts || []), { name: f.name.trim(), role: f.role.trim(), email: f.email.trim() }] }));
-    setF({ name: "", role: "", email: "" }); setErr("");
-    document.getElementById("pl-c-name")?.focus();
+    hide();
   };
   const rm = (i) => { const c = a.contacts[i]; Apps.update(a.id, (x) => ({ contacts: x.contacts.filter((_, j) => j !== i) })); toast(`Removed ${c.name}`, { undo: () => Apps.update(a.id, (x) => { const n = [...x.contacts]; n.splice(i, 0, c); return { contacts: n }; }) }); };
   const contacts = a.contacts || [];
   return html`<section class="dsec">
-    <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}</h3>
+    <h3>Contacts${contacts.length ? html`<span class="count">${contacts.length}</span>` : null}<span class="spacer"></span>
+      ${!open && html`<${Btn} kind="ghost" size="sm" icon="plus" id="pl-c-add" onClick=${show}>Add contact</${Btn}>`}</h3>
     ${contacts.length > 0 && html`<div class="list pl-contacts">${contacts.map((c, i) => html`<div class="pl-contact" key=${c.name + i}>
       <span class="pl-avatar" aria-hidden="true">${initials(c.name)}</span>
       <div class="stack-sm" style="gap:0;flex:1;min-width:0"><span class="truncate" style="font-weight:500">${c.name}</span><span class="truncate muted pl-small">${[c.role, c.email].filter(Boolean).join(" · ") || "No role or email"}</span></div>
       ${c.email && html`<${Btn} kind="ghost" size="sm" icon="copy" aria-label=${`Copy ${c.name}'s email`} title="Copy email" onClick=${() => copyText(c.email, "Email copied")} />`}
       <${Btn} kind="ghost" size="sm" icon="x" aria-label=${`Remove ${c.name}`} title="Remove" onClick=${() => rm(i)} />
     </div>`)}</div>`}
-    <form class="pl-contact-form" onSubmit=${add}>
+    ${!contacts.length && !open && html`<p class="pl-none">No contacts yet. Add the recruiter or interviewers so follow-ups have a name.</p>`}
+    ${open && html`<form class="pl-contact-form" onSubmit=${add}>
       <input id="pl-c-name" class="input" placeholder="Name" aria-label="Contact name" value=${f.name} onInput=${(e) => { setF({ ...f, name: e.currentTarget.value }); setErr(""); }} aria-invalid=${err ? "true" : undefined} />
-      <input id="pl-c-role" class="input" placeholder="Role" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
-      <input id="pl-c-email" class="input" type="email" placeholder="Email" aria-label="Contact email" value=${f.email} onInput=${(e) => setF({ ...f, email: e.currentTarget.value })} />
-      <button type="submit" class="btn"><${Icon} name="plus" />Add</button>
-    </form>
-    ${err && html`<span class="pl-err" role="alert">${err}</span>`}
+      <input id="pl-c-role" class="input" placeholder="Role, e.g. Recruiter" aria-label="Contact role" value=${f.role} onInput=${(e) => setF({ ...f, role: e.currentTarget.value })} />
+      <input id="pl-c-email" class="input pl-span2" type="email" placeholder="Email" aria-label="Contact email" value=${f.email} onInput=${(e) => setF({ ...f, email: e.currentTarget.value })} />
+      <div class="pl-contact-actions pl-span2">
+        ${err && html`<span class="pl-err" role="alert">${err}</span>`}
+        <span class="spacer" style="flex:1"></span>
+        <button type="button" class="btn ghost sm" onClick=${hide}>Cancel</button>
+        <button type="submit" class="btn sm">Save contact</button>
+      </div>
+      <${PlEscape} onEscape=${hide} />
+    </form>`}
   </section>`;
 }
 
-/* Rounds */
+/* Rounds: each one is a summary row; one is expanded at a time by default */
+const PL_OUT_BADGE = { passed: "ok", failed: "bad", cancelled: "" };
+function plDefaultOpen(rounds, t = now()) {
+  const up = rounds.filter((r) => r.at && r.at > t && r.outcome !== "cancelled").sort((x, y) => x.at - y.at)[0];
+  if (up) return up.id;
+  const past = rounds.filter((r) => r.at && r.at <= t && r.outcome === "pending").sort((x, y) => y.at - x.at)[0];
+  return past ? past.id : null;
+}
 function PlRounds({ a }) {
   const rounds = [...(a.rounds || [])].sort((x, y) => (x.at || 9e15) - (y.at || 9e15));
+  const [open, setOpen] = useState(() => { const d = plDefaultOpen(rounds); return d ? { [d]: true } : {}; });
   const add = () => {
     const r = Apps.addRound(a.id, { type: a.stage === "screen" || a.stage === "applied" ? "recruiter" : "technical" });
+    setOpen((o) => ({ ...o, [r.id]: true }));
     setTimeout(() => { const el = document.getElementById(`pl-r-${r.id}-type`); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.focus(); }, 60);
   };
-  return html`<div class="stack">
-    ${rounds.length > 0 && html`<div class="row"><span class="spacer" style="flex:1"></span><${Btn} size="sm" icon="plus" onClick=${add}>Add round</${Btn}></div>`}
+  const toggle = (id, v) => { setOpen((o) => ({ ...o, [id]: v })); if (!v) setTimeout(() => document.getElementById(`pl-r-${id}-sum`)?.focus(), 0); };
+  return html`<div class="stack pl-rounds">
+    ${rounds.length > 0 && html`<div class="row"><span class="pl-small muted" style="flex:1">${pluralize(rounds.length, "round")}</span><${Btn} size="sm" icon="plus" onClick=${add}>Add round</${Btn}></div>`}
     ${!rounds.length && html`<${Empty} icon="cal" title="No rounds yet" action=${html`<${Btn} icon="plus" onClick=${add}>Add round</${Btn}>`}>Log each interview with its date, type and interviewers.</${Empty}>`}
-    ${rounds.map((r) => html`<${PlRound} key=${r.id} a=${a} r=${r} />`)}
+    ${rounds.length > 0 && html`<div class="pl-round-list">${rounds.map((r) => open[r.id]
+      ? html`<${PlRound} key=${r.id} a=${a} r=${r} onDone=${() => toggle(r.id, false)} />`
+      : html`<${PlRoundRow} key=${r.id} r=${r} onEdit=${() => toggle(r.id, true)} />`)}</div>`}
   </div>`;
 }
 
-function PlRound({ a, r }) {
+function plOutcomeBadge(r, t = now()) {
+  if (r.outcome === "pending") {
+    if (!r.at) return { kind: "", text: "No date" };
+    return r.at > t ? { kind: "info", text: fmt.until(r.at) } : { kind: "wait", text: "Outcome pending" };
+  }
+  return { kind: PL_OUT_BADGE[r.outcome] ?? "", text: PL_OUTCOMES.find((o) => o.id === r.outcome)?.label || "Pending" };
+}
+function PlRoundRow({ r, onEdit }) {
+  const b = plOutcomeBadge(r);
+  const who = plFirstName(r.interviewers);
+  const when = r.at ? fmt.date(r.at, { weekday: "short", month: "short", day: "numeric" }) : "";
+  return html`<div class="pl-round pl-round-row" data-round=${r.id}>
+    <button type="button" id=${`pl-r-${r.id}-sum`} class="pl-round-sum" onClick=${onEdit} aria-label=${`${ROUND[r.type]?.label || "Round"}${when ? ", " + when : ""}, ${b.text}${who ? ", with " + who : ""}. Edit`}>
+      <span class="pl-round-name">${ROUND[r.type]?.label || "Round"}</span>
+      <span class="pl-round-meta num">
+        ${when && html`<span>${when}</span>`}
+        <span class=${cx("badge", b.kind)}>${b.text}</span>
+        ${who && html`<span class="truncate">${who}</span>`}
+      </span>
+      <span class="pl-round-edit"><${Icon} name="edit" size=${13} />Edit</span>
+    </button>
+  </div>`;
+}
+
+function PlRound({ a, r, onDone }) {
   const upd = (p) => Apps.updateRound(a.id, r.id, p);
   const pid = `pl-r-${r.id}`;
   const t = now();
-  const when = r.at ? (r.at > t ? html`<span class="badge info">${fmt.until(r.at)}</span>` : null) : null;
   const del = () => askConfirm({ title: "Delete this round?", body: `This removes the ${(ROUND[r.type]?.label || "round").toLowerCase()} and its notes. This can't be undone.`, confirmLabel: "Delete round", danger: true, onConfirm: () => { Apps.removeRound(a.id, r.id); toast("Round deleted"); } });
-  return html`<div class="round pl-round" data-round=${r.id}>
+  return html`<div class="round pl-round pl-round-open" data-round=${r.id}>
     <div class="pl-round-head">
       <select id=${pid + "-type"} class="select pl-round-type" value=${r.type} aria-label="Round type" onChange=${(e) => upd({ type: e.currentTarget.value })}>${ROUND_TYPES.map((x) => html`<option key=${x.id} value=${x.id}>${x.label}</option>`)}</select>
-      <${PlInline} id=${pid + "-at"} label="Date and time" type="datetime-local" value=${r.at || null} display=${r.at ? `${plLongWhen(r.at)}` : ""} placeholder="Add date and time"
-        toInput=${(v) => fmt.toInput(v)} fromInput=${(v) => fmt.fromInput(v) || null} onSave=${(v) => upd({ at: v })} />
-      ${when}
+      <span class="spacer" style="flex:1"></span>
+      <${Btn} kind="ghost" size="sm" icon="chevU" onClick=${onDone} aria-label="Collapse this round" title="Collapse">Done</${Btn}>
     </div>
-    <div class="pl-round-out">
-      <span class="label" id=${pid + "-out-l"}>Outcome</span>
-      <div class="seg pl-outcome" role="group" aria-labelledby=${pid + "-out-l"}>${PL_OUTCOMES.map((o) => html`<button type="button" key=${o.id} class=${"o-" + o.id} aria-pressed=${r.outcome === o.id ? "true" : "false"} onClick=${() => upd({ outcome: o.id })}>${o.label}</button>`)}</div>
-    </div>
-    <${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}>
     <div class="pl-round-grid">
+      <${Field} label="Date and time" id=${pid + "-at"}><input id=${pid + "-at"} class="input" type="datetime-local" value=${fmt.toInput(r.at)} onChange=${(e) => upd({ at: fmt.fromInput(e.currentTarget.value) || null })} /></${Field}>
+      <${Field} label="Outcome" id=${pid + "-out"}><select id=${pid + "-out"} class=${cx("select pl-out-sel", "o-" + r.outcome)} value=${r.outcome || "pending"} onChange=${(e) => upd({ outcome: e.currentTarget.value })}>${PL_OUTCOMES.map((o) => html`<option key=${o.id} value=${o.id}>${o.label}</option>`)}</select></${Field}>
+      <div class="pl-span2"><${Field} label="Interviewers" id=${pid + "-who"}><${PlText} id=${pid + "-who"} value=${r.interviewers} placeholder="e.g. Priya S. (Eng manager)" onSave=${(v) => upd({ interviewers: v })} /></${Field}></div>
       <${Field} label="Prep notes" id=${pid + "-prep"}><${PlText} multiline id=${pid + "-prep"} rows="3" value=${r.prep} placeholder="Topics, stories, questions to ask" onSave=${(v) => upd({ prep: v })} /></${Field}>
       <${Field} label="How it went" id=${pid + "-refl"}><${PlText} multiline id=${pid + "-refl"} rows="3" value=${r.reflection} placeholder="What they asked, what to improve" onSave=${(v) => upd({ reflection: v })} /></${Field}>
     </div>
@@ -973,10 +1014,10 @@ ${raw.slice(0, 12000)}
       <span class="truncate">${plEmailSummary(raw)}</span>
       <button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(true)} aria-expanded="false" aria-controls="pl-p-raw">Show</button>
     </div>` : html`<div class="field">
-      <div class="row"><label for="pl-p-raw" class="label" style="flex:1">Email</label>
-        ${f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(false)} aria-expanded="true">Hide</button>`}
-        ${raw && !f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => { setRaw(""); setF(null); setErr(""); document.getElementById("pl-p-raw")?.focus(); }}>Clear</button>`}</div>
-      <textarea id="pl-p-raw" class=${cx("textarea pl-raw", f && "short")} value=${raw} autofocus onInput=${(e) => { setRaw(e.currentTarget.value); setErr(""); }}
+      ${(f || raw) && html`<div class="row pl-raw-tools">
+        ${f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => setShowRaw(false)} aria-expanded="true">Hide email</button>`}
+        ${raw && !f && html`<button type="button" class="pl-linkbtn pl-small" onClick=${() => { setRaw(""); setF(null); setErr(""); document.getElementById("pl-p-raw")?.focus(); }}>Clear</button>`}</div>`}
+      <textarea id="pl-p-raw" aria-label="Email text" class=${cx("textarea pl-raw", f && "short")} value=${raw} autofocus onInput=${(e) => { setRaw(e.currentTarget.value); setErr(""); }}
         placeholder=${"Paste the whole email here, including the From and Subject lines if you can.\n\nWorks with application confirmations, interview invites, rejections and offers."}></textarea>
       ${html`<div class="pl-samples"><span class="hint">Try a sample:</span>${Object.entries(PL_SAMPLES).map(([key, x]) => html`<button type="button" key=${key} class="chip" id=${"pl-sample-" + key} onClick=${() => sample(key)}>${x.label}</button>`)}</div>`}
     </div>`}

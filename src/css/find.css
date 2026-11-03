@@ -7,6 +7,7 @@
 .find-fgroups .hint { line-height: 1.4; }
 .chip .find-chip-n { font-size: var(--fs-xs); color: var(--fg-3); font-variant-numeric: tabular-nums; font-weight: 400; }
 .chip[aria-pressed="true"] .find-chip-n { color: var(--accent-text); opacity: .75; }
+.find-chip:disabled { opacity: .45; cursor: default; pointer-events: none; }
 .find-fgroups .chips { gap: 6px; }
 .find-fgroups .chip { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
 .find-fgroups .filter-group h4 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -26,7 +27,10 @@
 .find-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .find-search { flex: 1; min-width: 200px; }
 .find-search .input { height: 40px; font-size: var(--fs-md); padding-right: 36px; }
-.find-search .input::-webkit-search-cancel-button { cursor: pointer; }
+.find-search .input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.find-search .find-qclear { position: absolute; right: 4px; width: 32px; height: 32px; color: var(--fg-3); }
+.find-search .find-qclear:hover { color: var(--fg); }
+.find-search .find-qclear .ico { position: static; }
 .find-kbd { position: absolute; right: 10px; pointer-events: none; }
 .find-fbtn { display: none; height: 40px; }
 .find-fcount { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-fg); font-size: var(--fs-xs); font-weight: 600; }
@@ -49,8 +53,11 @@
   font-weight: 500; font-size: var(--fs-md); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
 .find-row-meta { font-size: var(--fs-sm); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
-.find-side { display: grid; grid-template-columns: 112px 60px 84px 92px; align-items: center; gap: 8px; justify-items: end; }
-.find-c-ghost:empty { visibility: hidden; }
+/* Ghost column auto-sizes (empty when risk is low); the action column only widens when a row shows a stage badge. */
+.find-side { display: grid; grid-template-columns: auto 60px 84px 36px; align-items: center; gap: 8px; justify-items: end; }
+.find-has-stage .find-side { grid-template-columns: auto 60px 84px 92px; }
+.find-c-ghost { grid-column: 1; } .find-c-fit { grid-column: 2; } .find-c-fresh { grid-column: 3; } .find-c-act { grid-column: 4; }
+.find-c-ghost:empty { display: none; }
 .find-c-fit, .find-c-ghost, .find-c-fresh, .find-c-act { display: inline-flex; align-items: center; justify-content: flex-end; }
 .find-c-fit .fit { min-width: 56px; white-space: nowrap; }
 .find-c-fresh .fresh { text-align: right; }
@@ -62,7 +69,7 @@
 .find-keys .kbd { margin-left: 6px; }
 .find-foot { padding-top: 0; }
 .find-row-co { grid-template-columns: minmax(0, 1fr) auto; }
-.find-results-tight .find-side { grid-template-columns: auto 60px 64px 28px; }
+.find-results-tight .find-side { grid-template-columns: auto 60px 64px 36px; }
 .find-results-tight .find-c-act .badge { display: none; }
 
 /* drawer */
@@ -101,11 +108,6 @@ button.find-h-meta { font-size: var(--fs-sm); }
 .find-fit-ico.bad { background: var(--bad-soft); color: var(--bad); }
 .find-fit-ico.none { background: var(--surface-2); color: var(--fg-3); font-size: var(--fs-xs); }
 .find-fit-list + .stack-sm { margin-top: 4px; }
-/* company mini stats inside the job drawer */
-.find-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.find-mini-s { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.find-mini-s .stat-label { font-size: var(--fs-xs); color: var(--fg-3); }
-.find-mini-v { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
 .find-season-line { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; line-height: 1.5; }
 a.find-link { cursor: pointer; }
 .find-dsub-co { column-gap: 14px; }
@@ -117,8 +119,7 @@ a.find-link { cursor: pointer; }
 @keyframes find-pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
 .find-ai-out { display: flex; flex-direction: column; gap: 10px; }
 .find-yn { gap: 16px; }
-.find-yn-h { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 600; margin-bottom: 6px; }
-.find-yn-h.ok { color: var(--ok); } .find-yn-h.bad { color: var(--bad); }
+.find-yn-h { font-size: var(--fs-xs); font-weight: 600; color: var(--fg-2); margin-bottom: 6px; }
 .find-yn .reason-list li { display: list-item; margin-left: 16px; list-style: disc; color: var(--fg-2); }
 .find-yn ul.reason-list { list-style: disc; }
 .find-bullets { display: flex; flex-direction: column; }
@@ -126,7 +127,8 @@ a.find-link { cursor: pointer; }
 .find-bullet + .find-bullet { border-top: 1px solid var(--line); }
 .find-bullet:first-child { padding-top: 0; }
 .find-bullet-row { display: flex; align-items: flex-start; gap: 8px; }
-.find-bullet-from { font-size: var(--fs-xs); color: var(--fg-3); }
+.find-bullet-from { font-size: var(--fs-xs); color: var(--fg-3); line-height: 1.45; }
+.dsec > h3 .find-h-btn { margin: -6px -8px -6px 0; }
 .find-bullet-to { flex: 1; font-size: var(--fs-sm); color: var(--fg); }
 .find-brief { font-size: var(--fs-sm); line-height: 1.6; color: var(--fg); display: flex; flex-direction: column; gap: 6px; }
 .find-brief .reason-list { color: var(--fg); }
@@ -171,7 +173,6 @@ a.find-link { cursor: pointer; }
 }
 @media (max-width: 860px) {
   .find-kv { grid-template-columns: 110px minmax(0, 1fr); }
-  .find-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .find-yn { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
@@ -192,7 +193,8 @@ a.find-link { cursor: pointer; }
   .find-c-act { margin-left: auto; }
   .find-c-act .btn.sm.icon { width: 36px; height: 36px; }
   .find-c-fit .fit { min-width: 0; }
-  .find-mini { gap: 12px; }
-  .find-mini-v, .find-stat-v { font-size: var(--fs-md); }
+  .find-stats { gap: 12px; }
+  .find-stat-v { font-size: var(--fs-md); }
+  .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }

@@ -67,8 +67,29 @@ module.exports = {
     await page.waitForTimeout(300);
     assert(await page.$('.td-caught'), 'caught-up state shows when no tasks');
   },
+  async weekSome(page) {
+    await page.evaluate(() => { const t = Date.now(); ['Acme', 'Globex', 'Initech'].forEach((c, i) => Apps.create({ company: c, title: 'Software Engineer Intern', stage: 'applied', appliedAt: t - i * 3600000, createdAt: t - i * 3600000 })); });
+    await page.waitForTimeout(300);
+    assert(await page.$('.td-week .td-bars'), 'This week shows bars once something is sent');
+  },
+  // Core task kinds: a taken-down posting ("removed") and an intern season that is closing ("apply", urgent).
+  async newTaskKinds(page) {
+    await page.waitForFunction(() => jobsStore.status === 'ready', null, { timeout: 15000 });
+    await page.evaluate(() => {
+      Apps.create({ company: 'Gone Corp', title: 'Data Engineer Intern', jobId: 'deadbeef00', stage: 'saved', source: 'find' });
+      Apps.create({ company: 'Vanished Ltd', title: 'Software Engineer, New Grad 2027', jobId: 'deadbeef01', stage: 'applied', appliedAt: Date.now() - 6 * 86400000 });
+      const j = jobsStore.jobs.find((x) => x.lvl === 'intern' && jobsStore.cstats[x.co]);
+      jobsStore.cstats[j.co].season = { posted: 24, open: 2, term: 'Summer 2027', lastNew: Math.floor((Date.now() - 40 * 86400000) / 1000) };
+      Apps.create({ company: j.co, title: j.t, jobId: j.id, url: j.url, stage: 'saved', source: 'find' });
+    });
+    await page.waitForTimeout(400);
+    const more = await page.$('.td-card-foot button'); if (more) { await more.click(); await page.waitForTimeout(200); }
+    const kinds = await page.$$eval('.td-task', (els) => els.map((e) => e.dataset.key.split(':')[0]));
+    assert(kinds.filter((k) => k === 'removed').length === 2, `two removed tasks render (${kinds.join(',')})`);
+    assert(await page.$('.td-task[data-key^="apply:"] .task-ico.wait'), 'closing-season apply task is urgent');
+  },
   async editGoal(page) {
-    await page.click('#td-week-h ~ a:has-text("Edit goal")');
+    await page.click('.td-goal-edit');
     await page.waitForTimeout(300);
     assert((await page.evaluate(() => location.hash)) === '#prefs', 'Edit goal goes to Settings');
   },
