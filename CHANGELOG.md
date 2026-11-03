@@ -24,3 +24,9 @@
 - Interview prep: rounds list, question bank by round type and role, talking points from resume, questions to ask, practice mode with timer, Claude feedback.
 - Onboarding (3 steps), Settings (profile, resume, reminders, theme, example data, JSON/CSV export + import, delete all, privacy, data source), anonymous reply-data sharing (opt-in, shared db).
 - QA: all routes at 1440 and 375, light and dark, zero console errors, no horizontal overflow.
+
+### 01:10 PT — v2 published
+- Add to calendar on interview rounds (application drawer + prep): creates a Google Calendar event through the viewer's own connector (asks permission first), otherwise downloads an .ics file. Argument names match the connector schema; not exercised with a real call tonight (it would create a real event).
+- Email parser: case-insensitive "thank you for applying", interview invites that mention a recruiter call are no longer misread as screens, interview times are read from the body (not the Date header), company names stop at "on/to/for…", offer titles ("position of X at Y") detected.
+- Core: modals keep their own props (draft modal opened from Today now works), Escape closes only the top-most overlay, dialogs focus their first field, toasts support an action button, thank-you template cleans interviewer names, danger confirmations styled as danger, shortcuts disabled during onboarding.
+- Mobile: "More" sheet (Companies, Insights, Paste email, Settings), toasts sit above the tab bar.

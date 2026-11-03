@@ -172,6 +172,7 @@ function parseEmail(raw) {
     /(?:join|joining) (?:the )?([A-Z][\w&.'\- ]{1,40}?) (?:team|family)/,
     /interest in (?:joining )?([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
     /^(?:the )?([A-Z][\w&.'\- ]{1,30}?) (?:Recruiting|Talent|Careers|Hiring) Team/m,
+    /\b(?:at|with|from) ([A-Z][\w&.'\-]+(?: [A-Z][\w&.'\-]+){0,3})[.!]/,
   ];
   for (const re of pats) { const m = text.match(re); if (m) { company = m[1].trim().replace(/^the /i, ""); break; } }
   if (!company && from) {

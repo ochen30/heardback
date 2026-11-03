@@ -569,6 +569,7 @@ function PlRound({ a, r }) {
       <label class="check" for=${pid + "-thx"}><input id=${pid + "-thx"} type="checkbox" checked=${!!r.thanked} onChange=${(e) => upd({ thanked: e.currentTarget.checked })} />Thank-you sent</label>
       <span class="spacer" style="flex:1"></span>
       <${Btn} kind="ghost" size="sm" icon="trash" aria-label="Delete round" title="Delete round" onClick=${del} />
+      <${CalendarButton} appId=${a.id} round=${r} />
       <${Btn} size="sm" icon="prep" onClick=${() => plPrep(a, r)}>Prep for this round</${Btn}>
       <${Btn} size="sm" icon="send" onClick=${() => openModal("draft", { appId: a.id, roundId: r.id, mode: "thanks" })}>Draft thank-you</${Btn}>
     </div>
