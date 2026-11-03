@@ -13,17 +13,24 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     const expPrefs = await page.evaluate(() => { const f = find_getFilters(store.get()); return find_run(jobsStore.jobs, f, '', false).res.length; });
     T.check('initial count uses prefs filters', n0 === expPrefs, `${n0} vs ${expPrefs}`);
     // Show all
-    await page.click('.find-prefs .find-link');
+    T.check('hide-ghost on by default', await page.evaluate(() => find_getFilters(store.get()).hideGhost === true && store.get().ui.findHideGhost !== false));
+    await page.click('.find-prefs button:has-text("Show all")');
     await page.waitForTimeout(250);
     const nAll = await count(page);
-    const nTot = await page.evaluate(() => jobsStore.jobs.length);
-    const nRaw = await page.evaluate(() => jobsStore.jobs.reduce((n, j) => n + 1 + (j.dup || 0), 0));
-    T.check('Show all = de-duplicated job count', nAll === nTot, `${nAll} vs ${nTot} (raw incl dups ${nRaw})`);
+    // identical repeats (company + title + first 3 locations) are collapsed into one listing
+    const dd = await page.evaluate(() => { const ks = jobsStore.jobs.map((x) => `${x.c}|${x.t.toLowerCase()}|${(x.l || []).slice(0, 3).join(';')}`); return { n: ks.length, u: new Set(ks).size, raw: jobsStore.jobs.reduce((n, j) => n + 1 + (j.dup || 0), 0) }; });
+    T.check('identical repeats collapsed (unique company+title+3 locs)', dd.n === dd.u && dd.raw >= dd.n, JSON.stringify(dd));
+    const nTot = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50).length);
+    const nGhost = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g >= 50).length);
+    T.check('Show all = de-duplicated jobs minus strong ghost signals', nAll === nTot, `${nAll} vs ${nTot} (dedup ${dd.n}, raw incl dups ${dd.raw})`);
+    const ghostNote = await page.locator('.find-ghost-note').innerText().catch(() => '');
+    T.check('count bar: "Hiding N with strong ghost signals"', ghostNote === `Hiding ${nGhost.toLocaleString('en-US')} with strong ghost signals`, ghostNote);
+    T.check('count bar: "Show them" link', await page.locator('.find-count button:has-text("Show them")').isVisible());
     // search
     await page.fill('#find-q', 'google software');
     await page.waitForTimeout(400);
     const nq = await count(page);
-    const expQ = await page.evaluate(() => jobsStore.jobs.filter((j) => ['google', 'software'].every((w) => j._s.includes(w))).length);
+    const expQ = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && ['google', 'software'].every((w) => j._s.includes(w))).length);
     T.check('search "google software" count', nq === expQ, `${nq} vs ${expQ}`);
     const titles = await page.locator('.find-row-meta').allInnerTexts();
     T.check('search results contain google', titles.every((t) => /google/i.test(t) || true));
@@ -47,35 +54,47 @@ const count = (page) => page.locator('.find-count strong').innerText().then((t) 
     else T.check('mobile hides filter aside', !(await page.locator('.find-aside').isVisible()));
     const filt = async (sel) => { await openFilters(); await page.click(`${scope} ${sel}`); await page.waitForTimeout(200); await closeFilters(); await page.waitForTimeout(200); return count(page); };
     let n = await filt('.chip:has-text("Internship")');
-    let e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.lvl === 'intern').length);
+    let e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && j.lvl === 'intern').length);
     T.check('Level=Internship', n === e, `${n} vs ${e}`);
     n = await filt('.chip:has-text("Quant")');
-    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.lvl === 'intern' && j.cat === 'Quant').length);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && j.lvl === 'intern' && j.cat === 'Quant').length);
     T.check('+Role=Quant', n === e, `${n} vs ${e}`);
     n = await filt(`label[for="${mobile ? "find-m" : "find-f"}-loc-new-york"]`);
-    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.lvl === 'intern' && j.cat === 'Quant' && jobInLoc(j, 'new york')).length);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && j.lvl === 'intern' && j.cat === 'Quant' && jobInLoc(j, 'new york')).length);
     T.check('+Loc=New York', n === e, `${n} vs ${e}`);
     // posted 7d
     await openFilters(); await page.click(`${scope} .seg button:has-text("7d")`); await page.waitForTimeout(200); await closeFilters(); await page.waitForTimeout(200);
     n = await count(page).catch(() => 0);
-    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.lvl === 'intern' && j.cat === 'Quant' && jobInLoc(j, 'new york') && j.p >= Date.now() - 7 * 864e5).length);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && j.lvl === 'intern' && j.cat === 'Quant' && jobInLoc(j, 'new york') && j.p >= Date.now() - 7 * 864e5).length);
     T.check('+Posted 7d', n === e, `${n} vs ${e}`);
     // clear filters
     if (mobile) { await page.click('.find-fbtn'); await page.click('.modal-foot button:has-text("Clear filters")'); await page.click('.modal-foot .btn.primary'); }
     else await page.click('.find-aside button:has-text("Clear filters")');
     await page.waitForTimeout(250);
-    T.check('clear filters -> all', (await count(page)) === nTot);
+    { const nc = await count(page); T.check('clear filters -> all (ghost hiding kept)', nc === nTot, `${nc} vs ${nTot}`); }
     // visa + ghost
     n = await filt(`label[for="${mobile ? 'find-m' : 'find-f'}-visa-yes"]`);
-    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp === 'yes').length);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && j.sp === 'yes').length);
     T.check('Visa=yes', n === e, `${n} vs ${e}`);
     n = await filt(`label[for="${mobile ? 'find-m' : 'find-f'}-visa-nocit"]`);
-    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.g < 50 && j.sp !== 'citizen').length);
     T.check('Visa=nocit', n === e, `${n} vs ${e}`);
     await openFilters(); await page.click(`${scope} label[for$="-ghost"]`); await page.waitForTimeout(200); await closeFilters(); await page.waitForTimeout(200);
     n = await count(page);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
+    T.check('toggle Hide ghost off -> includes g>=50', n === e, `${n} vs ${e}`);
+    const gShown = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen' && j.g >= 50).length);
+    const ghostNote2 = await page.locator('.find-ghost-note').innerText().catch(() => '');
+    T.check('count bar (off): "N with strong ghost signals · Hide them"', ghostNote2 === `${gShown.toLocaleString('en-US')} with strong ghost signals` && await page.locator('.find-count button:has-text("Hide them")').isVisible(), ghostNote2);
+    T.check('hide-ghost off persisted in store', (await page.evaluate(() => store.get().ui.findHideGhost)) === false);
+    await page.click('.find-count button:has-text("Hide them")'); await page.waitForTimeout(250);
+    n = await count(page);
     e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen' && j.g < 50).length);
-    T.check('+Hide ghost', n === e, `${n} vs ${e}`);
+    T.check('"Hide them" re-enables hiding', n === e, `${n} vs ${e}`);
+    await page.click('.find-count button:has-text("Show them")'); await page.waitForTimeout(250);
+    n = await count(page);
+    e = await page.evaluate(() => jobsStore.jobs.filter((j) => j.sp !== 'citizen').length);
+    T.check('"Show them" shows ghost listings again', n === e, `${n} vs ${e}`);
     if (mobile) { await page.click('.find-fbtn'); await page.click('.modal-foot button:has-text("Clear filters")'); await page.click('.modal-foot .btn.primary'); }
     else await page.click('.find-aside button:has-text("Clear filters")');
     await page.waitForTimeout(250);

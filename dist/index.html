@@ -568,7 +568,7 @@ p { margin: 0; }
 }
 @media (max-width: 860px) {
   .toasts.over-drawer { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-  .toast { max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+  .toast { max-width: calc(100vw - 32px); white-space: normal; }
 }
 .palette-input input:focus, .palette-input input:focus-visible { box-shadow: none; outline: none; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
@@ -2759,7 +2759,11 @@ function computeTasks(s = store.get()) {
     if (["applied", "screen", "interview"].includes(a.stage)) {
       const silent = Apps.daysSilent(a);
       const upcoming = (a.rounds || []).some((r) => r.at && r.at > t);
-      if (!upcoming && silent >= s.settings.ghostDays) {
+      const later = a.stage !== "applied";
+      if (later && !upcoming && silent >= s.settings.followUpDays && silent < s.settings.ghostDays * 2) {
+        const key = `next:${a.id}`;
+        if (!skip(key)) out.push({ key, kind: "nextround", pri: 2, app: a, icon: "cal", tone: "", title: `What's next with ${a.company}?`, sub: `You're at ${STAGE[a.stage].label.toLowerCase()} and nothing is scheduled. Add the next round, or follow up if it's been quiet.`, action: "Add a round" });
+      } else if (!upcoming && silent >= s.settings.ghostDays * (later ? 2 : 1)) {
         const key = `ghost:${a.id}`;
         if (!skip(key)) out.push({ key, kind: "ghost", pri: 3, app: a, icon: "ghost", tone: "ghost", title: `No reply from ${a.company} in ${silent} days`, sub: "Most companies reply within 3 weeks if they're interested. Mark it as ghosted to keep your board honest.", action: "Mark as ghosted" });
       } else if (!upcoming && a.stage === "applied" && silent >= s.settings.followUpDays && !a.followedUpAt) {
@@ -2799,7 +2803,7 @@ function computeStats(s = store.get(), apps = Apps.list(s)) {
   const replied = applied.filter((a) => a.lastReplyAt || ["screen", "interview", "offer", "rejected"].includes(a.stage));
   const interviewed = applied.filter((a) => ["interview", "offer"].includes(a.stage) || (a.rounds || []).length || a.events.some((e) => e.to === "interview"));
   const offers = applied.filter((a) => a.stage === "offer" || a.events.some((e) => e.to === "offer"));
-  const replyDays = replied.map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
+  const replyDays = replied.filter((a) => !(a.source === "import" && a.lastReplyAt && a.lastReplyAt === a.appliedAt && !(a.events || []).some((e) => e.kind === "stage"))).map((a) => (firstReplyAt(a) && a.appliedAt ? (firstReplyAt(a) - a.appliedAt) / DAY : null)).filter((x) => x != null && x >= 0);
   const median = (arr) => { if (!arr.length) return null; const v = [...arr].sort((a, b) => a - b); const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   const weekStart = startOfWeek(now());
   const thisWeek = applied.filter((a) => a.appliedAt >= weekStart).length;

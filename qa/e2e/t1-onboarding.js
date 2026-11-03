@@ -20,7 +20,9 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
     await page.keyboard.press('Control+k'); await page.waitForTimeout(150);
     T.check('Ctrl+K inert during onboarding', !(await page.evaluate(() => ui.state.palette)));
     // step 1 prefs
-    await page.click('.onboard .chip:has-text("Internship")'); // toggle off intern -> only newgrad
+    // Level starts unpicked (empty = both levels)
+    T.check('Level starts unpicked', (await page.locator('.onboard .chip[aria-pressed="true"]:has-text("Internship"), .onboard .chip[aria-pressed="true"]:has-text("New grad")').count()) === 0 && (await page.locator('.onboard .chip:has-text("New grad")').count()) === 1);
+    await page.click('.onboard .chip:has-text("New grad")'); // pick newgrad only
     await page.click('.onboard .chip:has-text("Software")');
     await page.click('.onboard .chip:has-text("Data & AI")');
     // v5: locations are a checkbox list (top N + "Show more")
@@ -54,7 +56,7 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
     // compute expected count ourselves
     const exp = await page.evaluate(() => {
       const p = { levels: ['newgrad'], roles: ['Software', 'Data & AI'], locations: ['new york', 'seattle'], remote: true, needsSponsor: true };
-      return jobsStore.jobs.filter((j) => p.levels.includes(j.lvl) && p.roles.includes(j.cat) && (p.locations.some((l) => jobInLoc(j, l)) || (p.remote && j.r)) && !(j.sp === 'no' || j.sp === 'citizen')).length;
+      return jobsStore.jobs.filter((j) => p.levels.includes(j.lvl) && p.roles.includes(j.cat) && (p.locations.some((l) => jobInLoc(j, l)) || (p.remote && jobInLoc(j, 'remote'))) && !(j.sp === 'no' || j.sp === 'citizen')).length;
     });
     T.check('step 3 count matches own computation', n.replace(/,/g, '') === String(exp), `${n} vs ${exp}`);
     T.check('no overflow step3', (await overflow(page)).ok);
@@ -82,7 +84,7 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
     T.check('no onboarding after reload', !(await page.locator('.onboard-wrap').count()));
     // Find uses prefs
     await page.evaluate(() => (location.hash = 'find')); await page.waitForTimeout(600);
-    const usingPrefs = await page.locator('.find-prefs').innerText().catch(() => '');
+    const usingPrefs = await page.locator('.find-count').innerText().catch(() => '');
     T.check('Find shows "Using your preferences"', /Using your preferences/.test(usingPrefs), usingPrefs);
     // Skip setup path
     T.check('console errors', errors.length === 0, errors.join(' | '));
@@ -93,7 +95,7 @@ Skills: Python, Java, JavaScript, TypeScript, SQL, Git, Linux, machine learning`
   try {
     await r2.page.click('text=Skip setup'); await r2.page.waitForTimeout(300);
     const p = await r2.page.evaluate(() => store.get().profile);
-    T.check('skip setup -> onboarded, defaults', p.onboarded && p.levels.length === 2);
+    T.check('skip setup -> onboarded, defaults (levels unpicked = both)', p.onboarded && p.levels.length === 0, JSON.stringify(p.levels));
     T.check('skip: no console errors', r2.errors.length === 0, r2.errors.join('|'));
     // back button retains state
   } catch (e) { T.check('exception skip', false, e.message.split('\n')[0]); }

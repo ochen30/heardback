@@ -50,6 +50,22 @@ const pad = (n) => String(n).padStart(2, '0');
     T.check('interview sample keeps stage', nw.stage === 'interview');
     T.check('email event logged', nw.events.some((e) => e.kind === 'email'));
     await clearToasts(page);
+    // logging an interview invite asks the user to confirm the time (Today "Confirm your …" task)
+    {
+      const oldIds = new Set(byCo(before, 'Northwind Labs').rounds.map((r) => r.id));
+      const nr = nw.rounds.find((r) => !oldIds.has(r.id));
+      if (nr && nr.at > Date.now()) {
+        const key = `confirm:${nw.id}:${nr.id}`;
+        const ct = await page.evaluate((k) => { const t = computeTasks().find((x) => x.key === k); return t && { kind: t.kind, title: t.title }; }, key);
+        T.check('interview invite -> "Confirm your technical with Northwind Labs" task', ct && ct.kind === 'confirm' && ct.title === 'Confirm your technical with Northwind Labs', JSON.stringify(ct));
+        await page.evaluate(() => (location.hash = 'today')); await page.waitForTimeout(500);
+        const more = page.locator('#td-needs-h >> xpath=../.. >> button:has-text("more")');
+        if (await more.count()) { await more.click(); await page.waitForTimeout(150); }
+        const tt = await page.locator(`.td-task[data-key="${key}"]`).innerText().catch(() => '');
+        T.check('Today shows the Confirm task', /^Confirm your technical with Northwind Labs/m.test(tt) || tt.includes('Confirm your technical with Northwind Labs'), tt.replace(/\n/g, ' ').slice(0, 120));
+        await page.evaluate(() => (location.hash = 'pipeline')); await page.waitForTimeout(500);
+      } else T.note('confirm task: invite round not in the future, skipped', JSON.stringify(nr && nr.at));
+    }
     // re-paste the same interview email -> duplicate round?
     await page.keyboard.press('e'); await page.waitForSelector('#pl-p-raw');
     await page.click('#pl-sample-interview'); await page.waitForTimeout(150);

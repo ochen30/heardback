@@ -87,8 +87,12 @@ const mobile = W < 700;
     T.note('own computation', JSON.stringify(mine));
     const kv = (i) => kpis[i].split('\n')[1];
     const total = await page.evaluate(() => Apps.list().length);
-    T.check('KPI "Applications" = all tracked (incl saved)', /^Applications/.test(kpis[0]) && kv(0) === String(total), `${kv(0)} vs ${total}`);
-    T.check('KPI Applications sub shows sent count', kpis[0].includes(`${mine.applied} sent`), kpis[0].replace(/\n/g, ' '));
+    const kExp = await page.evaluate(() => { const s = store.get(); const apps = Object.values(s.apps).filter((a) => s.settings.showExamples || !a.example); const applied = apps.filter((a) => a.stage !== 'saved' && a.appliedAt); return { total: apps.length, saved: apps.filter((a) => a.stage === 'saved').length, week: applied.filter((a) => a.appliedAt >= startOfWeek(Date.now())).length }; });
+    // the first KPI (labelled "Tracked") counts every tracked application, saved ones included
+    T.check('KPI "Applications" = all tracked (incl saved)', /^(Tracked|Applications)\b/.test(kpis[0]) && kv(0) === String(total) && total === kExp.total, `${kpis[0].split('\n')[0]}: ${kv(0)} vs ${total}/${kExp.total}`);
+    const kSub = await page.locator('.st-kpis .stat').first().locator('.stat-sub > span').allInnerTexts();
+    const kSubExp = [`${mine.applied} applied`, `${kExp.saved} saved`, `${kExp.week} this week`];
+    T.check('KPI Applications sub-line "N applied · N saved · N this week"', JSON.stringify(kSub.map((x) => x.trim())) === JSON.stringify(kSubExp) && mine.applied + kExp.saved <= kExp.total, `${kSub.join(' · ')} vs ${kSubExp.join(' · ')}`);
     T.check('KPI response rate', kv(1) === `${Math.round((mine.replied / mine.applied) * 100)}%`, `${kv(1)} vs ${mine.replied}/${mine.applied}`);
     T.check('KPI interview rate', kv(2) === `${Math.round((mine.interviewed / mine.applied) * 100)}%`, `${kv(2)} vs ${mine.interviewed}/${mine.applied}`);
     const medTxt = mine.med == null ? '—' : mine.med < 10 && mine.med % 1 ? mine.med.toFixed(1) : String(Math.round(mine.med));

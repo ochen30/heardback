@@ -130,7 +130,11 @@ const WRAP = () => {
     await page.evaluate((id) => openApp(id), nwId); await page.waitForTimeout(300);
     await page.keyboard.press('Control+k'); await page.waitForTimeout(200);
     const items = await page.locator('.palette-item').allInnerTexts();
-    T.check('palette over app drawer: context group first ("Move to …")', /Move to/.test(items[0] || ''), items.slice(0, 3).join(' | '));
+    const palExp = await page.evaluate((id) => { const a = Apps.get(id); return { head: `${a.company} · ${a.title || 'Application'}`, moves: STAGES.filter((st) => st.id !== a.stage).map((st) => `Move to ${st.label}`).slice(0, 4) }; }, nwId);
+    const palHead = await page.locator('.palette-group').first().innerText().catch(() => '');
+    T.check('palette over app drawer: context group header is "{Company} · {Title}"', palHead.trim() === palExp.head, `${palHead} vs ${palExp.head}`);
+    const palCtx = items.slice(0, 6).map((t) => t.trim().split('\n')[0].trim());
+    T.check('palette over app drawer: context group first (Add round, Draft follow-up, then Move to …)', JSON.stringify(palCtx) === JSON.stringify(['Add an interview round', 'Draft a follow-up', ...palExp.moves]), palCtx.join(' | '));
     T.check('palette over app drawer: offers Add round + Draft follow-up', items.some((t) => /Add an interview round|Add a round/.test(t)) && items.some((t) => /Draft a follow-up/.test(t)), items.join(' | ').slice(0, 300));
     T.check('palette over app drawer: no "Move to" current stage', !items.some((t) => new RegExp(`Move to ${'Interviews'}`).test(t)) || true);
     await page.keyboard.type('move to offer'); await page.waitForTimeout(150);
@@ -246,24 +250,39 @@ const WRAP = () => {
     T.check('calendar: button on upcoming round', await calBtn.count() === 1);
     await page.evaluate(() => navigator.clipboard.writeText(''));
     await calBtn.click(); await page.waitForTimeout(500);
-    let ics = '';
+    // .ics content: call the app's own builder directly
+    const ics = await page.evaluate(({ a, r }) => { const app = Apps.get(a); return cal_ics(app, app.rounds.find((x) => x.id === r)); }, cal);
+    const noStamp = (t) => String(t || '').replace(/DTSTAMP:[^\r\n]*/, 'DTSTAMP');
     if (MOCK) {
       const sv = await page.evaluate(() => window.__qa.saves.slice(-1)[0]);
-      ics = sv ? sv.text : '';
       T.check('calendar (MOCK downloads): .ics saved', sv && /^cal-co-technical\.ics$/.test(sv.filename) && sv.type === 'text/calendar', sv && sv.filename);
+      T.check('calendar (MOCK downloads): saved text = cal_ics(app, round)', sv && noStamp(sv.text) === noStamp(ics), sv && sv.text.slice(0, 80));
     } else {
-      ics = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
-      T.check('calendar (no downloads): .ics text copied as fallback', /BEGIN:VCALENDAR/.test(ics));
+      const tt = await page.locator('.toast').first().innerText().catch(() => '');
+      T.check('calendar (no downloads): toast explains files can’t be saved here', /Calendar files can.t be saved in this view/.test(tt), tt);
+      const clip = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
+      T.check('calendar (no downloads): nothing copied to clipboard', clip === '', clip.slice(0, 60));
+      T.check('calendar (no downloads): round not marked', (await page.evaluate(({ a, r }) => Apps.get(a).rounds.find((x) => x.id === r).calendar, cal)) == null);
       const btxt = await page.locator(`[data-round="${cal.r}"] .pl-round-foot`).innerText();
-      T.check('calendar (no downloads): button should not claim "In calendar" after only copying text', !/In calendar/.test(btxt), btxt.replace(/\n/g, ' '));
+      T.check('calendar (no downloads): button still says "Add to calendar"', /Add to calendar/.test(btxt) && !/In calendar/.test(btxt), btxt.replace(/\n/g, ' '));
+      await clearToasts(page);
     }
     T.check('ics: DTSTART is UTC of round time', /DTSTART:20261120T173000Z/.test(ics), (ics.match(/DTSTART:[^\r\n]*/) || [''])[0]);
     T.check('ics: DTEND +45 min', /DTEND:20261120T181500Z/.test(ics));
     T.check('ics: SUMMARY escaped', /SUMMARY:Technical: Cal Co · SWE Intern/.test(ics), (ics.match(/SUMMARY:[^\r\n]*/) || [''])[0]);
     T.check('ics: DESCRIPTION escapes ; and ,', /Priya S\\., Sam|Priya S\.\\, Sam/.test(ics) && /Graphs\\; DP\\, and SQL/.test(ics), (ics.match(/DESCRIPTION:[^\r\n]*/) || [''])[0].slice(0, 160));
     T.check('ics: CRLF line endings + VALARM', /\r\n/.test(ics) && /BEGIN:VALARM/.test(ics));
+    T.check('ics: every line ends CRLF (no bare LF)', !/[^\r]\n/.test(ics) && ics.split('\r\n').length > 10);
     const longLine = ics.split('\r\n').find((l) => Buffer.byteLength(l) > 75);
     T.check('ics: lines folded at 75 octets (RFC 5545 §3.1)', !longLine, longLine ? `${Buffer.byteLength(longLine)} octets: ${longLine.slice(0, 60)}…` : '');
+    // long ASCII description: must be folded, and unfolding must restore it
+    const icsLong = await page.evaluate(() => cal_ics({ company: 'Cal Co', title: 'SWE Intern' }, { id: 'rq', type: 'technical', at: Date.UTC(2026, 10, 20, 17, 30), prep: 'x'.repeat(200) }));
+    const llL = icsLong.split('\r\n');
+    T.check('ics: long line folded (continuations start with a space, unfold restores)', llL.every((l) => Buffer.byteLength(l) <= 75) && llL.some((l) => /^ x/.test(l)) && icsLong.replace(/\r\n /g, '').includes('Prep notes: ' + 'x'.repeat(200)), llL.map((l) => Buffer.byteLength(l)).join(','));
+    // non-ASCII text (names, curly quotes): the 75 limit is in octets, not characters
+    const icsU = await page.evaluate(() => cal_ics({ company: 'Café Zoë', title: 'Ingénieur logiciel – stagiaire' }, { id: 'ru', type: 'technical', at: Date.UTC(2026, 10, 20, 17, 30), interviewers: 'José Müller, Zoë Ångström, Søren Æbelø', prep: 'Révisez les graphes – c’est important; préparez « DP » et SQL ’’’’’’’’’’’’’’’’’’’’' }));
+    const uLong = icsU.split('\r\n').find((l) => Buffer.byteLength(l) > 75);
+    T.check('ics: non-ASCII lines folded at 75 octets', !uLong, uLong ? `${Buffer.byteLength(uLong)} octets: ${uLong.slice(0, 50)}…` : '');
     if (MOCK) T.check('calendar: round marked + button says "In calendar"', (await page.evaluate(({ a, r }) => Apps.get(a).rounds.find((x) => x.id === r).calendar, cal)) === 'ics' && await page.locator(`[data-round="${cal.r}"] button:has-text("In calendar")`).count() === 1);
     // past round: no button; no date: no button
     const past = await page.evaluate(({ a }) => Apps.addRound(a, { type: 'behavioral', at: Date.now() - 3 * 864e5 }).id, cal);
@@ -311,7 +330,7 @@ const WRAP = () => {
       // bad PDF and unsupported type
       await page.setInputFiles('#onb-res-file', { name: 'broken.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 garbage not a pdf') });
       await page.waitForTimeout(1500);
-      T.check('pdf: corrupt PDF -> plain error, text kept', /Couldn't read that PDF/.test(await page.locator('.onb-resume .callout').innerText().catch(() => '')) && /Jordan/.test(await page.inputValue('#onb-res-text')));
+      T.check('pdf: corrupt PDF -> plain error, text kept', /Couldn.t read that PDF/.test(await page.locator('.onb-resume .callout').innerText().catch(() => '')) && /Jordan/.test(await page.inputValue('#onb-res-text')));
       await page.setInputFiles('#onb-res-file', { name: 'resume.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('PK...') });
       await page.waitForTimeout(400);
       T.check('pdf: .docx -> "save as PDF" hint', /Word files: save as PDF/.test(await page.locator('.onb-resume .callout').innerText().catch(() => '')));
@@ -341,7 +360,7 @@ const WRAP = () => {
     await r.page.route(/pdfjs-dist/, (route) => route.abort());
     await r.page.evaluate(() => openModal('resume')); await r.page.waitForTimeout(200);
     await r.page.setInputFiles('#resm-file', PDF); await r.page.waitForTimeout(1500);
-    T.check('pdf: CDN blocked -> "Couldn\'t read that PDF here. Paste the text instead."', /Couldn't read that PDF/.test(await r.page.locator('.modal .callout').innerText().catch(() => '')));
+    T.check('pdf: CDN blocked -> "Couldn\'t read that PDF here. Paste the text instead."', /Couldn.t read that PDF/.test(await r.page.locator('.modal .callout').innerText().catch(() => '')));
     await r.close();
   }
 

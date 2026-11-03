@@ -561,7 +561,7 @@ p { margin: 0; }
 }
 @media (max-width: 860px) {
   .toasts.over-drawer { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-  .toast { max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+  .toast { max-width: calc(100vw - 32px); white-space: normal; }
 }
 .palette-input input:focus, .palette-input input:focus-visible { box-shadow: none; outline: none; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
