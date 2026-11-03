@@ -339,7 +339,7 @@ VIEWS.find = function FindView() {
     <div>
       <h1>Find jobs</h1>
       <p>${ready
-        ? html`<span class="num">${fmt.num(st.active || jobs.jobs.length)}</span> open internship and new-grad roles from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? ` · updated ${fmt.ago(genAt)}` : ""}`
+        ? html`<span class="num">${fmt.num(st.active || jobs.jobs.length)}</span> open internship and new-grad roles from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? ` · updated ${fmt.ago(genAt)}` : ""} · <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button>`
         : "Open internship and new-grad roles, checked for ghost-job signals."}</p>
     </div>
   </div>`;

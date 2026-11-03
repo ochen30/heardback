@@ -137,7 +137,7 @@ function useFocusTrap(ref, self) {
     el.addEventListener("keydown", onTab);
     const prev = document.activeElement;
     if (self) { setTimeout(() => el.focus({ preventScroll: true }), 20); return () => { el.removeEventListener("keydown", onTab); try { prev?.focus?.(); } catch {} }; }
-    const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el.querySelector("button");
+    const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el;
     setTimeout(() => (first || el).focus?.(), 20);
     return () => { el.removeEventListener("keydown", onTab); try { prev?.focus?.(); } catch {} };
   }, []);
