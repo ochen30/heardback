@@ -30,3 +30,17 @@
 - Email parser: case-insensitive "thank you for applying", interview invites that mention a recruiter call are no longer misread as screens, interview times are read from the body (not the Date header), company names stop at "on/to/for…", offer titles ("position of X at Y") detected.
 - Core: modals keep their own props (draft modal opened from Today now works), Escape closes only the top-most overlay, dialogs focus their first field, toasts support an action button, thank-you template cleans interviewer names, danger confirmations styled as danger, shortcuts disabled during onboarding.
 - Mobile: "More" sheet (Companies, Insights, Paste email, Settings), toasts sit above the tab bar.
+
+### 01:40 PT — v3 published (design pass + QA fixes)
+Design review scored v2 at 6.3/10 ("good foundations, too much noise"). Fixed:
+- Quieter everywhere: example data is one banner (no per-item pills), one primary button per region, no duplicate page titles, neutral company monograms, solid (not dashed) borders, chips with a check when selected, no footnote under every number.
+- Today: one primary action, aligned buttons, Snooze/Dismiss folded into one menu, no repeated widgets; Insights: simpler chart, one "How we calculate this" note.
+- Find: one "Fit 92" format, ghost labels only when there are signals, location checkbox list, drawers use sections instead of nested cards, unknown fields hidden, duplicate listings collapsed, "new since your last visit".
+- Pipeline: no tall grey columns, single "Closed" rail, underline tabs in the application drawer, read-mode details that edit on click, footer action matches the next step, compact "Log an email" preview.
+- Prep / Settings / Onboarding: clean mobile header, roomier answer tips, no card-head icons, custom skill input, calmer copy.
+- Toasts bottom-left, modals sit above drawers, drawers don't pop the keyboard, Escape closes one layer, dark-mode switches visible.
+QA found 32 bugs (2 crash, 4 broken). Fixed all P0/P1 and most P2:
+- Bad or partial records can no longer crash the app (validated on load and import; error boundary per screen with export/retry).
+- Unreadable saved data is backed up instead of overwritten; failed saves warn you; edits flush on tab close.
+- Email parser scores signals instead of first match (11/11 realistic test emails now classified correctly), handles numeric dates, time zones (ET/PT…), assessment deadlines, platform senders (HackerRank etc.).
+- No duplicate rounds from re-logging the same email; Offer cards can't be arrow-keyed into Rejected; hidden examples aren't matched or exported as real; Delete all clears every Heardback key; Tab stays inside dialogs; long names wrap.

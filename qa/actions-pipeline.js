@@ -52,6 +52,7 @@ const actions = {
     assert(await page.locator('.pl-empty').count() === 1, 'empty state renders');
   },
   async dnd(page) {
+    if (page.viewportSize().width < 600) { log('skip dnd at phone width (columns scroll horizontally; use the move menu)'); return; }
     const before = await stageOf(page, 'Verity Labs');
     await drag(page, '.pl-card:has-text("Verity Labs")', '[data-col="screen"]');
     await wait(page, 400);
