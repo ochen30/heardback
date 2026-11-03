@@ -2714,7 +2714,8 @@ function expectedSkills(job) {
 
 /* ===== Fit score: transparent, based only on what the listing states ===== */
 function fitScore(job, profile) {
-  if (!profile || (!profile.roles?.length && !profile.locations?.length && !profile.skills?.length)) return null;
+  // Without skills every matching job scores the same, which says nothing. Fit appears once a resume or skills are added.
+  if (!profile || !profile.skills?.length) return null;
   const parts = [];
   let score = 0, max = 0;
   // role (35)
