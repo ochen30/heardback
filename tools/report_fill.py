@@ -6,11 +6,12 @@ rep = root / "report"; out = rep / "out"; out.mkdir(exist_ok=True)
 v = json.loads((rep / "values.json").read_text())
 jobs = json.loads((root / "dist/data/jobs.json").read_text())
 st = jobs["stats"]
+uniq = len({(j["c"], j["t"].lower(), ";".join(j["l"][:3])) for j in jobs["jobs"]})
 tl = "\n".join(f'      <li><time>{html.escape(t)}</time><div><b>{html.escape(h)}</b><p>{html.escape(p)}</p></div></li>' for t, h, p in v["timeline"])
 known = "\n".join(f"      <li>{html.escape(k)}</li>" for k in v.get("known", []))
 page = (rep / "index.html").read_text()
 for k, val in {
-    "__JOBS__": f'{st["active"]:,}', "__COMPANIES__": f'{st["companies"]:,}', "__GHOSTSTRONG__": f'{st["likelyGhost"]:,}',
+    "__JOBS__": f'{uniq:,}', "__POSTINGS__": f'{st["active"]:,}', "__COMPANIES__": f'{st["companies"]:,}', "__GHOSTSTRONG__": f'{st["likelyGhost"]:,}',
     "__VERSIONS__": str(v["versions"]), "__SCORE__": v["score"], "__TIMELINE__": tl, "__QA__": html.escape(v["qa"]),
     "__KNOWN__": known, "__POST_MAIN__": html.escape(v["post_main"]), "__POST_SHORT__": html.escape(v["post_short"]), "__CHECKS__": v["checks"],
 }.items():

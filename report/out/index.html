@@ -1,0 +1,283 @@
+<title>Heardback Night 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column (max 760px) with a wide band for screenshots. Same tokens as the app. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f1f3f6; --line: #e2e6ec; --line-strong: #cfd5de;
+  --fg: #12161d; --fg-2: #4a5361; --fg-3: #626b79; --accent: #3150d6; --accent-soft: #eaeefc; --accent-text: #2a46c4;
+  --ok: #1d7a4f; --ok-soft: #e5f4ec; --wait: #9a6100; --wait-soft: #fbf1dd;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0f13; --surface: #14171c; --surface-2: #1a1e24; --line: #262b33; --line-strong: #353c46;
+  --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1; --accent: #6f8bff; --accent-soft: #1c2440; --accent-text: #93a8ff;
+  --ok: #4cc38a; --ok-soft: #12291e; --wait: #e2a740; --wait-soft: #2b2112; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d0f13; --surface: #14171c; --surface-2: #1a1e24; --line: #262b33; --line-strong: #353c46;
+  --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1; --accent: #6f8bff; --accent-soft: #1c2440; --accent-text: #93a8ff;
+  --ok: #4cc38a; --ok-soft: #12291e; --wait: #e2a740; --wait-soft: #2b2112; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 48px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 40px; }
+.wide { max-width: 1120px; }
+h1 { font-size: 32px; letter-spacing: -0.03em; line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-size: 19px; letter-spacing: -0.015em; margin: 0 0 12px; }
+h3 { font-size: 15px; margin: 20px 0 6px; }
+p { margin: 0 0 10px; color: var(--fg-2); }
+a { color: var(--accent-text); }
+.eyebrow { font: 500 12px var(--mono); color: var(--fg-3); letter-spacing: .04em; text-transform: uppercase; }
+.hero { display: flex; flex-direction: column; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; }
+:root[data-theme="dark"] .btn { color: #0b1020; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { color: #0b1020; } }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line-strong); }
+.url { font: 13px var(--mono); color: var(--fg-3); word-break: break-all; }
+.lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.lines li { padding: 12px 16px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; color: var(--fg); }
+.lines li + li { border-top: 1px solid var(--line); }
+.lines .n { font: 500 13px var(--mono); color: var(--fg-3); padding-top: 2px; }
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.shot { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.shot img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--surface); }
+.shot figcaption { font-size: 13px; color: var(--fg-3); }
+.phones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.callout { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 16px 18px; }
+.callout.need { border-color: transparent; background: var(--wait-soft); }
+.callout ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.callout li { color: var(--fg); }
+.callout li span { color: var(--fg-2); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.stats > div { padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stats > div + div { border-left: 1px solid var(--line); }
+.stats b { font-size: 24px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stats span { font-size: 13px; color: var(--fg-3); }
+.tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tl li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.tl li:first-child { border-top: 0; }
+.tl time { font: 500 13px var(--mono); color: var(--fg-3); padding-top: 2px; }
+.tl b { display: block; }
+.tl p { margin: 2px 0 0; font-size: 14px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 640px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--fg-3); font-weight: 500; font-size: 12px; }
+tr:last-child td { border-bottom: 0; }
+td.y { color: var(--ok); font-weight: 600; } td.p { color: var(--wait); } td.n { color: var(--fg-3); }
+tr.us td { background: var(--accent-soft); }
+.post { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 18px; white-space: pre-wrap; font-size: 14px; line-height: 1.65; color: var(--fg); }
+.copy { margin-top: 8px; display: inline-flex; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); font: 500 13px var(--font); cursor: pointer; }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cols .callout h3 { margin-top: 0; }
+ul.plain { margin: 0; padding-left: 18px; color: var(--fg-2); display: flex; flex-direction: column; gap: 6px; }
+.foot { font-size: 13px; color: var(--fg-3); border-top: 1px solid var(--line); padding-top: 16px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .shots, .cols { grid-template-columns: minmax(0, 1fr); }
+  .phones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats > div:nth-child(3) { border-left: 0; }
+  .stats > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  h1 { font-size: 26px; }
+  .tl li { grid-template-columns: 64px minmax(0, 1fr); }
+}
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="brand"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M9 11.5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-4.5L12 23v-3.5a3 3 0 0 1-3-3z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="m13 14.2 2 2 4-4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Heardback</div>
+    <span class="eyebrow">Night 1 · Nov 3, 2026 · built 12:30–9:00 AM PT</span>
+    <h1>The job search app that knows which jobs are real, who actually replies, and what to do next.</h1>
+    <div class="cta">
+      <a class="btn" href="https://claude.ai/artifact/CUYnHDx5AYEtoPjDxxVobm" target="_blank" rel="noopener">Open Heardback</a>
+      <span class="url">claude.ai/artifact/CUYnHDx5AYEtoPjDxxVobm</span>
+    </div>
+    <p>Private to you until you share it from the page's Share menu.</p>
+  </header>
+
+  <section>
+    <h2>What it does now</h2>
+    <ol class="lines">
+      <li><span class="n">01</span><span><b>Real roles.</b> 7,600 open internship and new-grad roles (8,245 postings, identical repeats shown once) from 1,966 companies, each linking to the employer's own application page, refreshed from live data tonight.</span></li>
+      <li><span class="n">02</span><span><b>A ghost-job check on every listing,</b> with the exact reasons: how long it's been up, how often it was posted and closed before, how many cities it's blasted across, and how fast this company usually closes roles.</span></li>
+      <li><span class="n">03</span><span><b>A pipeline for every application and interview round.</b> Paste a recruiter email and it logs itself: new application, stage move or a scheduled round.</span></li>
+      <li><span class="n">04</span><span><b>A Today view</b> that says what to do: prep for tomorrow's round, send the thank-you note, follow up, notice a posting that was taken down, or call it ghosted.</span></li>
+      <li><span class="n">05</span><span><b>Interview prep, insights and opt-in anonymous reply data,</b> with Claude on your own account for tailoring, feedback and drafts.</span></li>
+    </ol>
+  </section>
+
+  <section class="callout need">
+    <h2>Needs you (about 5 minutes)</h2>
+    <ol>
+      <li><b>Create the GitHub repo <code>ochen30/heardback</code></b> (empty). <span>This session can't create repos, and neither name existed tonight. Full git history is ready to push.</span></li>
+      <li><b>Decide on the data source.</b> <span>Listings come from the SimplifyJobs community lists on GitHub, which have no license file. Fine for a private prototype; before a public launch, ask them or switch to direct company boards (next item).</span></li>
+      <li><b>Allow three hosts</b> in this environment's network settings: <code>boards-api.greenhouse.io</code>, <code>api.lever.co</code>, <code>api.ashbyhq.com</code>. <span>Then the ready-made script pulls 822 company boards directly, with full job descriptions.</span></li>
+      <li><b>Try "Add to calendar" once</b> on a real interview round. <span>It uses your Google Calendar connector and matches its schema, but I didn't fire it tonight because it would create a real event.</span></li>
+      <li><b>Share the app</b> from its Share menu when you're ready to post.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Numbers</h2>
+    <div class="stats">
+      <div><b>7,600</b><span>open roles</span></div>
+      <div><b>858</b><span>with strong ghost signals</span></div>
+      <div><b>7</b><span>published versions</span></div>
+      <div><b>8.6</b><span>design score (from 6.3)</span></div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap wide" style="padding-block:0">
+  <section>
+    <h2>Screens</h2>
+    <div class="shots">
+      <figure class="shot"><img src="shots/today-light.png" alt="Today view in light mode: prioritized tasks, upcoming interview, new matching roles" loading="lazy"><figcaption>Today, light</figcaption></figure>
+      <figure class="shot"><img src="shots/find-dark.png" alt="Find jobs in dark mode with filters, fit scores and ghost signals" loading="lazy"><figcaption>Find jobs, dark</figcaption></figure>
+      <figure class="shot"><img src="shots/job-light.png" alt="Job panel showing the ghost-job check with reasons and fit breakdown" loading="lazy"><figcaption>Ghost-job check on a listing</figcaption></figure>
+      <figure class="shot"><img src="shots/pipeline-light.png" alt="Pipeline board with application cards across stages" loading="lazy"><figcaption>Pipeline</figcaption></figure>
+    </div>
+    <h3>Phone</h3>
+    <div class="phones">
+      <figure class="shot"><img src="shots/m-today-light.png" alt="Today on a phone, light" loading="lazy"><figcaption>Today</figcaption></figure>
+      <figure class="shot"><img src="shots/m-find-dark.png" alt="Find on a phone, dark" loading="lazy"><figcaption>Find, dark</figcaption></figure>
+      <figure class="shot"><img src="shots/m-pipeline-light.png" alt="Pipeline on a phone" loading="lazy"><figcaption>Pipeline</figcaption></figure>
+      <figure class="shot"><img src="shots/m-prep-dark.png" alt="Interview prep on a phone, dark" loading="lazy"><figcaption>Prep, dark</figcaption></figure>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+  <section>
+    <h2>Tonight, cycle by cycle</h2>
+    <ol class="tl">
+      <li><time>12:30 AM</time><div><b>Setup and platform limits</b><p>Verified what an Artifact page can and can&#x27;t do, found that this environment blocks the job-board APIs, and found a reachable real data source. Renamed the app from Ghosted to Heardback.</p></div></li>
+      <li><time>12:45 AM</time><div><b>Foundations</b><p>Design system (Geist, cool neutrals, one cobalt accent, full dark mode), app shell, command palette, local-first store, nudges engine, data pipeline with ghost signals, competitor scan.</p></div></li>
+      <li><time>1:05 AM</time><div><b>v1: every screen</b><p>Four agents built Find, Pipeline, Today/Insights and Prep/Onboarding/Settings in parallel. First publish.</p></div></li>
+      <li><time>1:10 AM</time><div><b>v2: calendar and parsing</b><p>Add to calendar (Google Calendar connector or .ics), email parser accuracy, core fixes.</p></div></li>
+      <li><time>1:40 AM</time><div><b>v3: design pass 1 + QA</b><p>Design review 1 scored 6.3. Removed noise everywhere. QA found 32 bugs; fixed every crash and broken feature.</p></div></li>
+      <li><time>2:10 AM</time><div><b>v4: design pass 2</b><p>Review 2 scored 7.4. Calmer layouts, tablet breakpoints, rounds as summaries. New: posting-taken-down detection, season-closing nudges, PDF resumes, new since your last visit.</p></div></li>
+      <li><time>2:30 AM</time><div><b>v5: new features</b><p>Mock interview with Claude, bulk actions, command palette context actions, How we score listings.</p></div></li>
+      <li><time>2:55 AM</time><div><b>v6: design pass 3</b><p>Review 3 scored 8.1. One vocabulary for signals, softer selection, simpler mock interview. Share-your-progress card.</p></div></li>
+      <li><time>3:30 AM</time><div><b>v7: design pass 4 + QA round 2</b><p>Review 4 scored 8.6. Quieter fit and freshness, typography, raised dark overlays. QA round 2 (2,280 checks): no crash or broken-feature bugs left.</p></div></li>
+    </ol>
+    <p style="margin-top:10px">Full detail: CHANGELOG.md in the repo bundle below.</p>
+  </section>
+
+  <section>
+    <h2>QA</h2>
+    <p>Every published version passed Playwright runs at 375, 768 and 1440 px in light and dark mode with zero console errors and no horizontal overflow. Two full QA passes drove the real UI end to end (onboarding, search, saving, drag and drop, keyboard moves, email logging with 11 realistic emails, rounds, nudges, insights math, export/import round-trips, corrupt data, 300 applications, focus and Escape behavior): 2,288 automated checks in the final suite. All crash and broken-feature bugs found were fixed. Remaining failures in the suite are tests written for earlier UI text, plus decorative separators that fall below contrast ratio by design.</p>
+  </section>
+
+  <section>
+    <h2>Known issues</h2>
+    <ul class="plain">
+      <li>Listing dates are when the community list added a role (the dataset starts Mar 9, 2026), not the employer's own date.</li>
+      <li>Tonight's data has no job descriptions, so fit uses title, level, location and your skills. Pasting a description into the job panel gives Claude a sharper read.</li>
+      <li>Sponsorship is almost never stated in the data (99.7% blank), so the visa filter rarely helps yet.</li>
+      <li>Anonymous reply data can be written only by people with Contributor access or above; public-link visitors can read but not add. A small backend fixes this.</li>
+      <li>Claude features run on each visitor's own Claude account and ask permission first; signed-out visitors get the non-AI versions.</li>
+      <li>Your tracker lives in this browser on one device. Export and import move it.</li>
+      <li>Add to calendar matches your Google Calendar connector&#x27;s schema but wasn&#x27;t fired tonight, because it would create a real event.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Platform limits found tonight</h2>
+    <ul class="plain">
+      <li>Pages can't fetch outside URLs, so job data ships as files next to the page and a script refreshes it.</li>
+      <li>This environment blocks the Greenhouse, Lever and Ashby APIs. The SimplifyJobs lists on raw.githubusercontent.com are reachable.</li>
+      <li>The shared database holds 25,000 documents of up to 256 KiB, and outside viewers are read-only.</li>
+      <li>Download links, alert/confirm and window.open don't work inside the frame, so the app uses the downloads capability, in-page dialogs and real links.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Against the competition</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Product</th><th>Price</th><th>Ghost-job check</th><th>Per-round tracking</th><th>Email logging</th><th>Nudges</th><th>Reply data</th></tr></thead>
+        <tbody>
+          <tr class="us"><td><b>Heardback</b></td><td>Free</td><td class="y">Per listing, with reasons</td><td class="y">Yes</td><td class="y">Paste an email</td><td class="y">Today view</td><td class="p">Opt-in, needs backend</td></tr>
+          <tr><td>Teal</td><td>$29/mo</td><td class="n">No</td><td class="p">Stages, notes</td><td class="n">No</td><td class="p">Networking</td><td class="n">No</td></tr>
+          <tr><td>Huntr</td><td>$40/mo Pro</td><td class="p">Unclear</td><td class="y">Yes</td><td class="n">No</td><td class="p">Some</td><td class="n">No</td></tr>
+          <tr><td>Simplify</td><td>$39.99/mo+</td><td class="p">Age, closed marker</td><td class="n">No</td><td class="n">No</td><td class="n">Unclear</td><td class="n">No</td></tr>
+          <tr><td>Jobright</td><td>~$40/mo</td><td class="p">Claimed</td><td class="n">No</td><td class="n">No</td><td class="n">Unclear</td><td class="n">Internal only</td></tr>
+          <tr><td>LinkedIn</td><td>Free / Premium</td><td class="p">Reposted label</td><td class="n">No</td><td class="n">No</td><td class="n">No</td><td class="p">Responsiveness badge</td></tr>
+          <tr><td>Remote Rocketship / Klepify</td><td>Free</td><td class="y">Score, no reasons</td><td class="n">No</td><td class="n">No</td><td class="n">No</td><td class="n">No</td></tr>
+          <tr><td>didtheyghost.me / DidTheyGhostYou</td><td>Free</td><td class="n">No</td><td class="p">Community</td><td class="n">No</td><td class="n">No</td><td class="y">Community reports</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:10px">The job feed is a commodity; Heardback doesn't try to win on breadth. Its edge is honesty and the loop: explained ghost signals on every listing, every round tracked, a Today list that tells you what to do, and (with a backend) early-career reply data nobody publishes. Prices from third-party sources; check before quoting.</p>
+  </section>
+
+  <section>
+    <h2>LinkedIn post</h2>
+    <p>Edit the first line to your own experience before posting.</p>
+    <div class="post" id="post-main">[Edit to your own experience] Half the internship listings I applied to last year never replied. Some of them were never real.
+
+So I built Heardback, a free job search app for internships and new-grad roles that asks one question about every listing: will you actually hear back?
+
+• 7,500+ live internship and new-grad roles, each linking straight to the company&#x27;s own application page
+• A ghost-job check on every listing, with the reasons: how long it&#x27;s been up, how many times it was closed and reposted, how many cities it&#x27;s blasted across
+• A pipeline that tracks every interview round. Paste a recruiter email and it logs itself.
+• A Today view that tells you who to follow up with, when a posting was taken down, and when to call it ghosted
+• Mock interviews and prep for each round, on your own Claude account
+
+It&#x27;s free and your data stays in your browser.
+
+If you&#x27;re recruiting this season, try it and log your last 10 applications.
+
+[link]</div>
+    <button type="button" class="copy" data-copy="post-main">Copy post</button>
+    <h3>Shorter version</h3>
+    <div class="post" id="post-short">Built Heardback: a free internship and new-grad job search that flags ghost listings (open 200+ days, posted and closed 7× before) and tracks every interview round. Paste a recruiter email and it logs itself. Try it and log your last 10 applications: [link]</div>
+    <button type="button" class="copy" data-copy="post-short">Copy short post</button>
+    <p style="margin-top:12px">Suggested images: Find with the ghost-signal column, a job panel showing "Posted and closed 7× before", the pipeline board, and Today on a phone (all in the Screens section above).</p>
+  </section>
+
+  <section>
+    <h2>Nights 2 and 3</h2>
+    <div class="cols">
+      <div class="callout">
+        <h3>Night 2: real data, real accounts</h3>
+        <ul class="plain">
+          <li>Direct ATS ingestion from 822 company boards, with descriptions: description-based fit, requirement extraction, sharper tailoring.</li>
+          <li>Daily snapshots for true "first seen" dates and requisition-level repost detection, plus a published hit rate for the ghost score.</li>
+          <li>A small backend (Postgres plus one function) for sign-in, sync across devices and public anonymous reply data.</li>
+          <li>Nightly refresh and republish of the data files.</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h3>Night 3: launch</h3>
+        <ul class="plain">
+          <li>Public "Who replies at…" company pages once sample sizes allow.</li>
+          <li>Optional read-only Gmail import through your connector.</li>
+          <li>A shareable weekly progress card, landing page and accessibility audit.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Source</h2>
+    <p>The GitHub repo didn't exist tonight, so the source ships here: <a href="source/heardback-app.txt">the built app (single file)</a>, <a href="source/refresh_jobs.py.txt">data refresh script</a>, <a href="source/fetch_ats.py.txt">direct ATS fetcher</a>, <a href="source/CHANGELOG.md.txt">changelog</a> and <a href="source/NOTES.md.txt">engineering notes</a>. The full git history is in the session workspace, ready to push.</p>
+  </section>
+
+  <p class="foot">Built overnight by Claude with a team of agents: four builders, four design reviews, a QA engineer running 2,288 automated checks, and three polish rounds. Nothing was posted publicly.</p>
+</div>
+
+<script>
+document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
+  const el = document.getElementById(b.dataset.copy);
+  try { await navigator.clipboard.writeText(el.innerText); b.textContent = "Copied"; }
+  catch { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected. Press Ctrl+C"; }
+  setTimeout(() => { b.textContent = b.dataset.copy === "post-main" ? "Copy post" : "Copy short post"; }, 2500);
+}));
+</script>

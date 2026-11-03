@@ -2,7 +2,7 @@
 // Env: W=1440 H=900 THEME=light|dark DPR=1 SETUP=examples|fresh|onboarded ACTIONS=js-file
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs'); const http = require('http');
-const root = path.resolve(__dirname, '..'); const dist = path.join(root, 'dist'); const nm = path.join(root, 'tools', 'node_modules');
+const root = path.resolve(__dirname, '..'); const dist = process.env.ROOT ? path.resolve(process.env.ROOT) : path.join(root, 'dist'); const nm = path.join(root, 'tools', 'node_modules');
 const out = process.env.OUT ? path.resolve(process.env.OUT) : path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
 const types = { '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.js': 'text/javascript' };
 const server = http.createServer((req, res) => {
