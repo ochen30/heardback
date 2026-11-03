@@ -77,3 +77,17 @@ Design review 3 scored v5 at 8.1/10 (from 7.4). Applied:
 
 ### 03:05 PT — v6.1
 - **Share your progress:** a clean 1200×630 card (week, month or all time; light or dark) with applications, replies, interviews, offers, response rate and an 8-week sparkline, plus a modest suggested caption. Counts only real applications, never examples; company names off by default. From Insights or the command palette.
+
+### 03:30 PT — v7 published (design pass 4 + QA round 2)
+Design review 4 scored v6 at 8.6/10 (from 8.1). QA round 2: 2,280 automated checks, no crash or broken-feature bugs left. Applied:
+- Fit is plain text (highlighted only at 95+); age is quiet metadata with a green dot for new listings; one row order everywhere (age · Fit · save).
+- Company monograms: one or two letters, never "H&".
+- Dark mode: drawers and dialogs sit on a raised surface; lighter scrim; calmer Insights charts.
+- Typography: curly quotes, en dashes in titles, no orphaned "·" separators or one-word last lines.
+- Pipeline: mobile stage control fixed; typing right after clicking a field never triggers shortcuts; Escape cancels an edit before closing the drawer.
+- Find: focus returns to the row after closing a job; job drawer values aligned in one column.
+- Command palette: context actions first; screen-reader combobox semantics; removed an action the frame blocks.
+- Add to calendar never claims success when nothing was saved; .ics files follow the line-length standard and carry the time zone.
+- Unreadable saved data now shows a notice with a Restore action on launch (not only in Settings).
+- Imported dates are validated to a sane range.
+- Job data refreshed (8,245 open roles).
