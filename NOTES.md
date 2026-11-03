@@ -48,3 +48,16 @@ App renamed to **Heardback** at 08:50 UTC per user request. Repo to attach: oche
 12. [ ] Stats view (funnel, weekly activity)
 13. [ ] Settings: theme, privacy, export/import, example data toggle
 14. [ ] QA + design critique loops
+
+## Live artifact
+- URL: https://claude.ai/artifact/CUYnHDx5AYEtoPjDxxVobm (private to the owner until shared via the page's Share menu)
+- Publish from `publish/` (stable snapshot): `python3 tools/build.py && cp dist/index.html publish/ && cp dist/data/*.json publish/data/`, then Artifact publish `publish/index.html` with files `data/jobs.json`, `data/companies.json`.
+- Capabilities: db (rules: pool read view/write owner; pool/{self} read view/write interact), user, sample, downloads, mcp (Google Calendar: create_event) from v2.
+
+## Refreshing job data (each night)
+1. `python3 tools/refresh_jobs.py` (downloads the two SimplifyJobs listings files; ~30 s).
+2. Optional once hosts are allowed: `python3 tools/fetch_ats.py --open-only` (direct Greenhouse/Lever/Ashby, adds descriptions).
+3. Rebuild + copy to publish/ + republish (data files only change).
+
+## Calendar
+- `addToCalendar(appId, roundId)`: Google Calendar connector (`create_event`, local ISO times, 45 min) when the viewer has it; otherwise an .ics file via the downloads capability. Result payload of create_event is not read (no write was run just to learn its shape).

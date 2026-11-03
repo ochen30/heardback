@@ -117,14 +117,18 @@ function Field({ label, hint, children, id }) {
 function ExampleTag() { return html`<span class="badge example" title="Example data. Not real.">Example</span>`; }
 
 /* Modal & drawer shells */
+/* Escape closes only the top-most overlay */
+const escStack = [];
+window.addEventListener("keydown", (e) => { if (e.key === "Escape" && escStack.length) { e.stopPropagation(); e.preventDefault(); escStack[escStack.length - 1].current(); } }, true);
 function useEscape(fn) {
-  useEffect(() => { const k = (e) => { if (e.key === "Escape") { e.stopPropagation(); fn(); } }; window.addEventListener("keydown", k, true); return () => window.removeEventListener("keydown", k, true); }, [fn]);
+  const ref = useRef(fn); ref.current = fn;
+  useEffect(() => { escStack.push(ref); return () => { const i = escStack.indexOf(ref); if (i >= 0) escStack.splice(i, 1); }; }, []);
 }
 function useFocusTrap(ref) {
   useEffect(() => {
     const el = ref.current; if (!el) return;
     const prev = document.activeElement;
-    const first = el.querySelector("[autofocus], input, textarea, select, button");
+    const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el.querySelector("button");
     setTimeout(() => (first || el).focus?.(), 20);
     return () => { try { prev?.focus?.(); } catch {} };
   }, []);

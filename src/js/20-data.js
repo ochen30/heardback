@@ -160,17 +160,17 @@ function parseEmail(raw) {
   const has = (...ps) => ps.some((p) => low.includes(p));
   if (has("pleased to offer", "extend an offer", "offer letter", "excited to offer", "formal offer", "offer of employment")) kind = "offer";
   else if (has("unfortunately", "not to move forward", "not be moving forward", "decided to pursue other", "move forward with other", "regret to inform", "position has been filled", "not selected", "will not be proceeding", "other candidates whose", "decided not to proceed")) kind = "rejection";
-  else if (has("phone screen", "recruiter call", "initial call", "quick chat", "intro call", "screening call")) kind = "screen";
-  else if (has("interview", "schedule a time", "your availability", "calendly", "next round", "onsite", "superday", "technical assessment", "coding challenge", "hackerrank", "codesignal")) kind = "interview";
+  else if (has("phone screen", "recruiter call", "initial call", "quick chat", "intro call", "screening call") && !has("technical interview", "onsite", "on-site", "superday", "final round", "panel interview", "coding interview", "system design", "hackerrank", "codesignal", "case interview", "virtual onsite")) kind = "screen";
+  else if (has("interview", "schedule a time", "your availability", "calendly", "next round", "onsite", "superday", "technical assessment", "coding challenge", "hackerrank", "codesignal", "phone screen", "recruiter call")) kind = "interview";
   else if (has("thank you for applying", "received your application", "application has been received", "we have received your", "thanks for applying", "application was submitted", "successfully submitted", "thank you for your application", "thank you for your interest")) kind = "confirmation";
 
   // company
   let company = "";
   const pats = [
-    /thank you for (?:applying|your (?:application|interest)) (?:to|at|in|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| for | and )/,
-    /(?:position|role|opportunity|job) (?:at|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and )/,
+    /(?:[Tt]hank you|[Tt]hanks|THANK YOU) for (?:applying|your (?:application|interest)|submitting your application) (?:to|at|in|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| for | and | on | to | this | next |$)/m,
+    /(?:position|role|opportunity|job) (?:at|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
     /(?:join|joining) (?:the )?([A-Z][\w&.'\- ]{1,40}?) (?:team|family)/,
-    /interest in (?:joining )?([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and )/,
+    /interest in (?:joining )?([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
     /^(?:the )?([A-Z][\w&.'\- ]{1,30}?) (?:Recruiting|Talent|Careers|Hiring) Team/m,
   ];
   for (const re of pats) { const m = text.match(re); if (m) { company = m[1].trim().replace(/^the /i, ""); break; } }
@@ -186,6 +186,7 @@ function parseEmail(raw) {
   // role
   let title = "";
   const tp = [
+    /(?:position|role|offer) (?:of|as) (?:an? |the )?([A-Z][\w&/,()+.'\- ]{2,70}?) (?:at|with) /,
     /for (?:the )?(?:position of |role of )?["“]?([A-Z][\w&/,()+.'\- ]{2,70}?)["”]? (?:position|role|opening|internship)/,
     /(?:application|applying|interview|candidacy) for (?:the )?["“]?([A-Z][\w&/()+.'\- ]{2,70}?)["”]?(?: position| role| opening)?(?: at | with |[.!,\n(])/,
     /(?:position|role):\s*([^\n]{3,70})/i,
@@ -199,7 +200,8 @@ function parseEmail(raw) {
 
   // interview time
   let interviewAt = null;
-  const dm = text.match(/(?:on\s+)?((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*,?\s+)?((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?(?:\s*(?:at|@|,)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)))?/i);
+  const body = text.replace(/^(?:From|To|Cc|Bcc|Subject|Date|Sent|Reply-To):.*$/gim, "");
+  const dm = body.match(/(?:on\s+)?((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*,?\s+)?((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?(?:\s*(?:at|@|,)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)))?/i);
   if (dm && (kind === "interview" || kind === "screen")) {
     const yr = dm[3] || new Date().getFullYear();
     const t = Date.parse(`${dm[2]} ${yr} ${dm[4] ? dm[4].replace(/(am|pm)/i, " $1") : "10:00 am"}`);

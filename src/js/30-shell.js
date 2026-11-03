@@ -176,7 +176,7 @@ function useShortcuts() {
 
 function Toasts() {
   const { toasts } = useUI();
-  return html`<div class="toasts" role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
+  return html`<div class="toasts" role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.action && html`<button type="button" onClick=${() => { t.action.run(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>${t.action.label}</button>`}${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
 }
 function Celebrate() {
   const { celebrate } = useUI();
@@ -195,7 +195,7 @@ function App() {
   useEffect(() => { const w = document.querySelector(".workspace"); if (w) w.scrollTop = 0; }, [route]);
   const View = VIEWS[route];
   const DrawerC = u.drawer && DRAWERS[u.drawer.kind];
-  const ModalC = u.modal && MODALS[u.modal.kind];
+  const ModalC = u.modal && MODALS[u.modal.__kind];
   const showOnboard = !s.profile.onboarded && VIEWS.__onboarding;
   return html`<div class="frame">
     <${Rail} route=${route} />

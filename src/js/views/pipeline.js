@@ -620,7 +620,7 @@ function PlNotes({ a }) {
    openModal(kind, props) spreads props over {kind}, so a `kind` prop replaces the modal kind.
    Supported: openModal("draft", {appId, roundId, mode: "follow"|"thanks"}) and, for callers that pass
    {kind: "thanks"|"follow"}, the aliases MODALS.thanks / MODALS.follow below. */
-MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${p.mode === "thanks" ? "thanks" : "follow"} />`;
+MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${(p.mode || p.kind) === "thanks" ? "thanks" : "follow"} />`;
 MODALS.thanks = (p) => html`<${PlDraft} ...${p} kind="thanks" />`;
 MODALS.follow = (p) => html`<${PlDraft} ...${p} kind="follow" />`;
 function PlDraft({ appId, roundId, kind = "follow" }) {

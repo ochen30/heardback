@@ -279,7 +279,8 @@
   .pl-stage-line > .spacer { display: none; }
   .pl-close-btn { flex: 1; justify-content: center; }
   .pl-outcome button { padding: 0 4px; }
-  .pl-table { min-width: 0; }
+  .pl-table { min-width: 0; table-layout: fixed; }
+  .pl-table th:nth-child(2) { width: 134px; }
   .pl-table th:nth-child(n+3), .pl-table td:nth-child(n+3) { display: none; }
   .pl-table td { height: auto; padding-block: 10px; }
   .pl-table td:first-child { padding-left: 12px; } .pl-table td:nth-child(2) { padding-right: 12px; }

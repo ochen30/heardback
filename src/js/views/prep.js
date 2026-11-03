@@ -395,6 +395,7 @@ function PrepWorkspace({ a, r }) {
               <span class="muted truncate" style="font-size:var(--fs-sm)">${a.title}</span>
             </div>
             <span class="spacer"></span>
+            <${CalendarButton} appId=${a.id} round=${r} />
             <${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openApp(a.id, "rounds")} cls="hide-sm">Open application</${Btn}>
           </div>
           <dl class="prep-facts">

@@ -975,7 +975,8 @@ a.find-link { cursor: pointer; }
   .pl-stage-line > .spacer { display: none; }
   .pl-close-btn { flex: 1; justify-content: center; }
   .pl-outcome button { padding: 0 4px; }
-  .pl-table { min-width: 0; }
+  .pl-table { min-width: 0; table-layout: fixed; }
+  .pl-table th:nth-child(2) { width: 134px; }
   .pl-table th:nth-child(n+3), .pl-table td:nth-child(n+3) { display: none; }
   .pl-table td { height: auto; padding-block: 10px; }
   .pl-table td:first-child { padding-left: 12px; } .pl-table td:nth-child(2) { padding-right: 12px; }
@@ -1625,7 +1626,7 @@ function useUI() { const [v, setV] = useState(ui.state); useEffect(() => ui.sub(
 const openJob = (jobId) => ui.set({ drawer: { kind: "job", id: jobId } });
 const openApp = (appId, tab) => ui.set({ drawer: { kind: "app", id: appId, tab } });
 const openCompany = (name) => ui.set({ drawer: { kind: "company", id: name } });
-const openModal = (kind, props = {}) => ui.set({ modal: { kind, ...props } });
+const openModal = (kind, props = {}) => ui.set({ modal: { ...props, __kind: kind } });
 const closeDrawer = () => ui.set({ drawer: null });
 const closeModal = () => ui.set({ modal: null });
 
@@ -1646,15 +1647,15 @@ function applyTheme(t) {
 }
 
 /* ---------- Capabilities (design for absence) ---------- */
-const caps = { sample: null, db: null, user: null, downloads: null, ready: false };
+const caps = { sample: null, db: null, user: null, downloads: null, mcp: null, ready: false };
 const capSubs = new Set();
 function useCaps() { const [v, setV] = useState({ ...caps }); useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); return () => capSubs.delete(f); }, []); return v; }
 async function initCaps() {
   const c = window.claude;
   if (!c || typeof c.use !== "function") { caps.ready = true; capSubs.forEach((f) => f()); return; }
   const grab = async (n) => { try { return await c.use(n); } catch { return null; } };
-  const [sample, db, user, downloads] = await Promise.all([grab("sample"), grab("db"), grab("user"), grab("downloads")]);
-  Object.assign(caps, { sample, db, user, downloads, ready: true });
+  const [sample, db, user, downloads, mcp] = await Promise.all([grab("sample"), grab("db"), grab("user"), grab("downloads"), grab("mcp")]);
+  Object.assign(caps, { sample, db, user, downloads, mcp, ready: true });
   capSubs.forEach((f) => f());
 }
 const AI_COPY = {
@@ -1832,14 +1833,18 @@ function Field({ label, hint, children, id }) {
 function ExampleTag() { return html`<span class="badge example" title="Example data. Not real.">Example</span>`; }
 
 /* Modal & drawer shells */
+/* Escape closes only the top-most overlay */
+const escStack = [];
+window.addEventListener("keydown", (e) => { if (e.key === "Escape" && escStack.length) { e.stopPropagation(); e.preventDefault(); escStack[escStack.length - 1].current(); } }, true);
 function useEscape(fn) {
-  useEffect(() => { const k = (e) => { if (e.key === "Escape") { e.stopPropagation(); fn(); } }; window.addEventListener("keydown", k, true); return () => window.removeEventListener("keydown", k, true); }, [fn]);
+  const ref = useRef(fn); ref.current = fn;
+  useEffect(() => { escStack.push(ref); return () => { const i = escStack.indexOf(ref); if (i >= 0) escStack.splice(i, 1); }; }, []);
 }
 function useFocusTrap(ref) {
   useEffect(() => {
     const el = ref.current; if (!el) return;
     const prev = document.activeElement;
-    const first = el.querySelector("[autofocus], input, textarea, select, button");
+    const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el.querySelector("button");
     setTimeout(() => (first || el).focus?.(), 20);
     return () => { try { prev?.focus?.(); } catch {} };
   }, []);
@@ -2051,17 +2056,17 @@ function parseEmail(raw) {
   const has = (...ps) => ps.some((p) => low.includes(p));
   if (has("pleased to offer", "extend an offer", "offer letter", "excited to offer", "formal offer", "offer of employment")) kind = "offer";
   else if (has("unfortunately", "not to move forward", "not be moving forward", "decided to pursue other", "move forward with other", "regret to inform", "position has been filled", "not selected", "will not be proceeding", "other candidates whose", "decided not to proceed")) kind = "rejection";
-  else if (has("phone screen", "recruiter call", "initial call", "quick chat", "intro call", "screening call")) kind = "screen";
-  else if (has("interview", "schedule a time", "your availability", "calendly", "next round", "onsite", "superday", "technical assessment", "coding challenge", "hackerrank", "codesignal")) kind = "interview";
+  else if (has("phone screen", "recruiter call", "initial call", "quick chat", "intro call", "screening call") && !has("technical interview", "onsite", "on-site", "superday", "final round", "panel interview", "coding interview", "system design", "hackerrank", "codesignal", "case interview", "virtual onsite")) kind = "screen";
+  else if (has("interview", "schedule a time", "your availability", "calendly", "next round", "onsite", "superday", "technical assessment", "coding challenge", "hackerrank", "codesignal", "phone screen", "recruiter call")) kind = "interview";
   else if (has("thank you for applying", "received your application", "application has been received", "we have received your", "thanks for applying", "application was submitted", "successfully submitted", "thank you for your application", "thank you for your interest")) kind = "confirmation";
 
   // company
   let company = "";
   const pats = [
-    /thank you for (?:applying|your (?:application|interest)) (?:to|at|in|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| for | and )/,
-    /(?:position|role|opportunity|job) (?:at|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and )/,
+    /(?:[Tt]hank you|[Tt]hanks|THANK YOU) for (?:applying|your (?:application|interest)|submitting your application) (?:to|at|in|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| for | and | on | to | this | next |$)/m,
+    /(?:position|role|opportunity|job) (?:at|with) ([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
     /(?:join|joining) (?:the )?([A-Z][\w&.'\- ]{1,40}?) (?:team|family)/,
-    /interest in (?:joining )?([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and )/,
+    /interest in (?:joining )?([A-Z][\w&.'\- ]{1,40}?)(?:[.!,\n]| and | on | to | this | next | in | for |$)/,
     /^(?:the )?([A-Z][\w&.'\- ]{1,30}?) (?:Recruiting|Talent|Careers|Hiring) Team/m,
   ];
   for (const re of pats) { const m = text.match(re); if (m) { company = m[1].trim().replace(/^the /i, ""); break; } }
@@ -2077,6 +2082,7 @@ function parseEmail(raw) {
   // role
   let title = "";
   const tp = [
+    /(?:position|role|offer) (?:of|as) (?:an? |the )?([A-Z][\w&/,()+.'\- ]{2,70}?) (?:at|with) /,
     /for (?:the )?(?:position of |role of )?["“]?([A-Z][\w&/,()+.'\- ]{2,70}?)["”]? (?:position|role|opening|internship)/,
     /(?:application|applying|interview|candidacy) for (?:the )?["“]?([A-Z][\w&/()+.'\- ]{2,70}?)["”]?(?: position| role| opening)?(?: at | with |[.!,\n(])/,
     /(?:position|role):\s*([^\n]{3,70})/i,
@@ -2090,7 +2096,8 @@ function parseEmail(raw) {
 
   // interview time
   let interviewAt = null;
-  const dm = text.match(/(?:on\s+)?((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*,?\s+)?((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?(?:\s*(?:at|@|,)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)))?/i);
+  const body = text.replace(/^(?:From|To|Cc|Bcc|Subject|Date|Sent|Reply-To):.*$/gim, "");
+  const dm = body.match(/(?:on\s+)?((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*,?\s+)?((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?(?:\s*(?:at|@|,)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)))?/i);
   if (dm && (kind === "interview" || kind === "screen")) {
     const yr = dm[3] || new Date().getFullYear();
     const t = Date.parse(`${dm[2]} ${yr} ${dm[4] ? dm[4].replace(/(am|pm)/i, " $1") : "10:00 am"}`);
@@ -2236,8 +2243,8 @@ function followUpTemplate(a, profile) {
   return `Subject: Following up on my ${a.title || "application"}\n\nHi ${a.contacts?.[0]?.name || "there"},\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 function thankYouTemplate(a, r, profile) {
-  const who = (r?.interviewers || "").split(/[,&]| and /)[0].trim();
-  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me today about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team${r?.reflection ? ", especially " + r.reflection.split(/[.!\n]/)[0].toLowerCase() : ""}.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
+  const who = (r?.interviewers || "").split(/[,&]| and /)[0].replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
+  return `Subject: Thank you, ${ROUND[r?.type]?.label || "interview"} for ${a.title || "the role"}\n\nHi ${who || "there"},\n\nThank you for taking the time to talk with me today about the ${a.title || "role"} at ${a.company}. I enjoyed learning more about the team and the work you're doing.\n\nOur conversation made me even more excited about the opportunity. Please let me know if there's anything else I can share.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
 
 /* --- js/30-shell.js --- */
@@ -2419,7 +2426,7 @@ function useShortcuts() {
 
 function Toasts() {
   const { toasts } = useUI();
-  return html`<div class="toasts" role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
+  return html`<div class="toasts" role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.action && html`<button type="button" onClick=${() => { t.action.run(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>${t.action.label}</button>`}${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
 }
 function Celebrate() {
   const { celebrate } = useUI();
@@ -2438,7 +2445,7 @@ function App() {
   useEffect(() => { const w = document.querySelector(".workspace"); if (w) w.scrollTop = 0; }, [route]);
   const View = VIEWS[route];
   const DrawerC = u.drawer && DRAWERS[u.drawer.kind];
-  const ModalC = u.modal && MODALS[u.modal.kind];
+  const ModalC = u.modal && MODALS[u.modal.__kind];
   const showOnboard = !s.profile.onboarded && VIEWS.__onboarding;
   return html`<div class="frame">
     <${Rail} route=${route} />
@@ -4133,7 +4140,7 @@ function PlNotes({ a }) {
    openModal(kind, props) spreads props over {kind}, so a `kind` prop replaces the modal kind.
    Supported: openModal("draft", {appId, roundId, mode: "follow"|"thanks"}) and, for callers that pass
    {kind: "thanks"|"follow"}, the aliases MODALS.thanks / MODALS.follow below. */
-MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${p.mode === "thanks" ? "thanks" : "follow"} />`;
+MODALS.draft = (p) => html`<${PlDraft} ...${p} kind=${(p.mode || p.kind) === "thanks" ? "thanks" : "follow"} />`;
 MODALS.thanks = (p) => html`<${PlDraft} ...${p} kind="thanks" />`;
 MODALS.follow = (p) => html`<${PlDraft} ...${p} kind="follow" />`;
 function PlDraft({ appId, roundId, kind = "follow" }) {
@@ -5098,6 +5105,7 @@ function PrepWorkspace({ a, r }) {
               <span class="muted truncate" style="font-size:var(--fs-sm)">${a.title}</span>
             </div>
             <span class="spacer"></span>
+            <${CalendarButton} appId=${a.id} round=${r} />
             <${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openApp(a.id, "rounds")} cls="hide-sm">Open application</${Btn}>
           </div>
           <dl class="prep-facts">
@@ -5834,6 +5842,61 @@ function today_View() {
   </div>`;
 }
 VIEWS.today = today_View;
+
+/* --- js/views/zz-calendar.js --- */
+/* ===== Add an interview round to the calendar =====
+   1) Viewer has the Google Calendar connector on claude.ai -> create the event directly (they approve the first call).
+   2) Otherwise -> an .ics file they can open in any calendar app. */
+const CAL_SERVER = "Google Calendar";
+const CAL_MIN = 45;
+function cal_localISO(ts) { const d = new Date(ts); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`; }
+function cal_utcStamp(ts) { return new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
+function cal_text(app, round) {
+  const type = ROUND[round.type]?.label || "Interview";
+  const summary = `${type}: ${app.company}${app.title ? " · " + app.title : ""}`;
+  const lines = [`${type} for ${app.title || "the role"} at ${app.company}.`];
+  if (round.interviewers) lines.push(`With: ${round.interviewers}`);
+  if (round.prep) lines.push(`Prep notes: ${round.prep}`);
+  if (app.url) lines.push(`Posting: ${app.url}`);
+  lines.push("Added from Heardback.");
+  return { summary, description: lines.join("\n") };
+}
+function cal_ics(app, round) {
+  const { summary, description } = cal_text(app, round);
+  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Heardback//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+    `UID:${round.id}@heardback`, `DTSTAMP:${cal_utcStamp(now())}`, `DTSTART:${cal_utcStamp(round.at)}`, `DTEND:${cal_utcStamp(round.at + CAL_MIN * 60000)}`,
+    `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(description)}`,
+    "BEGIN:VALARM", "TRIGGER:-PT30M", "ACTION:DISPLAY", "DESCRIPTION:Interview in 30 minutes", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+}
+async function addToCalendar(appId, roundId) {
+  const app = Apps.get(appId); const round = app?.rounds.find((r) => r.id === roundId);
+  if (!app || !round) return;
+  if (!round.at) { toast("Set a date and time for this round first."); return; }
+  if (caps.mcp) {
+    const { summary, description } = cal_text(app, round);
+    try {
+      await caps.mcp.callTool(CAL_SERVER, "create_event", { summary, description, startTime: cal_localISO(round.at), endTime: cal_localISO(round.at + CAL_MIN * 60000) });
+      Apps.updateRound(appId, roundId, { calendar: "google" });
+      toast("Added to Google Calendar");
+      return;
+    } catch (e) {
+      const fallthrough = ["server_not_connected", "not_in_manifest", "not_granted", "capability_disabled", "capability_removed", "selection_required", "blocked_by_policy", "consent_required"];
+      if (e?.code === "needs_reauth") { toast("Reconnect Google Calendar in claude.ai Settings → Connectors, then try again."); return; }
+      if (e?.code === "approval_required") { toast("Google Calendar needs your approval for this page. Try again and choose Allow."); return; }
+      if (!fallthrough.includes(e?.code)) { toast("Google Calendar didn't respond. Downloading a calendar file instead."); }
+    }
+  }
+  const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
+  if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
+}
+function CalendarButton({ appId, round, size = "sm" }) {
+  useCaps();
+  if (!round?.at || round.at < now() - DAY) return null;
+  const done = round.calendar;
+  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? "In calendar" : "Add to calendar"}</${Btn}>`;
+}
 
 /* --- js/views/zz-pool.js --- */
 /* ===== Pooled reply data ("who actually replies") =====

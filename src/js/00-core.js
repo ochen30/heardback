@@ -196,7 +196,7 @@ function useUI() { const [v, setV] = useState(ui.state); useEffect(() => ui.sub(
 const openJob = (jobId) => ui.set({ drawer: { kind: "job", id: jobId } });
 const openApp = (appId, tab) => ui.set({ drawer: { kind: "app", id: appId, tab } });
 const openCompany = (name) => ui.set({ drawer: { kind: "company", id: name } });
-const openModal = (kind, props = {}) => ui.set({ modal: { kind, ...props } });
+const openModal = (kind, props = {}) => ui.set({ modal: { ...props, __kind: kind } });
 const closeDrawer = () => ui.set({ drawer: null });
 const closeModal = () => ui.set({ modal: null });
 
@@ -217,15 +217,15 @@ function applyTheme(t) {
 }
 
 /* ---------- Capabilities (design for absence) ---------- */
-const caps = { sample: null, db: null, user: null, downloads: null, ready: false };
+const caps = { sample: null, db: null, user: null, downloads: null, mcp: null, ready: false };
 const capSubs = new Set();
 function useCaps() { const [v, setV] = useState({ ...caps }); useEffect(() => { const f = () => setV({ ...caps }); capSubs.add(f); return () => capSubs.delete(f); }, []); return v; }
 async function initCaps() {
   const c = window.claude;
   if (!c || typeof c.use !== "function") { caps.ready = true; capSubs.forEach((f) => f()); return; }
   const grab = async (n) => { try { return await c.use(n); } catch { return null; } };
-  const [sample, db, user, downloads] = await Promise.all([grab("sample"), grab("db"), grab("user"), grab("downloads")]);
-  Object.assign(caps, { sample, db, user, downloads, ready: true });
+  const [sample, db, user, downloads, mcp] = await Promise.all([grab("sample"), grab("db"), grab("user"), grab("downloads"), grab("mcp")]);
+  Object.assign(caps, { sample, db, user, downloads, mcp, ready: true });
   capSubs.forEach((f) => f());
 }
 const AI_COPY = {

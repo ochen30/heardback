@@ -12,7 +12,7 @@ module.exports = {
     await wait(page);
     const rows = await page.locator('.pl-table tbody tr').count();
     assert(rows === 10, `table shows 10 rows (got ${rows})`);
-    await page.click('.pl-table th button:has-text("Days silent")');
+    await page.evaluate(() => store.set((s) => ({ ...s, ui: { ...s.ui, pipelineSort: { k: 'silent', dir: -1 } } })));
     await wait(page, 150);
   },
   async tableStage(page) {
