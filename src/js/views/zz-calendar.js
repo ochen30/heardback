@@ -5,7 +5,17 @@ const CAL_SERVER = "Google Calendar";
 const CAL_MIN = 45;
 function cal_localISO(ts) { const d = new Date(ts); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`; }
 function cal_tz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } }
-function cal_fold(line) { const out = []; let s = line; while (s.length > 74) { out.push(s.slice(0, 74)); s = " " + s.slice(74); } out.push(s); return out.join("\r\n"); }
+/* RFC 5545: lines are at most 75 octets (UTF-8); continuation lines start with one space. */
+function cal_fold(line) {
+  const enc = new TextEncoder(); const out = []; let cur = ""; let bytes = 0;
+  for (const ch of line) {
+    const b = enc.encode(ch).length;
+    if (bytes + b > 75) { out.push(cur); cur = " "; bytes = 1; }
+    cur += ch; bytes += b;
+  }
+  out.push(cur);
+  return out.join("\r\n");
+}
 function cal_utcStamp(ts) { return new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
 function cal_text(app, round) {
   const type = ROUND[round.type]?.label || "Interview";

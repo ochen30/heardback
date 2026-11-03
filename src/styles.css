@@ -607,3 +607,5 @@ p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 @media (max-width: 860px) { .topbar .btn.primary { width: 36px; height: 36px; padding: 0; } }
 p a, .hint a, .callout a, li a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
 .modal-body:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
+/* One keyboard-focus style for list rows and cards (J/K navigation) */
+.kb-active, .kb-row:focus-visible { outline: none; box-shadow: inset 2px 0 0 var(--accent); background: var(--surface-2); }
