@@ -27,7 +27,7 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     // thanks task -> draft modal with thank you template
     const thanks = tasks.find((t) => t.kind === 'thanks');
     if (thanks) {
-      await page.locator(`.td-task[data-key="${thanks.key}"] .btn.primary`).click(); await page.waitForTimeout(300);
+      await page.locator(`.td-task[data-key="${thanks.key}"] .td-act`).click(); await page.waitForTimeout(300);
       const txt = await page.inputValue('#pl-draft').catch(() => '');
       T.check('thanks: draft modal with thank-you template', /Thank you/.test(txt) && txt.includes(thanks.co), txt.slice(0, 80));
       await page.click('.modal-foot button:has-text("Mark as sent")'); await page.waitForTimeout(300);
@@ -40,7 +40,7 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     // follow task
     const fol = await page.evaluate(() => computeTasks().find((t) => t.kind === 'follow')?.key);
     if (fol) {
-      await page.locator(`.td-task[data-key="${fol}"] .btn.primary`).click(); await page.waitForTimeout(300);
+      await page.locator(`.td-task[data-key="${fol}"] .td-act`).click(); await page.waitForTimeout(300);
       const txt = await page.inputValue('#pl-draft').catch(() => '');
       T.check('follow: draft modal with follow-up template', /Following up/.test(txt), txt.slice(0, 60));
       if (MOCK) {
@@ -59,7 +59,7 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     // ghost task
     const gh = await page.evaluate(() => computeTasks().find((t) => t.kind === 'ghost')?.key);
     if (gh) {
-      await page.locator(`.td-task[data-key="${gh}"] .btn.primary`).click(); await page.waitForTimeout(300);
+      await page.locator(`.td-task[data-key="${gh}"] .td-act`).click(); await page.waitForTimeout(300);
       const a = await page.evaluate((k) => Apps.get(k.split(':')[1]), gh);
       T.check('ghost: Mark ghosted moves stage', a.stage === 'ghosted', a.stage);
       await clearToasts(page);
@@ -67,14 +67,14 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     // outcome task -> opens drawer rounds tab
     const oc = await page.evaluate(() => computeTasks().find((t) => t.kind === 'outcome')?.key);
     if (oc) {
-      await page.locator(`.td-task[data-key="${oc}"] .btn.primary`).click(); await page.waitForTimeout(300);
+      await page.locator(`.td-task[data-key="${oc}"] .td-act`).click(); await page.waitForTimeout(300);
       T.check('outcome: opens drawer on rounds tab', await page.locator('.drawer .pl-round').count() > 0);
       await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     } else T.note('no outcome task', '');
     // prep task -> prep view focus
     const pr = await page.evaluate(() => computeTasks().find((t) => t.kind === 'prep'));
     if (pr) {
-      await page.locator(`.td-task[data-key="${pr.key}"] .btn.primary`).click(); await page.waitForTimeout(400);
+      await page.locator(`.td-task[data-key="${pr.key}"] .td-act`).click(); await page.waitForTimeout(400);
       T.check('prep: navigates to prep', (await page.evaluate(() => location.hash)) === '#prep');
       T.check('prep: focuses that round', (await page.locator('.prep-h2').first().innerText()).includes(pr.app.company));
       await page.evaluate(() => (location.hash = 'today')); await page.waitForTimeout(400);
@@ -83,45 +83,38 @@ const T = mk(`today-${W}${MOCK ? '-mock' : ''}`);
     const list = await page.evaluate(() => computeTasks().map((t) => t.key));
     const k1 = list[0], k2 = list[1];
     if (k1) {
-      await page.locator(`.td-task[data-key="${k1}"] button:has-text("Snooze")`).click(); await page.waitForTimeout(150);
-      await page.click('.td-menu button:has-text("3 days")'); await page.waitForTimeout(200);
+      await page.locator(`.td-task[data-key="${k1}"] .td-more`).click(); await page.waitForTimeout(150);
+      T.check('task menu opens with role=menu', await page.locator('.td-menu[role=menu]').isVisible());
+      const mb = await page.locator('.td-menu').boundingBox();
+      T.check('task menu inside viewport', mb && mb.x >= 0 && mb.x + mb.width <= W + 1, JSON.stringify(mb));
+      await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+      T.check('Escape closes task menu', !(await page.locator('.td-menu').count()));
+      await page.locator(`.td-task[data-key="${k1}"] .td-more`).click(); await page.waitForTimeout(150);
+      await page.click('.td-menu button:has-text("Snooze 3 days")'); await page.waitForTimeout(200);
       T.check('snooze hides task', !(await page.locator(`.td-task[data-key="${k1}"]`).count()));
       const until = await page.evaluate((k) => store.get().dismissed[k], k1);
       T.check('snooze stores ~3 days', Math.abs(until - Date.now() - 3 * 864e5) < 60000);
       await clearToasts(page);
     }
     if (k2) {
-      await page.locator(`.td-task[data-key="${k2}"] .td-dismiss`).click(); await page.waitForTimeout(200);
+      await page.locator(`.td-task[data-key="${k2}"] .td-more`).click(); await page.locator('.td-menu .td-dismiss').click(); await page.waitForTimeout(200);
       T.check('dismiss hides task', !(await page.locator(`.td-task[data-key="${k2}"]`).count()));
       await page.click('.toast button:has-text("Undo")'); await page.waitForTimeout(200);
       T.check('dismiss undo restores', await page.locator(`.td-task[data-key="${k2}"]`).count() === 1);
-      await page.locator(`.td-task[data-key="${k2}"] .td-dismiss`).click(); await page.waitForTimeout(400);
+      await page.locator(`.td-task[data-key="${k2}"] .td-more`).click(); await page.locator('.td-menu .td-dismiss').click(); await page.waitForTimeout(400);
       await clearToasts(page);
     }
     await page.reload(); await page.waitForTimeout(800);
     T.check('snooze persists after reload', !(await page.locator(`.td-task[data-key="${k1}"]`).count()));
     T.check('dismiss persists after reload', !(await page.locator(`.td-task[data-key="${k2}"]`).count()));
-    // weekly goal
-    await page.fill('#today-goal', '15'); await page.locator('#today-goal').press('Tab'); await page.waitForTimeout(200);
-    T.check('goal set via input', (await page.evaluate(() => store.get().profile.weeklyGoal)) === 15);
-    await page.click('button[aria-label="Raise weekly goal"]'); await page.waitForTimeout(100);
-    T.check('goal +1', (await page.evaluate(() => store.get().profile.weeklyGoal)) === 16);
-    await page.click('button[aria-label="Lower weekly goal"]'); await page.waitForTimeout(100);
-    T.check('goal -1', (await page.evaluate(() => store.get().profile.weeklyGoal)) === 15);
-    await page.fill('#today-goal', '0'); await page.locator('#today-goal').press('Tab'); await page.waitForTimeout(100);
-    T.check('goal clamps 0 -> 1', (await page.evaluate(() => store.get().profile.weeklyGoal)) === 1);
-    await page.fill('#today-goal', '500'); await page.locator('#today-goal').press('Tab'); await page.waitForTimeout(100);
-    const g500 = await page.evaluate(() => store.get().profile.weeklyGoal);
-    T.check('goal clamps 500 -> 99', g500 === 99, g500);
-    await page.fill('#today-goal', ''); await page.locator('#today-goal').press('Tab'); await page.waitForTimeout(100);
-    const gEmpty = await page.evaluate(() => store.get().profile.weeklyGoal);
-    T.check('empty goal keeps previous value (not reset to 1)', gEmpty === 99, gEmpty);
-    // settings goal max consistency
-    T.note('goal max', 'Today stepper max 99 vs Settings max 100');
-    // this-week count vs computeStats
+    // weekly goal (v4+: one widget on Today, edited in Settings)
     const tw = await page.evaluate(() => computeStats().thisWeek);
-    const shown = await page.locator('.td-big').first().innerText();
-    T.check('this week number = computeStats.thisWeek', shown === String(tw), `${shown} vs ${tw}`);
+    const goal = await page.evaluate(() => store.get().profile.weeklyGoal);
+    const wk = await page.locator('.td-week .td-count').innerText().catch(() => '');
+    T.check('This week "N of goal" = computeStats.thisWeek', tw === 0 ? wk === '' : wk === `${tw} of ${goal}`, `${wk} vs ${tw} of ${goal}`);
+    await page.click('.td-goal-edit'); await page.waitForTimeout(400);
+    T.check('Edit goal -> Settings', (await page.evaluate(() => location.hash)) === '#prefs');
+    await page.evaluate(() => (location.hash = 'today')); await page.waitForTimeout(400);
     // response card median n
     const resp = await page.evaluate(() => { const st = computeStats(); return st; });
     const sub = await page.locator('.td-resp .stat-sub').nth(1).innerText().catch(() => '');

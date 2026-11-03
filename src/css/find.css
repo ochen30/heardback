@@ -40,6 +40,7 @@
 .find-count strong { color: var(--fg); font-weight: 600; }
 .find-prefs { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-3); }
 .find-prefs .sep { color: var(--line-strong); }
+.find-raw { white-space: nowrap; }
 .find-dsub .sep { color: var(--fg-3); }
 .find-link { border: 0; background: none; padding: 0; color: var(--accent-text); font-size: inherit; font-weight: 500; cursor: pointer; }
 .find-link:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -135,6 +136,8 @@ a.find-link { cursor: pointer; }
 .find-brief .reason-list { color: var(--fg); }
 .find-brief-pre { white-space: pre-wrap; display: block; }
 .find-brief-cta { gap: 12px; }
+.find-ai-btns { gap: 8px; }
+.dsec > h3 .seg { margin: -6px 0; font-weight: 400; letter-spacing: 0; }
 
 /* company drawer */
 .find-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 16px; }
@@ -179,6 +182,13 @@ a.find-link { cursor: pointer; }
 }
 @media (max-width: 520px) {
   .find-search { min-width: 0; }
+  /* sort select shares the matches row; the count wraps beside it */
+  .find-bar { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
+  .find-bar .spacer { display: none; }
+  .find-count { display: block; flex: 1; min-width: 0; padding-top: 8px; line-height: 1.5; }
+  .find-count .find-prefs { display: inline; }
+  .find-count .find-prefs .sep { margin: 0 4px; }
+  .find-bar .find-sort-sm { min-width: 0; width: auto; flex: none; height: 36px; }
   .find-co-toolbar .find-search { flex-basis: 100%; }
   .find-co-toolbar .find-sort-sm { width: 100%; }
   .find-row { align-items: start; padding: 12px 16px; row-gap: 6px; }
@@ -200,3 +210,5 @@ a.find-link { cursor: pointer; }
   .find-dhead .logo { display: none; }
   .find-c-ghost:empty { display: none; }
 }
+/* company drawer rows are narrow: bars only, the label lives in the tooltip */
+.find-results-tight .find-g-l { display: none; }

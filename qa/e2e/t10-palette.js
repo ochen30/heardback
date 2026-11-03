@@ -48,13 +48,14 @@ const state = (page) => page.evaluate(() => ({ palette: !!ui.state.palette, moda
     await page.keyboard.press('Enter'); await page.waitForTimeout(300);
     T.check('palette "Settings" navigates', (await state(page)).hash === '#prefs');
     // palette no results
+    await page.evaluate(() => { const b = document.querySelector('#workspace button, #workspace a[href], #workspace input'); b && b.focus(); window.__qaPrevFocus = document.activeElement; });
     await page.keyboard.press('Control+k'); await page.waitForTimeout(120); await page.keyboard.type('zzqqxx'); await page.waitForTimeout(150);
     T.check('no-match message', await page.locator('.palette .empty').isVisible());
     await page.keyboard.press('Enter'); await page.waitForTimeout(100);
     T.check('Enter on empty results does nothing', (await state(page)).palette);
     await page.keyboard.press('Escape'); await page.waitForTimeout(150);
     T.check('Escape closes palette', !(await state(page)).palette);
-    T.check('focus returns from palette', await page.evaluate(() => document.activeElement !== document.body), await page.evaluate(() => document.activeElement?.tagName));
+    T.check('focus returns from palette to the element focused before', await page.evaluate(() => document.activeElement === window.__qaPrevFocus && document.activeElement !== document.body), await page.evaluate(() => document.activeElement?.tagName));
     // shortcuts
     await page.evaluate(() => document.activeElement.blur());
     await page.keyboard.press('n'); await page.waitForTimeout(200);

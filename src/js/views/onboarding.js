@@ -142,25 +142,36 @@ function onbSummary(p) {
   return `${lv} · ${roles} · ${where}${p.needsSponsor ? " · sponsorship not ruled out" : ""}`;
 }
 
-/* ---------- Location checklist (shared with Settings): same pattern as Find. Top 6 by open roles, rest behind "Show N more". ---------- */
+/* ---------- Location checklist (shared with Settings): same pattern, counts and order as Find. Counts are open roles
+   in the picked fields and levels (Find's default filters follow the profile), ordered by that count, then by the
+   whole-dataset count, as Find does. Top 6 show, the rest behind "Show N more". ---------- */
 const ONB_LOC_TOP = 6;
-const onbLocCountC = { jobs: null, counts: null };
-function onbLocCounts(jobs) {
+const onbLocCountC = { key: null, jobs: null, out: null };
+function onbLocCounts(jobs, roles, levels) {
   if (!jobs || !jobs.length) return null;
-  if (onbLocCountC.jobs !== jobs) {
+  const key = `${roles.join("|")}#${levels.join("|")}`;
+  if (onbLocCountC.jobs !== jobs || onbLocCountC.key !== key) {
     const opts = onbLocChoices();
-    const c = {}; for (const o of opts) c[o.id] = 0;
-    for (const j of jobs) for (const o of opts) if (jobInLoc(j, o.id)) c[o.id]++;
-    onbLocCountC.jobs = jobs; onbLocCountC.counts = c;
+    const c = {}, all = {}; for (const o of opts) { c[o.id] = 0; all[o.id] = 0; }
+    for (const j of jobs) {
+      const hit = (!roles.length || roles.includes(j.cat)) && (!levels.length || levels.includes(j.lvl));
+      for (const o of opts) if (jobInLoc(j, o.id)) { all[o.id]++; if (hit) c[o.id]++; }
+    }
+    Object.assign(onbLocCountC, { key, jobs, out: { c, all } });
   }
-  return onbLocCountC.counts;
+  return onbLocCountC.out;
 }
-function OnbLocChecklist({ idp, value, onChange, label }) {
+function onbLocBasis(roles, levels) {
+  const r = roles.length ? `open ${roles.length > 2 ? roles.slice(0, -1).join(", ") + " and " + roles[roles.length - 1] : roles.join(" and ")} roles` : "open roles in every field";
+  const lv = levels.length === 1 ? (levels[0] === "intern" ? "internships only" : "new grad only") : "all levels";
+  return `Counts: ${r}, ${lv}.`;
+}
+function OnbLocChecklist({ idp, value, onChange, label, roles = [], levels = [] }) {
   const jobs = useJobs();
   const [more, setMore] = useState(false);
-  const counts = jobs.status === "ready" ? onbLocCounts(jobs.jobs) : null;
-  const opts = onbLocChoices().map((o, i) => ({ ...o, n: counts ? counts[o.id] : null, i }));
-  if (counts) opts.sort((a, b) => b.n - a.n || a.i - b.i);
+  const counts = jobs.status === "ready" ? onbLocCounts(jobs.jobs, roles, levels) : null;
+  const opts = onbLocChoices().map((o, i) => ({ ...o, n: counts ? counts.c[o.id] : null, all: counts ? counts.all[o.id] : 0, i }));
+  if (counts) opts.sort((a, b) => b.n - a.n || b.all - a.all || a.i - b.i);
   const top = opts.slice(0, ONB_LOC_TOP);
   const shown = more ? opts : top.concat(opts.slice(ONB_LOC_TOP).filter((o) => value.includes(o.id)));
   const hidden = opts.length - shown.length;
@@ -174,6 +185,7 @@ function OnbLocChecklist({ idp, value, onChange, label }) {
       </label>`;
     })}</div>
     ${(hidden > 0 || more) && html`<button type="button" class="onb-more" aria-expanded=${more ? "true" : "false"} onClick=${() => setMore(!more)}>${more ? "Show fewer" : `Show ${hidden} more`}</button>`}
+    ${counts && html`<span class="onb-loc-basis">${onbLocBasis(roles, levels)}</span>`}
   </div>`;
 }
 
@@ -194,7 +206,7 @@ function OnbStepTargets({ d, set }) {
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}</div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-loc" title="Locations" hint="Leave empty to see every location.">
-      <${OnbLocChecklist} idp="onb" value=${locs} onChange=${(v) => set({ locations: v })} />
+      <${OnbLocChecklist} idp="onb" value=${locs} roles=${d.roles} levels=${d.levels} onChange=${(v) => set({ locations: v })} />
       <div class="onb-switches">
         <${Switch} id="onb-remote" checked=${d.remote} onChange=${(v) => set({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />
         <${Switch} id="onb-sponsor" checked=${d.needsSponsor} onChange=${(v) => set({ needsSponsor: v })} label="I'll need visa sponsorship" />

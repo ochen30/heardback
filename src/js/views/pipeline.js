@@ -8,6 +8,13 @@ const PL_OUTCOMES = [{ id: "pending", label: "Pending" }, { id: "passed", label:
 function plUi(patch) { store.set((s) => ({ ...s, ui: { ...s.ui, ...patch } })); }
 function plClosedOpen(s) { return !!s.ui.pipelineClosedOpen; }
 function plSetClosedOpen(v) { plUi({ pipelineClosedOpen: v }); }
+/* A move into Rejected/Ghosted opens Closed for that moment only ("auto"); it folds back on the next
+   move into an active stage and whenever you come back to the page. Opening it yourself sticks. */
+function plAutoOpenClosed(to) {
+  const cur = store.get().ui.pipelineClosedOpen;
+  if (PL_CLOSED.includes(to)) { if (!cur) plSetClosedOpen("auto"); }
+  else if (cur === "auto") plSetClosedOpen(false);
+}
 function plUpcoming(a, t = now()) {
   return (a.rounds || []).filter((r) => r.at && r.at > t && r.outcome !== "cancelled").sort((x, y) => x.at - y.at)[0] || null;
 }
@@ -15,7 +22,7 @@ function plWhen(ts) {
   const d0 = fmt.startOfDay(now()), d1 = fmt.startOfDay(ts);
   const diff = Math.round((d1 - d0) / DAY);
   const day = diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : diff > 1 && diff < 7 ? new Date(ts).toLocaleDateString(undefined, { weekday: "short" }) : fmt.date(ts);
-  return `${day} ${plTime(ts)}`;
+  return `${day}, ${plTime(ts)}`;
 }
 /* "1 PM" on the hour, "1:30 PM" otherwise */
 function plTime(ts) { const d = new Date(ts); return d.getMinutes() ? fmt.time(ts) : d.toLocaleTimeString(undefined, { hour: "numeric" }); }
@@ -51,7 +58,7 @@ function plFirstName(s) { return (s || "").replace(/\([^)]*\)/g, "").split(/[,&;
 function plStatus(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
-  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", main: plWhen(up.at), extra: ROUND[up.type]?.label || "Round", text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: `${ROUND[up.type]?.label || "Round"} · ${fmt.dateTime(up.at)}` };
+  if (up && !PL_CLOSED.includes(a.stage)) return { icon: "cal", tone: "accent", main: plWhen(up.at), text: `${ROUND[up.type]?.label || "Round"} · ${plWhen(up.at)}`, title: `${ROUND[up.type]?.label || "Round"} · ${fmt.dateTime(up.at)}` };
   if (listingRemoved(a) && ["saved", "applied", "screen"].includes(a.stage)) return { icon: "flag", tone: "wait", text: "Posting taken down", title: "This listing is no longer live" };
   if (a.stage === "saved") return { icon: "bookmark", text: `Saved ${fmt.ago(a.createdAt)}` };
   if (a.stage === "offer") return { icon: "trophy", tone: "ok", text: `Offer ${fmt.ago(plStageAt(a, "offer") || a.lastReplyAt || a.lastActivityAt)}` };
@@ -199,6 +206,8 @@ VIEWS.pipeline = function PipelineView() {
   const sub = [pluralize(all.length, "application"), `${active} active`, offers ? pluralize(offers, "offer") : null].filter(Boolean).join(" · ");
   const examples = hasExamples(s) && s.settings.showExamples;
   const closedOpen = plClosedOpen(s);
+  /* Closed opened by a move folds back when you return to the page */
+  useEffect(() => { if (store.get().ui.pipelineClosedOpen === "auto") plSetClosedOpen(false); }, []);
   /* Only items on screen can be selected: filtered out (or in the collapsed Closed rail) drops them */
   const visible = view === "board" && !closedOpen ? apps.filter((a) => !PL_CLOSED.includes(a.stage)) : apps;
   const sel = plUseSelection(visible.map((a) => a.id).join(","), view);
@@ -221,9 +230,10 @@ VIEWS.pipeline = function PipelineView() {
       </div>
     </div>
     ${examples && html`<div class="example-banner pl-banner" role="note">
-      <span class="pl-banner-text"><b>Example data.</b><span class="hide-sm"> Clear it when you add your first application.</span></span>
+      <${Icon} name="info" />
+      <span class="pl-banner-text"><b>Example data.</b><span class="pl-banner-more"> Clear it when you add your first application.</span></span>
       <span class="spacer"></span>
-      <${Btn} size="sm" kind="ghost" onClick=${clearExamples}>Clear examples</${Btn}>
+      <${Btn} size="sm" onClick=${() => clearExamples()}>Clear examples</${Btn}>
     </div>`}
     ${n && !apps.length && html`<div class="callout"><${Icon} name="search" /><span>No applications match “${q}”. <button type="button" class="pl-linkbtn" onClick=${() => setQ("")}>Clear the filter</button></span></div>`}
     ${view === "board" ? html`<${PlBoard} apps=${apps} settings=${s.settings} closedOpen=${closedOpen} hint=${!s.ui.pipelineHintDone} filtering=${!!n} sel=${sel} />` : html`<${PlTable} apps=${apps} settings=${s.settings} sort=${s.ui.pipelineSort || { k: "activity", dir: -1 }} sel=${sel} />`}
@@ -285,7 +295,7 @@ function plBulkMove(ids, to) {
     }
     return { ...s, apps };
   });
-  if (PL_CLOSED.includes(to)) plSetClosedOpen(true);
+  plAutoOpenClosed(to);
   if (to === "offer") celebrate(before[0]);
   toast(to === "ghosted" ? `Marked ${plCount(before)} as ghosted` : `Moved ${plCount(before)} to ${STAGE[to].label}`, { undo: () => plRestore(before) });
   return before.length;
@@ -363,12 +373,27 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering, sel }) {
   const [menu, setMenu] = useState(null);
   const by = useMemo(() => { const m = {}; STAGES.forEach((x) => (m[x.id] = [])); apps.forEach((a) => (m[a.stage] || m.applied).push(a)); for (const k in m) m[k] = plSortInCol(m[k]); return m; }, [apps]);
   const closedList = useMemo(() => plSortInCol([...by.rejected, ...by.ghosted]), [by]);
+  /* Edge fades only on the side that has more board to scroll to */
+  const boardRef = useRef(null);
+  const [edge, setEdge] = useState("");
+  useLayoutEffect(() => {
+    const el = boardRef.current; if (!el) return;
+    const upd = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const v = max <= 2 ? "" : [el.scrollLeft > 2 && "fade-l", el.scrollLeft < max - 2 && "fade-r"].filter(Boolean).join(" ");
+      setEdge((p) => (p === v ? p : v));
+    };
+    upd();
+    el.addEventListener("scroll", upd, { passive: true });
+    window.addEventListener("resize", upd);
+    return () => { el.removeEventListener("scroll", upd); window.removeEventListener("resize", upd); };
+  }, [closedOpen, !!drag, apps.length]);
 
   const dropOn = (stage) => (e) => {
     e.preventDefault(); e.stopPropagation();
     const id = e.dataTransfer?.getData("text/plain") || drag;
     setOver(null); setDrag(null);
-    if (id && Apps.get(id) && Apps.get(id).stage !== stage) { if (PL_CLOSED.includes(stage)) plSetClosedOpen(true); Apps.move(id, stage); }
+    if (id && Apps.get(id) && Apps.get(id).stage !== stage) { plAutoOpenClosed(stage); Apps.move(id, stage); }
   };
   const dragOver = (stage) => (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; if (over !== stage) setOver(stage); };
   const dragLeave = (stage) => (e) => { if (!e.currentTarget.contains(e.relatedTarget) && over === stage) setOver(null); };
@@ -376,7 +401,7 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering, sel }) {
 
   const move = (a, to) => {
     if (!to || to === a.stage) return;
-    if (PL_CLOSED.includes(to)) plSetClosedOpen(true);
+    plAutoOpenClosed(to);
     Apps.move(a.id, to); plFocusCard(a.id);
     if (hint) plUi({ pipelineHintDone: true });
   };
@@ -407,7 +432,7 @@ function PlBoard({ apps, settings, closedOpen, hint, filtering, sel }) {
   const closedTargets = html`<div class="pl-drop-pair">${PL_CLOSED.map((id) => html`<div key=${id} class=${cx("pl-drop", over === id && "on")} data-col=${id} ...${dropProps(id)}><span class=${cx("dot", id)}></span>${STAGE[id].label}</div>`)}</div>`;
 
   return html`<${Fragment}>
-    <div class=${cx("board pl-board", sel.size && "selecting")} role="list" aria-label="Pipeline board">
+    <div ref=${boardRef} class=${cx("board pl-board", sel.size && "selecting", edge)} role="list" aria-label="Pipeline board">
       ${PL_MAIN.map((sid) => {
         const st = STAGE[sid], list = by[sid];
         return html`<section role="listitem" key=${sid} class=${cx("col pl-col", over === sid && "drop")} data-col=${sid} aria-label=${`${st.label}, ${pluralize(list.length, "application")}`} ...${dropProps(sid)}>
@@ -465,7 +490,7 @@ function PlCard({ a, settings, dragging, onMenu, selected, selecting, onSelect, 
     <div class="app-card-title pl-card-title">${a.title || "Untitled role"}</div>
     ${a.location && html`<div class="pl-card-loc truncate">${a.location}</div>`}
     <div class="app-card-foot pl-card-foot">
-      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span><span class="pl-status-dot" aria-hidden="true">·</span><span class="truncate pl-status-extra">${stt.extra}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
+      <span class=${cx("pl-status", stt.tone)} title=${stt.title}><${Icon} name=${stt.icon} size=${13} />${stt.main ? html`<span class="pl-status-main">${stt.main}</span>` : html`<span class="truncate">${stt.text}</span>`}</span>
     </div>
   </article>`;
 }
@@ -613,7 +638,6 @@ DRAWERS.app = function PlAppDrawer({ id, tab }) {
       <h2 class="pl-dtitle">${a.title || "Untitled role"}</h2>
       <div class="pl-dsub">
         ${hasCo ? html`<button type="button" class="pl-linkbtn" onClick=${() => openCompany(a.company)}>${a.company}</button>` : html`<span class="pl-dco">${a.company}</span>`}
-        ${a.location && html`<span class="pl-sep">·</span><span>${a.location}</span>`}
         ${a.example && html`<${ExampleTag} />`}
       </div>
     </div>
@@ -995,8 +1019,8 @@ ${draft}
     <${Btn} icon="copy" onClick=${() => copyText(text, "Draft copied")} disabled=${busy}>Copy</${Btn}>
     <${Btn} kind="primary" icon="check" onClick=${sent} disabled=${busy}>Mark as sent</${Btn}>`}>
     <div class="field">
-      <div class="row"><label for="pl-draft" style="flex:1" class="label">${thanks ? "Thank-you note" : "Follow-up email"}</label>
-        ${ai && !busy && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude. Review before sending.</span>`}</div>
+      <label for="pl-draft" class="sr">${thanks ? "Thank-you note" : "Follow-up email"}</label>
+      ${ai && !busy && html`<span class="ai-label"><${Icon} name="spark" />Drafted by Claude. Review before sending.</span>`}
       <textarea id="pl-draft" class=${cx("textarea pl-draft", busy && "busy")} value=${text} readOnly=${busy} onInput=${(e) => setText(e.currentTarget.value)} aria-busy=${busy ? "true" : "false"}></textarea>
       <span class="hint">Send it from your inbox, then mark as sent.</span>
     </div>

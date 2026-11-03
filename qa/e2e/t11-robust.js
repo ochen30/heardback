@@ -101,7 +101,7 @@ async function visitAll(page, label, errors) {
       await page.evaluate(() => (location.hash = 'pipeline')); await page.waitForTimeout(300);
       await page.locator('.pl-card').first().click(); await page.waitForTimeout(300);
       for (const tab of ['Overview', 'Rounds', 'Timeline', 'Notes']) {
-        await page.click(`.drawer .seg button:has-text("${tab}")`); await page.waitForTimeout(150);
+        await page.click(`#pl-tab-${tab.toLowerCase()}`); await page.waitForTimeout(150);
         const ov = await page.evaluate(() => { const d = document.querySelector('.drawer'); return { sw: d.scrollWidth, cw: d.clientWidth, doc: document.documentElement.scrollWidth, dw: document.documentElement.clientWidth }; });
         T.check(`long strings: drawer ${tab} no horizontal overflow`, ov.sw <= ov.cw + 1 && ov.doc <= ov.dw + 1, JSON.stringify(ov));
       }

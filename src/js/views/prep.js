@@ -468,7 +468,6 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
   const waitingAnswer = phase === "live" && !busy && turns.length > 0 && turns[turns.length - 1].role === "assistant" && answered < n;
 
   const roundLabel = ROUND[ctx.type]?.label || "Interview";
-  const ctxLine = (x) => x.company ? `${x.company} · ${x.title || x.cat}` : `General practice · ${x.cat}`;
 
   const apiTurns = (list, mm, nn) => [{ role: "user", content: prepMockBrief(mm, nn, resume) }, ...list.map((t) => ({ role: t.role, content: t.text + (t.note ? "\n\n" + t.note : "") }))];
 
@@ -568,19 +567,15 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
   /* ----- start ----- */
   if (phase === "start") {
     return html`<div class="card prep-mock-start" aria-labelledby="prep-mock-title">
-      <div class="prep-mock-start-main">
-        <div class="prep-head-ico prep-mock-ico"><${Icon} name="msg" size=${18} /></div>
-        <div class="stack-sm prep-mock-start-text">
-          <h3 id="prep-mock-title" class="prep-mock-title">Mock interview with Claude</h3>
-          <p class="prep-mock-ctx"><span class="truncate">${a ? ctxLine({ company: a.company, title: a.title, cat: ctx.cat }) : ctxLine({ cat: ctx.cat })}</span><span class="prep-mock-type"> · ${roundLabel}</span></p>
-          <p class="prep-mock-desc">Claude plays the interviewer, one question at a time. Type your answers, get short feedback on each, and a scorecard at the end.</p>
-        </div>
-      </div>
-      <div class="prep-mock-start-foot">
-        <div class="prep-mock-len"><span class="label" id="prep-mock-len-l">Length</span><${Seg} label="Interview length" value=${n} options=${PREP_MOCK_LENGTHS} onChange=${setN} /></div>
+      <div class="card-head prep-mock-start-head">
+        <h3 id="prep-mock-title">Mock interview</h3>
         <span class="spacer"></span>
-        <span class="hint prep-mock-note">Uses your own Claude account. Nothing is saved outside this browser.</span>
-        <${Btn} kind="primary" icon="play" onClick=${start} id="prep-mock-start">Start mock interview</${Btn}>
+        <div class="prep-mock-len"><${Seg} label="Interview length" value=${n} options=${PREP_MOCK_LENGTHS} onChange=${setN} /></div>
+        <${Btn} kind="primary" size="sm" icon="play" onClick=${start} id="prep-mock-start">Start</${Btn}>
+      </div>
+      <div class="card-body prep-mock-start-body">
+        <p class="prep-mock-desc">Claude plays the interviewer, one question at a time, then scores you.</p>
+        <p class="prep-mock-note">Runs on your Claude account. Saved only in this browser.</p>
       </div>
     </div>`;
   }
@@ -598,10 +593,7 @@ function PrepMock({ ctx, a, r, resume, onPhase, onSaved }) {
 
   return html`<div class=${cx("card prep-mock", phase !== "end" && "on")}>
     <div class="card-head prep-mock-head">
-      <div class="stack-sm prep-mock-head-text">
-        <h3 ref=${headRef} tabindex="-1">${phase === "end" ? "Mock interview scorecard" : "Mock interview"}</h3>
-        <span class="prep-mock-sub truncate">${ctxLine(m)} · ${m.roundLabel}</span>
-      </div>
+      <h3 ref=${headRef} tabindex="-1">${phase === "end" ? "Mock interview scorecard" : "Mock interview"}</h3>
       <span class="spacer"></span>
       ${phase !== "end" && html`<span class="prep-count num" aria-live="polite">${phase === "scoring" ? "Scoring" : `Question ${shownQ} of ${n}`}</span>`}
       ${live && html`<${Btn} size="sm" kind="ghost" icon="flag" onClick=${finishEarly} id="prep-mock-end"><span class="hide-sm">${answered ? "End and score" : "End"}</span><span class="show-sm">End</span></${Btn}>`}
@@ -698,6 +690,7 @@ function PrepWorkspace({ a, r }) {
             <div class="prep-head-actions">
               <span class="prep-cal"><${CalendarButton} appId=${a.id} round=${r} /></span>
               <${Btn} size="sm" kind="ghost" iconRight="chevR" onClick=${() => openApp(a.id, "rounds")} cls="hide-sm">Open application</${Btn}>
+              <${Btn} icon="pipeline" onClick=${() => openApp(a.id, "rounds")} cls="show-sm prep-open-ico" aria-label="Open application" title="Open application" id="prep-open-app" />
             </div>
           </div>
           <dl class="prep-facts">
@@ -741,7 +734,7 @@ VIEWS.prep = function PrepView() {
   }
   const value = sel?.practice ? "practice" : sel ? `${sel.a.id}|${sel.r.id}` : "";
   return html`<div class="page">
-    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? `${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? `. Next ${fmt.until(up[0].r.at)}.` : "."}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
+    <div class="page-head"><div><h1>Interview prep</h1><p>${up.length ? `${pluralize(up.length, "upcoming round")}${up[0]?.r.at ? ` · next ${fmt.until(up[0].r.at)}` : ""}` : "No upcoming rounds. Practice keeps you sharp."}</p></div>
 </div>
     <div class="prep-layout">
       <aside class="prep-side">

@@ -125,7 +125,7 @@ function today_TaskRow({ tk, first }) {
   else primary = html`<button type="button" class=${cls} onClick=${() => today_runTask(tk)}>${copy.action}</button>`;
   const safeKey = tk.key.replace(/[^a-z0-9]/gi, "-");
   return html`<div class="task td-task" data-key=${tk.key}>
-    <span class=${cx("task-ico", tk.tone)}><${Icon} name=${tk.icon} /></span>
+    <span class=${cx("task-ico", today_tone(tk))}><${Icon} name=${tk.icon} /></span>
     <div class="td-task-text">
       <button type="button" class="td-task-title task-title" onClick=${() => openApp(a.id)} title="Open application">${tk.title}</button>
       <div class="task-sub">${copy.sub}</div>
@@ -304,8 +304,16 @@ function today_Response({ st }) {
   </section>`;
 }
 
+// Icons stay neutral; amber only when a task is genuinely late or closing: an intern season that is closing,
+// or a thank-you note past the 24-hour window.
+function today_tone(tk) {
+  if (tk.kind === "apply" && tk.tone === "wait") return "wait";
+  if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return "wait";
+  return "";
+}
+
 function today_ExampleBanner() {
-  return html`<div class="example-banner td-banner">
+  return html`<div class="example-banner td-banner" role="note">
     <${Icon} name="info" />
     <span class="td-banner-text"><b>Example data.</b><span class="td-banner-more"> Clear it when you add your first application.</span></span>
     <span class="spacer"></span>

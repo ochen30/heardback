@@ -118,8 +118,8 @@
   .td-up-row { grid-template-columns: 56px 24px minmax(0, 1fr) auto; padding: 12px 16px; }
   .td-up-row > .ico:last-child { display: none; }
   .td-legend-row { height: 36px; }
-  .td-banner-more { display: none; }
 }
+@media (max-width: 520px) { .td-banner-more { display: none; } }
 
 /* ===== Insights (stats) ===== */
 .st-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start; }

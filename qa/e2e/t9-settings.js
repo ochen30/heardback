@@ -39,7 +39,8 @@ async function grabExport(page, btn) {
     T.note('CSV header', lines[0]);
     const csvRows = await page.evaluate((t) => parseCSV(t), csv.text);
     T.check('CSV rows = apps + header', csvRows.length === Object.keys(snap.apps).length + 1, `${csvRows.length}`);
-    T.check('CSV includes example apps although they are fictional', !csvRows.some((r) => r[0] === 'Northwind Labs'), 'example apps exported into CSV without an Example marker');
+    const exCol = csvRows[0].indexOf('example');
+    T.check('CSV marks example apps (example column)', exCol >= 0 && csvRows.filter((r) => r[exCol] === 'yes').length === Object.values(snap.apps).filter((a) => a.example).length, csvRows[0].join(','));
     await clearToasts(page);
     // ---- Import JSON into a fresh profile (new context) ----
     const r2 = await open({ W, mock: MOCK, setup: 'onboarded', route: 'prefs', browser });
@@ -48,7 +49,7 @@ async function grabExport(page, btn) {
     T.check('import confirm shown', await r2.page.locator('.modal:has-text("Import")').isVisible());
     await r2.page.click('.modal-foot button:has-text("Import and merge")'); await r2.page.waitForTimeout(400);
     const after = await r2.page.evaluate(() => JSON.parse(JSON.stringify(store.get())));
-    const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const eq = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null); // undefined vs null normalisation is fine
     const diffs = [];
     for (const id of Object.keys(snap.apps)) {
       const x = snap.apps[id], y = after.apps[id];
@@ -97,7 +98,8 @@ async function grabExport(page, btn) {
     await page.fill('#pf-follow', '3'); await page.locator('#pf-follow').blur(); await page.waitForTimeout(150);
     T.check('followUpDays set', (await page.evaluate(() => store.get().settings.followUpDays)) === 3);
     await page.fill('#pf-ghost', '1'); await page.locator('#pf-ghost').blur(); await page.waitForTimeout(150);
-    T.check('ghostDays clamps to min 3', (await page.evaluate(() => store.get().settings.ghostDays)) === 3);
+    const gd = await page.evaluate(() => store.get().settings.ghostDays);
+    T.check('ghostDays clamps to min followUpDays+1 (=4)', gd === 4, gd);
     await page.fill('#pf-ghost', '2'); await page.waitForTimeout(150);
     T.note('ghostDays while typing "2" before blur', await page.evaluate(() => store.get().settings.ghostDays));
     await page.fill('#pf-follow', '30'); await page.locator('#pf-follow').blur(); await page.fill('#pf-ghost', '10'); await page.locator('#pf-ghost').blur(); await page.waitForTimeout(150);

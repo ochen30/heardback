@@ -17,9 +17,16 @@ module.exports = {
     await ready(p);
     await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.g >= 80 && x.nl > 6); openJob(j.id); });
     await wait(p);
-    await p.click('.find-details summary'); await wait(p, 200);
-    await p.evaluate(() => { document.querySelector('.find-details').scrollIntoView(); });
+    await p.evaluate(() => { document.querySelector('#find-gh-h').scrollIntoView(); });
   },
+  async methodFromDrawer(p) {
+    await ready(p);
+    await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.g >= 50); openJob(j.id); });
+    await wait(p);
+    await p.click('.drawer-body .dsec button:has-text("How we score listings")'); await wait(p);
+  },
+  async companyNewest(p) { await ready(p); await p.evaluate(() => openCompany('TikTok')); await wait(p); await p.click('.drawer-body [aria-label="Sort roles"] button:has-text("Newest")'); await wait(p, 200); await p.evaluate(() => document.querySelector('#find-open-h').scrollIntoView()); },
+  async companyRoles(p) { await ready(p); await p.evaluate(() => openCompany('TikTok')); await wait(p); await p.evaluate(() => document.querySelector('#find-open-h').scrollIntoView()); },
   async ghostTop(p) { await ready(p); await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.g >= 80 && x.nl > 6); openJob(j.id); }); await wait(p); },
   async midGhost(p) { await ready(p); await p.evaluate(() => { const j = jobsStore.jobs.find((x) => x.g >= 25 && x.g < 50); openJob(j.id); }); await wait(p); },
   async ghostList(p) { await ready(p); await p.click('text=Show all'); await wait(p, 200); await p.fill('#find-q', 'salesforce'); await wait(p, 500); },
@@ -31,6 +38,7 @@ module.exports = {
     await p.click('text=Tailor my resume'); await wait(p, 300);
     await p.evaluate(() => { document.querySelector('#find-ai-h').scrollIntoView(); });
   },
+  async jobAIIdle(p) { await ready(p); await fakeClaude(p); await p.click('.find-results .find-row'); await wait(p); await p.evaluate(() => { document.querySelector('#find-ai-h').scrollIntoView(); }); },
   async jobAIRegen(p) {
     await ready(p); await fakeClaude(p);
     await p.click('.find-results .find-row'); await wait(p);

@@ -165,8 +165,15 @@ function find_FitPill({ fit, sponsor }) {
 function find_GhostHint({ g }) {
   const lv = ghostLevel(g || 0);
   if (lv === "low") return null;
-  const label = lv === "high" ? "Strong signals" : "Some signals";
-  return html`<span class=${cx("gscore", lv)} title=${`${lv === "high" ? "Several" : "A few"} stale-listing signals (${g}/100). Not proof either way. Open the listing to see why.`}><span class="gbars" aria-hidden="true"><i></i><i></i><i></i></span>${label}</span>`;
+  return html`<span class=${cx("gscore", lv)} title=${`${ghostLabel(g)} (${g}/100). Not proof either way. Open the listing to see why.`}><span class="gbars" aria-hidden="true"><i></i><i></i><i></i></span><span class="find-g-l">${ghostLabel(g)}</span></span>`;
+}
+
+/* true at phone width (≤520px); follows resizes */
+function find_useNarrow() {
+  const mq = useMemo(() => (window.matchMedia ? window.matchMedia("(max-width: 520px)") : null), []);
+  const [n, setN] = useState(() => !!(mq && mq.matches));
+  useEffect(() => { if (!mq) return; const f = () => setN(mq.matches); mq.addEventListener ? mq.addEventListener("change", f) : mq.addListener(f); return () => (mq.removeEventListener ? mq.removeEventListener("change", f) : mq.removeListener(f)); }, [mq]);
+  return n;
 }
 
 /* ---------- shared row ---------- */
@@ -254,8 +261,8 @@ function find_FilterControls({ px, f, counts, jobs }) {
       ${f.visa === "yes" && html`<span class="hint">Few listings say either way, so this hides most jobs.</span>`}
     </div>
     <div class="filter-group">
-      <h4>Listing signals</h4>
-      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong stale signals" />
+      <h4>Ghost signals</h4>
+      <${Switch} id=${px + "-ghost"} checked=${f.hideGhost} onChange=${(v) => find_setFilters({ hideGhost: v })} label="Hide strong ghost signals" />
     </div>
     ${find_activeCount(f) > 0 && html`<div><${Btn} kind="ghost" size="sm" icon="x" onClick=${find_clearAll}>Clear filters</${Btn}></div>`}
   </div>`;
@@ -283,6 +290,7 @@ VIEWS.find = function FindView() {
   const sort = s.ui.findSort || "new";
   const byJob = find_useAppsByJob();
   const [qIn, setQIn] = useState(find_state.q);
+  const narrow = find_useNarrow();
   const [q, setQ] = useState(find_state.q);
   const [shown, setShown] = useState(FIND_PAGE);
   const [sel, setSel] = useState(-1);
@@ -339,7 +347,7 @@ VIEWS.find = function FindView() {
     <div>
       <h1>Find jobs</h1>
       <p>${ready
-        ? html`<span class="num">${fmt.num(st.active || jobs.jobs.length)}</span> open internship and new-grad roles from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? ` · updated ${fmt.ago(genAt)}` : ""} · <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button>`
+        ? html`<span class="num">${fmt.num(jobs.jobs.length)}</span> open internship and new-grad roles${st.active > jobs.jobs.length ? html` <span class="faint find-raw" title="Identical repeats of the same listing are shown once">(<span class="num">${fmt.num(st.active)}</span> postings)</span>` : null} from <span class="num">${fmt.num(st.companies || jobs.byCompany.size)}</span> companies${genAt ? ` · updated ${fmt.ago(genAt)}` : ""} · <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button>`
         : "Open internship and new-grad roles, checked for ghost-job signals."}</p>
     </div>
   </div>`;
@@ -381,7 +389,7 @@ VIEWS.find = function FindView() {
         <div class="find-toolbar">
           <div class="input-icon find-search">
             <${Icon} name="search" />
-            <input id="find-q" class="input" type="search" placeholder="Search title, company or location" value=${qIn} onInput=${(e) => setQIn(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Escape" && qIn) { e.stopPropagation(); setQIn(""); } else if (e.key === "Enter") { setQ(qIn); find_state.q = qIn; } }} aria-label="Search jobs" autocomplete="off" />
+            <input id="find-q" class="input" type="search" placeholder=${narrow ? "Search jobs" : "Search title, company or location"} value=${qIn} onInput=${(e) => setQIn(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Escape" && qIn) { e.stopPropagation(); setQIn(""); } else if (e.key === "Enter") { setQ(qIn); find_state.q = qIn; } }} aria-label="Search jobs" autocomplete="off" />
             ${qIn ? html`<${Btn} kind="ghost" size="sm" icon="x" cls="find-qclear" aria-label="Clear search" onClick=${() => { setQIn(""); setQ(""); find_state.q = ""; document.getElementById("find-q")?.focus(); }} />` : html`<span class="kbd find-kbd hide-sm">/</span>`}
           </div>
           <${Btn} cls="find-fbtn" icon="filter" onClick=${() => openModal("findFilters")} aria-label=${`Filters${nActive ? `, ${nActive} active` : ""}`}>Filters${nActive ? html`<span class="find-fcount num">${nActive}</span>` : null}</${Btn}>
@@ -443,89 +451,78 @@ const find_hasResume = (p) => (p.resume || "").trim().length >= 40;
 const find_jobBrief = (job) => `Title: ${job.t}\nCompany: ${job.co}\nLevel: ${FIND_LV[job.lvl]}${job.term ? ` (${job.term})` : ""}\nCategory: ${job.cat}\nLocations: ${(job.l || []).slice(0, 6).join("; ") || "not listed"}${job.nl > 6 ? ` and ${job.nl - 6} more` : ""}\nDegrees listed: ${(job.deg || []).join(", ") || "not stated"}`;
 
 const FIND_AI_NOTE = "Drafted by Claude · review before using.";
-function find_WhyYou({ job, profile, onOut, regen }) {
-  const [st, run, stop] = find_useAI();
-  const [jd, setJd] = useState("");
-  useEffect(() => { onOut && onOut(st.out ? "out" : st.busy ? "busy" : ""); }, [st.out, st.busy]);
-  if (!find_hasResume(profile)) return null;
-  const go = () => run(async (signal) => {
-    const prompt = `You help a student or new grad decide whether a job is worth applying to.
-You can see ONLY their resume and the basic listing facts below. ${jd.trim() ? "The candidate also pasted the job description below." : "You cannot see the full job description, so judge only from the title, level and location, and say so when a point depends on details you can't see."}
+function find_whyPrompt(job, profile, jd) {
+  return `You help a student or new grad decide whether a job is worth applying to.
+You can see ONLY their resume and the basic listing facts below. ${jd ? "The candidate also pasted the job description below." : "You cannot see the full job description, so judge only from the title, level and location, and say so when a point depends on details you can't see."}
 Never invent experience, skills or facts that aren't in the resume. Be specific and brief (each item under 20 words). Refer to resume content, not the person's name.
 
 LISTING
 ${find_jobBrief(job)}
-${jd.trim() ? `\nJOB DESCRIPTION (pasted by the candidate)\n${jd.trim().slice(0, 6000)}\n` : ""}
+${jd ? `\nJOB DESCRIPTION (pasted by the candidate)\n${jd.slice(0, 6000)}\n` : ""}
 RESUME
 ${profile.resume.slice(0, 8000)}
 
 Return JSON: {"why": [2-4 strings: reasons this resume fits], "whyNot": [2-4 strings: gaps or risks], "note": "one sentence on what would sharpen this read"}`;
-    return askClaudeJSON(prompt, { signal, modelTier: "quick" });
-  });
-  if (regen) regen.current.a = go;
-  const o = st.out;
-  return html`<div class="stack">
-    <div class="field">
-      <label for="find-jd">Job description <span class="faint">(optional)</span></label>
-      <textarea id="find-jd" class="textarea find-jd" placeholder="Paste the job description for a sharper read." value=${jd} onInput=${(e) => setJd(e.currentTarget.value)}></textarea>
-    </div>
-    ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : !o && html`<div><${Btn} icon="spark" onClick=${go}>Weigh my strengths and gaps</${Btn}></div>`}
-    ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err} The fit check above works without Claude.</span></div>`}
-    ${o && html`<div class="find-ai-out">
-      <div class="grid cols-2 find-yn">
-        <div><div class="find-yn-h">Strengths</div><ul class="reason-list">${(o.why || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
-        <div><div class="find-yn-h">Gaps</div><ul class="reason-list">${(o.whyNot || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
-      </div>
-      ${o.note && html`<p class="hint">${o.note}</p>`}
-    </div>`}
-  </div>`;
 }
-
-function find_Tailor({ job, profile, onOut, regen }) {
-  const [st, run, stop] = find_useAI();
-  useEffect(() => { onOut && onOut((st.out?.bullets || []).length ? "out" : st.busy ? "busy" : ""); }, [st.out, st.busy]);
-  const go = () => run(async (signal) => {
-    const prompt = `Rewrite lines from a candidate's EXISTING resume so they fit this role better.
+function find_tailorPrompt(job, profile, jd) {
+  return `Rewrite lines from a candidate's EXISTING resume so they fit this role better.
 Rules: only rework lines that are already in the resume. Never invent experience, employers, numbers, tools or results. If a line has no metric, do not add one. Keep each rewritten bullet under 30 words, start with a strong verb, and keep it truthful to the original.
-You cannot see the full job description, only the listing facts below.
+${jd ? "The candidate pasted the job description below; use its wording where the resume truthfully supports it." : "You cannot see the full job description, only the listing facts below."}
 
 LISTING
 ${find_jobBrief(job)}
-
+${jd ? `\nJOB DESCRIPTION (pasted by the candidate)\n${jd.slice(0, 6000)}\n` : ""}
 RESUME
 ${profile.resume.slice(0, 8000)}
 
 Return JSON: {"bullets": [3-5 items of {"from": "the original resume line, quoted exactly or nearly", "to": "the rewritten bullet", "why": "under 12 words on why it fits this role"}]}`;
-    return askClaudeJSON(prompt, { signal, modelTier: "default" });
-  });
-  if (regen) regen.current.b = go;
-  const bl = st.out?.bullets || [];
-  return html`<div class="stack">
-    ${st.busy ? html`<${find_Thinking} onStop=${stop} />` : !bl.length && html`<div><${Btn} icon="doc" onClick=${go}>Tailor my resume</${Btn}></div>`}
-    ${st.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${st.err}</span></div>`}
-    ${bl.length > 0 && html`<div class="find-bullets">
-      ${bl.map((b, i) => html`<div class="find-bullet" key=${i}>
-        <div class="find-bullet-from">From “${String(b.from || "").replace(/^["“”']+|["“”']+$/g, "")}”</div>
-        <div class="find-bullet-row"><div class="find-bullet-to">${b.to}</div><${Btn} kind="ghost" size="sm" icon="copy" aria-label="Copy bullet" title="Copy" onClick=${() => copyText(b.to, "Bullet copied")} /></div>
-        ${b.why && html`<div class="hint">${b.why}</div>`}
-      </div>`)}
-    </div>`}
-  </div>`;
 }
 
+/* Both Claude actions share one job-description box and sit side by side until used. */
 function find_AskClaude({ job, profile }) {
-  const [a, setA] = useState("");
-  const [b, setB] = useState("");
-  const regen = useRef({});
-  const anyOut = a === "out" || b === "out";
-  const busy = a === "busy" || b === "busy";
-  const again = () => { if (a === "out") regen.current.a?.(); if (b === "out") regen.current.b?.(); };
+  const [stA, runA, stopA] = find_useAI();
+  const [stB, runB, stopB] = find_useAI();
+  const [jd, setJd] = useState("");
+  const hasResume = find_hasResume(profile);
+  const goA = () => runA((signal) => askClaudeJSON(find_whyPrompt(job, profile, jd.trim()), { signal, modelTier: "quick" }));
+  const goB = () => runB((signal) => askClaudeJSON(find_tailorPrompt(job, profile, jd.trim()), { signal, modelTier: "default" }));
+  const o = stA.out;
+  const bl = stB.out?.bullets || [];
+  const anyOut = !!o || bl.length > 0;
+  const busy = stA.busy || stB.busy;
+  const again = () => { if (o) goA(); if (bl.length) goB(); };
+  const showA = !stA.busy && !o, showB = !stB.busy && !bl.length;
   return html`<section class="dsec" aria-labelledby="find-ai-h">
     <h3 id="find-ai-h">Ask Claude<span class="spacer"></span>${anyOut && !busy
       ? html`<${Btn} kind="ghost" size="sm" icon="refresh" cls="find-h-btn" onClick=${again}>Regenerate</${Btn}>`
       : html`<span class="ai-label find-h-meta"><${Icon} name="spark" />Uses your Claude account</span>`}</h3>
-    ${find_hasResume(profile)
-      ? html`<${find_WhyYou} job=${job} profile=${profile} onOut=${setA} regen=${regen} /><${find_Tailor} job=${job} profile=${profile} onOut=${setB} regen=${regen} />
+    ${hasResume
+      ? html`<div class="field">
+          <label for="find-jd">Job description <span class="faint">(optional)</span></label>
+          <textarea id="find-jd" class="textarea find-jd" placeholder="Paste the job description for a sharper read." value=${jd} onInput=${(e) => setJd(e.currentTarget.value)}></textarea>
+        </div>
+        ${(showA || showB) && html`<div class="row wrap find-ai-btns">
+          ${showA && html`<${Btn} icon="spark" onClick=${goA}>Weigh my strengths and gaps</${Btn}>`}
+          ${showB && html`<${Btn} icon="doc" onClick=${goB}>Tailor my resume</${Btn}>`}
+        </div>`}
+        ${stA.busy && html`<${find_Thinking} onStop=${stopA} text="Weighing your fit…" />`}
+        ${stA.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${stA.err} The fit check above works without Claude.</span></div>`}
+        ${o && html`<div class="find-ai-out">
+          <div class="grid cols-2 find-yn">
+            <div><div class="find-yn-h">Strengths</div><ul class="reason-list">${(o.why || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
+            <div><div class="find-yn-h">Gaps</div><ul class="reason-list">${(o.whyNot || []).map((t, i) => html`<li key=${i}>${t}</li>`)}</ul></div>
+          </div>
+          ${o.note && html`<p class="hint">${o.note}</p>`}
+        </div>`}
+        ${stB.busy && html`<${find_Thinking} onStop=${stopB} text="Tailoring bullets…" />`}
+        ${stB.err && html`<div class="callout wait"><${Icon} name="alert" /><span>${stB.err}</span></div>`}
+        ${bl.length > 0 && html`<div class="find-bullets">
+          ${bl.map((b, i) => html`<div class="find-bullet" key=${i}>
+            <div class="find-bullet-from">From “${String(b.from || "").replace(/^["“”']+|["“”']+$/g, "")}”</div>
+            <div class="find-bullet-row"><div class="find-bullet-to">${b.to}</div><${Btn} kind="ghost" size="sm" icon="copy" aria-label="Copy bullet" title="Copy" onClick=${() => copyText(b.to, "Bullet copied")} /></div>
+            ${b.why && html`<div class="hint">${b.why}</div>`}
+          </div>`)}
+        </div>`}
         ${anyOut && html`<span class="ai-label"><${Icon} name="spark" />${FIND_AI_NOTE}</span>`}`
       : html`<p class="muted find-small">Add your resume and Claude can weigh your fit or suggest stronger bullets from what's already there. <button type="button" class="find-link" onClick=${() => openModal("resume")}>Add your resume</button></p>`}
   </section>`;
@@ -543,8 +540,8 @@ function find_postedText(ts) {
 function find_ghostLine(job) {
   const lv = ghostLevel(job.g);
   const nr = (job.gr || []).length;
-  if (lv === "low") return nr ? `Looks active · ${pluralize(nr, "minor signal")}` : "Looks active · no stale-listing signals";
-  return `${lv === "high" ? "Several stale-listing signals" : "A stale-listing signal or two"} · worth a quick check`;
+  if (lv === "low") return nr ? `${ghostLabel(job.g)} · ${pluralize(nr, "minor signal")}` : `${ghostLabel(job.g)} · no signals`;
+  return `${ghostLabel(job.g)} · worth a quick check`;
 }
 
 DRAWERS.job = ({ id }) => {
@@ -577,7 +574,7 @@ DRAWERS.job = ({ id }) => {
     <${Logo} name=${job.co} size="lg" />
     <div class="stack-sm" style="gap:4px; min-width:0">
       <h2 class="find-dtitle">${job.t}</h2>
-      <div class="row wrap find-dsub"><button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button><span class="sep">·</span><span class="muted">Posted ${find_postedText(job.p).toLowerCase()}</span>${app && html`<${StageBadge} stage=${app.stage} />`}</div>
+      <div class="row wrap find-dsub"><button type="button" class="find-link find-co" onClick=${() => openCompany(job.co)}>${job.co}</button><span class="sep">·</span><span class="muted" title=${fmt.dateY(job.p)}>Posted ${find_postedText(job.p).toLowerCase()}</span>${app && html`<${StageBadge} stage=${app.stage} />`}</div>
     </div>
   </div>`;
 
@@ -602,30 +599,16 @@ DRAWERS.job = ({ id }) => {
         ${job.r ? html`<dt>Remote</dt><dd>Remote option listed</dd>` : null}
         ${job.sp && html`<dt>Visa</dt><dd>${find_visaText(job.sp)}</dd>`}
         ${deg && html`<dt>Degrees</dt><dd>${deg}</dd>`}
-        <dt>Posted</dt><dd><span title=${fmt.dateY(job.p)}>${find_postedText(job.p)}</span> <span class="muted num">· ${fmt.date(job.p)}</span></dd>
         <dt>Applies via</dt><dd>${find_atsName(job)}</dd>
       </dl>
     </section>
 
     <section class="dsec" aria-labelledby="find-gh-h">
       <h3 id="find-gh-h">Listing check</h3>
-      <div class=${cx("find-gline", lv)}><span class=${cx("gscore", lv)} aria-hidden="true"><span class="gbars"><i></i><i></i><i></i></span></span><span>${find_ghostLine(job)}</span></div>
-      ${lv !== "low" && (job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${r}</li>`)}</ul>`}
+      <div class=${cx("find-gline", lv)} title=${`${job.g}/100`}><span class=${cx("gscore", lv)} aria-hidden="true"><span class="gbars"><i></i><i></i><i></i></span></span><span>${find_ghostLine(job)}</span></div>
+      ${(job.gr || []).length > 0 && html`<ul class="reason-list find-reasons">${job.gr.map((r, i) => html`<li key=${i}>${r}</li>`)}</ul>`}
       ${job.dup ? html`<p class="muted find-small">Also posted ${job.dup === 1 ? "once more" : job.dup === 2 ? "twice more" : `${fmt.num(job.dup)} more times`} with the same title. Shown once.</p>` : null}
-      <details class="find-details">
-        <summary>How this works</summary>
-        <div class="find-details-body">
-          <p>Heardback scores signals it can see in public listing data. ${job.g}/100 here${lv === "low" && (job.gr || []).length ? `: ${job.gr.join("; ")}` : ""}. A high score means several signals, not that the job isn't real.</p>
-          <ul class="find-rubric">
-            <li><b>Age.</b> 30 or more days since first listed adds points, more at 60, 90 and 150.</li>
-            <li><b>Reposts.</b> The same title was posted and closed before.</li>
-            <li><b>Location count.</b> Listed in 8 or more cities at once.</li>
-            <li><b>Talent-pool wording.</b> Titles like "talent community" or "general application".</li>
-            <li><b>Company tempo.</b> Much older than this company's usual time to close a listing.</li>
-          </ul>
-          <p class="hint">Dates are when the community list first added a listing (data starts Mar 9, 2026), which can be later than the employer's own posting.</p>
-        </div>
-      </details>
+      <p class="hint">Scored ${job.g}/100 from public listing data such as age, reposts and location count. More signals means worth a check, not that the job isn't real. <button type="button" class="find-link" onClick=${() => openModal("method")}>How we score listings</button></p>
     </section>
 
     <section class="dsec" aria-labelledby="find-fit-h">
@@ -809,12 +792,14 @@ For context, public listing data currently shows ${cs?.open || 0} open roles${ca
   </section>`;
 }
 
+const FIND_CO_ROLE_SORTS = [{ id: "fit", label: "Best fit" }, { id: "new", label: "Newest" }];
 DRAWERS.company = ({ id }) => {
   const jobs = useJobs();
   const capsNow = useCaps();
   const s = useStore();
   const byJob = find_useAppsByJob();
   const [allRoles, setAllRoles] = useState(false);
+  const [roleSort, setRoleSort] = useState(null);
   const name = id;
   const cs = jobs.cstats[name];
   const open = jobs.byCompany.get(name) || [];
@@ -833,7 +818,11 @@ DRAWERS.company = ({ id }) => {
     </div>
   </div>`;
 
-  const roles = allRoles ? open : open.slice(0, 8);
+  // Best fit first when the profile yields a fit score; the toggle switches to newest.
+  const canFit = open.length > 1 && !!find_fit(open[0], s.profile);
+  const rSort = canFit ? roleSort || "fit" : "new";
+  const sorted = useMemo(() => (rSort === "fit" ? find_sort(open, "fit", s.profile) : [...open].sort((a, b) => b.p - a.p)), [open, rSort, s.profile]);
+  const roles = allRoles ? sorted : sorted.slice(0, 8);
   const season = find_season(cs);
   return html`<${Drawer} onClose=${closeDrawer} label=${name} head=${head}>
     ${loading && html`<${Skeleton} rows=${4} />`}
@@ -872,7 +861,7 @@ DRAWERS.company = ({ id }) => {
     ${capsNow.sample && html`<${find_Brief} name=${name} cs=${cs} />`}
 
     ${(open.length > 0 || !loading) && html`<section class="dsec" aria-labelledby="find-open-h">
-      <h3 id="find-open-h">Roles</h3>
+      <h3 id="find-open-h">Roles <span class="count">${fmt.num(open.length)}</span>${canFit && html`<span class="spacer"></span><${Seg} label="Sort roles" value=${rSort} options=${FIND_CO_ROLE_SORTS} onChange=${setRoleSort} />`}</h3>
       ${open.length
         ? html`<div class="find-dlist find-results-tight"><div class="list" role="list">${roles.map((j, i) => html`<${find_Row} key=${j.id} job=${j} app=${byJob.get(j.id)} profile=${s.profile} i=${i} inCompany />`)}</div></div>
           ${open.length > 8 && html`<div><${Btn} size="sm" onClick=${() => setAllRoles(!allRoles)}>${allRoles ? "Show fewer" : `Show all ${fmt.num(open.length)}`}</${Btn}></div>`}`

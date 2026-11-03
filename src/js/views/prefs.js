@@ -177,7 +177,7 @@ function PfProfile() {
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${(p.roles || []).includes(c)} onClick=${() => pfSetProfile({ roles: onbToggle(p.roles || [], c) })}>${c}</${Chip}>`)}</div>
     </${PfRow}>
     <${PfRow} label="Locations" hint="None selected means anywhere." top=${true}>
-      <${OnbLocChecklist} idp="pf" value=${locs} onChange=${(v) => pfSetProfile({ locations: v })} />
+      <${OnbLocChecklist} idp="pf" value=${locs} roles=${p.roles || []} levels=${p.levels || []} onChange=${(v) => pfSetProfile({ locations: v })} />
     </${PfRow}>
     <${PfRow} label="Remote">
       <${Switch} id="pf-remote" checked=${!!p.remote} onChange=${(v) => pfSetProfile({ remote: v, locations: v ? (locs.includes("remote") ? locs : [...locs, "remote"]) : locs.filter((x) => x !== "remote") })} label="Open to remote" />

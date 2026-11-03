@@ -147,7 +147,8 @@ module.exports = {
 // AbortSignal, plus a valid scorecard for the JSON call, so streaming, Stop and the end summary can be checked.
 async function patchMock(page, { delay = 30, firstDelay = 0, card = true } = {}) {
   await page.evaluate(({ delay, firstDelay, card }) => {
-    const orig = caps.sample; let n = 0;
+    if (!window.__qaOrigSample) window.__qaOrigSample = caps.sample;
+    const orig = window.__qaOrigSample; let n = 0;
     const f = async (input, opts = {}) => {
       n++;
       const last = Array.isArray(input) ? input[input.length - 1].content : String(input);
@@ -177,8 +178,23 @@ async function mockAnswer(page, i, viaKey = true) {
   await page.fill('#prep-mock-answer', ANSWERS[i % ANSWERS.length]);
   if (viaKey) await page.press('#prep-mock-answer', 'Control+Enter'); else await page.click('#prep-mock-send');
 }
+// Every mock* action starts from the same place, so they chain in one session: restore the real (MOCK=1) caps.sample,
+// close overlays, restore the 10 example applications, clear the prep selection and bounce the route so PrepMock remounts.
+async function resetMock(page) {
+  await page.evaluate(() => {
+    if (window.__qaOrigSample) caps.sample = window.__qaOrigSample;
+    ui.set({ drawer: null, modal: null, palette: false, toasts: [] });
+    store.set((s) => ({ ...s, apps: {}, settings: { ...s.settings, showExamples: true }, ui: { ...s.ui, prepFocus: null } }));
+    loadExamples(); ui.set({ toasts: [] });
+    location.hash = 'today';
+  });
+  await wait(page, 150);
+  await page.evaluate(() => { location.hash = 'prep'; });
+  await wait(page, 500);
+  await page.evaluate(() => { ui.set({ toasts: [] }); document.getElementById('workspace')?.scrollTo(0, 0); });
+}
 const waitIdle = (page) => page.waitForFunction(() => !document.querySelector('#prep-mock-stop'), null, { timeout: 20000 });
-Object.assign(module.exports, {
+const mockActions = {
   async mockStartDefault(page) { await module.exports.withResume(page); },
   async mockCanned(page) { await module.exports.withResume(page); await page.click('#prep-mock-start'); await wait(page, 900); },
   async mockThinking(page) { await module.exports.withResume(page); await patchMock(page, { firstDelay: 5000 }); await page.click('#prep-mock-start'); await wait(page, 400); },
@@ -210,7 +226,7 @@ Object.assign(module.exports, {
     await page.evaluate(() => document.getElementById('workspace').scrollTo(0, 0)); await wait(page, 300);
   },
   async mockSave(page) {
-    await module.exports.mockEnd(page);
+    await mockActions.mockEnd(page);
     await page.click('#prep-mock-save'); await wait(page, 500);
     const st = await page.evaluate(() => ({ store: Object.values(store.get().apps).flatMap((a) => a.rounds || []).some((r) => /Mock interview with Claude/.test(r.prep || '')), ui: /Mock interview with Claude/.test(document.querySelector('textarea[id^="prep-notes-"]')?.value || ''), btn: document.querySelector('#prep-mock-save')?.textContent }));
     console.log('[prep]', st.store && st.ui ? 'ok' : 'FAIL', 'save to round notes', JSON.stringify(st));
@@ -231,4 +247,5 @@ Object.assign(module.exports, {
     console.log('[prep]', n === 0 ? 'ok' : 'FAIL', 'mock hidden without Claude');
     await page.click('#prep-practice'); await wait(page);
   },
-});
+};
+Object.assign(module.exports, Object.fromEntries(Object.entries(mockActions).map(([k, fn]) => [k, async (page) => { await resetMock(page); return fn(page); }])));

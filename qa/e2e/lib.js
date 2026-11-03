@@ -44,6 +44,7 @@ async function open(o = {}) {
     return route.fulfill({ status: 200, contentType: 'text/css', body: '' });
   });
   if (o.mock) await page.addInitScript({ path: path.join(qa, 'mock-claude.js') });
+  if (o.init) await page.addInitScript(o.init);
   const setup = o.setup || 'examples';
   if (o.rawStorage != null) {
     await page.addInitScript((raw) => { if (!sessionStorage.getItem('qa-init')) { sessionStorage.setItem('qa-init', '1'); localStorage.setItem('heardback:v1', raw); } }, o.rawStorage);

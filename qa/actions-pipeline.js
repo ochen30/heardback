@@ -535,6 +535,53 @@ const actions = {
     await page.click('.pl-bulk-move');
     await page.waitForTimeout(200);
   },
+  async expandClosedStart(page) {
+    await page.click('.pl-rail[data-col="closed"]');
+    await wait(page, 250);
+    await page.evaluate(() => { document.querySelector('.pl-board').scrollLeft = 0; });
+    await page.waitForTimeout(150);
+    const cls = await page.locator('.pl-board').getAttribute('class');
+    const scrolls = await page.evaluate(() => { const b = document.querySelector('.pl-board'); return b.scrollWidth > b.clientWidth + 2; });
+    assert(!scrolls || (/fade-r/.test(cls) && !/fade-l/.test(cls)), `at scroll 0 only the right edge fades (${cls})`);
+  },
+  async closedAuto(page) {
+    await page.locator('.pl-card:has-text("Ostrich Systems") .pl-more').click();
+    await page.locator('.pl-menu button:has-text("Rejected")').click();
+    await wait(page, 300);
+    assert(await page.locator('.pl-col-closed').count() === 1, 'a move into Rejected opens Closed');
+    await page.locator('.pl-card:has-text("Ostrich Systems") .pl-more').click();
+    await page.locator('.pl-menu button:has-text("Applied")').click();
+    await wait(page, 300);
+    assert(await page.locator('.pl-col-closed').count() === 0, 'the next move into an active stage folds Closed back');
+    await page.click('.pl-rail[data-col="closed"]');
+    await wait(page, 200);
+    await page.locator('.pl-card:has-text("Verity Labs") .pl-more').click();
+    await page.locator('.pl-menu button:has-text("Screen")').click();
+    await wait(page, 300);
+    assert(await page.locator('.pl-col-closed').count() === 1, 'Closed opened by hand stays open');
+  },
+  async interviewFoot(page) {
+    const t = await page.locator('[data-col="interview"] .pl-card .pl-status').first().innerText();
+    const clip = await page.locator('[data-col="interview"] .pl-card .pl-status').first().evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    assert(/^\S+, \d/.test(t.trim()) && !clip, `Interviews footer reads "${t.trim()}" without truncation`);
+  },
+  async boardSelectFocus(page) {
+    await actions.boardSelect(page);
+    const sh = await page.locator('.pl-card.sel').first().evaluate((el) => getComputedStyle(el).boxShadow);
+    const bw = await page.locator('.pl-card.sel').first().evaluate((el) => getComputedStyle(el).borderTopWidth);
+    log('focused selected card shadow:', sh, 'border', bw);
+  },
+  async drawerHead(page) {
+    await actions.drawer(page);
+    const sub = await page.locator('.drawer .pl-dsub').innerText();
+    assert(!/Seattle|Remote|, [A-Z]{2}/.test(sub), `drawer subtitle has no location ("${sub.replace(/\n/g, ' ')}")`);
+    const x = await page.evaluate(() => {
+      const v = [...document.querySelectorAll('.drawer .pl-kv-v')][0], i = document.querySelector('.drawer .pl-inline');
+      const tx = (el) => { const r = document.createRange(); r.selectNodeContents(el.querySelector('.truncate') || el); return r.getBoundingClientRect().left; };
+      return [tx(v), tx(i)];
+    });
+    assert(Math.abs(x[0] - x[1]) < 0.6, `Last reply value aligns with inline values (${x.map((n) => n.toFixed(1))})`);
+  },
   async scrollBoard(page) { await page.evaluate(() => document.querySelector('.pl-board').scrollBy({ left: 300, behavior: 'instant' })); await wait(page, 300); },
 };
 // Every action starts from a clean board (no overlays left from a previous action).

@@ -63,3 +63,14 @@ New:
 - **Command palette context actions:** with an application open, Cmd/Ctrl+K offers "Move to Interviews", "Add a round", "Draft a follow-up"; with a job open, "Save", "Mark as applied", "View company".
 - **How we score listings:** a methodology page with the exact signals, points and live score distribution across all listings, plus known limits. Linked from Find and every job's ghost check.
 - Modal polish: content never squeezes into nested scroll areas; dialogs without fields don't show a focus ring on open.
+
+### 02:55 PT — v6 published (design pass 3)
+Design review 3 scored v5 at 8.1/10 (from 7.4). Applied:
+- One vocabulary for listing signals everywhere ("Looks active" / "Some ghost signals" / "Strong ghost signals"), and one honest count ("7,582 open roles (8,225 postings)").
+- Methodology page: points stacked and aligned, counts explained; job drawer links to it instead of repeating it.
+- Board selection is a soft tint (no heavy frames); mobile table checkboxes aligned; board edge fades only when scrolled; Interviews card footers no longer truncate; Closed column folds back after moves.
+- Mock interview start card simplified to the standard card header; no repeated context; calmer while live.
+- Neutral task icons on Today (amber only when genuinely urgent); one example-data banner design everywhere.
+- Command palette shows real key chips and names the open application in its group header.
+- Company roles sorted by fit (with a Newest toggle); duplicate "Posted" row removed; Claude actions side by side.
+- Settings/onboarding location counts match Find and say what they count.
