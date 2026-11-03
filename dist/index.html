@@ -64,7 +64,7 @@
     --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
     --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
     --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
-    --scrim: rgba(0, 0, 0, .55);
+    --scrim: rgba(0, 0, 0, .66);
     color-scheme: dark;
   }
 }
@@ -77,7 +77,7 @@
   --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
   --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
   --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
-  --scrim: rgba(0, 0, 0, .55);
+  --scrim: rgba(0, 0, 0, .66);
   color-scheme: dark;
 }
 
@@ -163,7 +163,7 @@ p { margin: 0; }
 .bottom-nav { display: none; }
 .example-banner {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 10px 14px; border-radius: var(--r-lg); border: 1px dashed var(--line-strong); background: var(--surface);
+  padding: 8px 8px 8px 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface-2);
   font-size: var(--fs-sm); color: var(--fg-2);
 }
 .example-banner b { color: var(--fg); font-weight: 600; }
@@ -248,7 +248,8 @@ p { margin: 0; }
 .badge.bad { background: var(--bad-soft); color: var(--bad); }
 .badge.ghost { background: var(--ghost-soft); color: var(--ghost); }
 .badge.info { background: var(--info-soft); color: var(--info); }
-.badge.example { background: transparent; border: 1px dashed var(--line-strong); color: var(--fg-3); }
+.badge.example { background: transparent; border: 1px solid var(--line-strong); color: var(--fg-3); display: none; }
+.drawer-head .badge.example, .prep-head .badge.example { display: inline-flex; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--fg-3); }
 .dot.saved { background: var(--fg-3); }
 .dot.applied { background: var(--accent); }
@@ -326,11 +327,12 @@ p { margin: 0; }
 
 /* ---------- Overlays ---------- */
 .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; animation: fade var(--t-med) var(--ease); }
+.scrim.modal-scrim { z-index: 50; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; transform: translateY(6px) scale(.99); } to { opacity: 1; transform: none; } }
 @keyframes slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .modal {
-  position: fixed; z-index: 41; left: 50%; top: 12vh; transform: translateX(-50%);
+  position: fixed; z-index: 51; left: 50%; top: 12vh; transform: translateX(-50%);
   width: min(560px, calc(100vw - 32px)); max-height: 76vh; display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
   animation: rise var(--t-med) var(--ease);
@@ -350,7 +352,7 @@ p { margin: 0; }
 .drawer-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
 .drawer-body { flex: 1; overflow: auto; padding: 18px 20px 28px; display: flex; flex-direction: column; gap: 20px; }
 .drawer-foot { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
-.menu { position: fixed; z-index: 50; min-width: 200px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-float); padding: 4px; animation: rise var(--t-fast) var(--ease); }
+.menu { position: fixed; z-index: 60; min-width: 200px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-float); padding: 4px; animation: rise var(--t-fast) var(--ease); }
 .menu button { display: flex; width: 100%; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 0; background: none; border-radius: var(--r-sm); font-size: var(--fs-sm); text-align: left; }
 .menu button:hover, .menu button:focus-visible { background: var(--surface-2); box-shadow: none; }
 
@@ -367,7 +369,7 @@ p { margin: 0; }
 .palette-foot { display: flex; gap: 14px; padding: 8px 16px; border-top: 1px solid var(--line); font-size: var(--fs-xs); color: var(--fg-3); }
 
 /* toast */
-.toasts { position: fixed; z-index: 60; bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.toasts { position: fixed; z-index: 70; bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px)); left: calc(var(--rail) + 24px); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 14px; background: var(--fg); color: var(--bg); border-radius: var(--r-md); box-shadow: var(--shadow-float); font-size: var(--fs-sm); animation: rise var(--t-med) var(--ease); max-width: calc(100vw - 32px); }
 .toast button { border: 0; background: none; color: inherit; font-weight: 600; opacity: .85; padding: 2px 6px; border-radius: 4px; }
 .toast button:hover { opacity: 1; }
@@ -474,7 +476,7 @@ p { margin: 0; }
 .callout.wait { background: var(--wait-soft); border-color: transparent; color: var(--fg); }
 .callout .ico { flex: none; margin-top: 2px; }
 .footer-note { font-size: var(--fs-xs); color: var(--fg-3); text-align: center; padding: 8px 16px 24px; }
-.celebrate { position: fixed; inset: 0; pointer-events: none; z-index: 70; display: grid; place-items: center; }
+.celebrate { position: fixed; inset: 0; pointer-events: none; z-index: 80; display: grid; place-items: center; }
 .celebrate-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: 22px 26px; text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; animation: rise 240ms var(--ease); }
 .celebrate-ring { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok); }
 .ico { width: 16px; height: 16px; flex: none; display: inline-block; vertical-align: middle; }
@@ -524,6 +526,36 @@ p { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
 }
+
+.drawer:focus, .drawer:focus-visible, .modal:focus, .modal:focus-visible { outline: none; box-shadow: var(--shadow-pop); }
+.switch i::after { background: #fff; }
+.logo { background: var(--surface-2); color: var(--fg-2); }
+.chip { border-color: var(--line); }
+.chip[aria-pressed="true"] { border-color: var(--accent); }
+.chip[aria-pressed="true"] .ico { color: var(--accent-text); }
+.example-banner { max-width: 100%; }
+@media (min-width: 861px) { .top-title { display: none; } }
+@media (max-width: 860px) {
+  .page-head h1 { display: none; }
+  .toasts { left: 50%; transform: translateX(-50%); align-items: center; }
+  .toasts.over-drawer { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .drawer { border-left-color: var(--line-strong); } :root:not([data-theme="light"]) .switch i::after { background: #c9ced6; } :root:not([data-theme="light"]) .switch input:checked + i::after { background: #fff; } }
+:root[data-theme="dark"] .drawer { border-left-color: var(--line-strong); }
+:root[data-theme="dark"] .switch i::after { background: #c9ced6; }
+:root[data-theme="dark"] .switch input:checked + i::after { background: #fff; }
+/* Underline tabs (navigation inside drawers/pages) */
+.tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tabs button { position: relative; height: 38px; padding: 0 2px; border: 0; background: none; color: var(--fg-2); font-weight: 500; font-size: var(--fs-sm); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.tabs button:hover { color: var(--fg); }
+.tabs button[aria-selected="true"] { color: var(--fg); }
+.tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); border-radius: 2px; }
+.tabs .count { color: var(--fg-3); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* Drawer sections (instead of cards inside drawers) */
+.dsec { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.dsec:first-child { border-top: 0; padding-top: 0; }
+.dsec > h3 { font-size: var(--fs-sm); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.dsec > h3 .spacer { flex: 1; }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -1808,9 +1840,7 @@ function StageBadge({ stage }) {
   return html`<span class=${cx("badge", kinds[stage])}><span class=${cx("dot", stage)}></span>${STAGE[stage]?.label}</span>`;
 }
 function Logo({ name, size }) {
-  const hue = hashHue(name || "");
-  const style = `background: hsl(${hue} 40% 50% / .12); color: hsl(${hue} 45% 38%);`;
-  return html`<span class=${cx("logo", size)} style=${style} aria-hidden="true"><span class="logo-txt">${initials(name)}</span></span>`;
+  return html`<span class=${cx("logo", size)} aria-hidden="true"><span class="logo-txt">${initials(name)}</span></span>`;
 }
 function Switch({ id, checked, onChange, label }) {
   return html`<label class="row" style="gap:10px; cursor:pointer" for=${id}>
@@ -1824,7 +1854,7 @@ function Seg({ value, options, onChange, label }) {
   </div>`;
 }
 function Chip({ on, onClick, children, icon }) {
-  return html`<button type="button" class="chip" aria-pressed=${on ? "true" : "false"} onClick=${onClick}>${icon && html`<${Icon} name=${icon} size=${14} />`}${children}</button>`;
+  return html`<button type="button" class="chip" aria-pressed=${on ? "true" : "false"} onClick=${onClick}>${on ? html`<${Icon} name="check" size=${13} />` : icon && html`<${Icon} name=${icon} size=${14} />`}${children}</button>`;
 }
 function Empty({ icon = "info", title, children, action }) {
   return html`<div class="empty"><div class="empty-ico"><${Icon} name=${icon} size=${20} /></div><h3>${title}</h3>${children && html`<p>${children}</p>`}${action}</div>`;
@@ -1851,10 +1881,11 @@ function useEscape(fn) {
   const ref = useRef(fn); ref.current = fn;
   useEffect(() => { escStack.push(ref); return () => { const i = escStack.indexOf(ref); if (i >= 0) escStack.splice(i, 1); }; }, []);
 }
-function useFocusTrap(ref) {
+function useFocusTrap(ref, self) {
   useEffect(() => {
     const el = ref.current; if (!el) return;
     const prev = document.activeElement;
+    if (self) { setTimeout(() => el.focus({ preventScroll: true }), 20); return () => { try { prev?.focus?.(); } catch {} }; }
     const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el.querySelector("button");
     setTimeout(() => (first || el).focus?.(), 20);
     return () => { try { prev?.focus?.(); } catch {} };
@@ -1864,7 +1895,7 @@ function Modal({ title, onClose, children, foot, size, label }) {
   const ref = useRef(null);
   useEscape(onClose); useFocusTrap(ref);
   return html`<${Fragment}>
-    <div class="scrim" onClick=${onClose}></div>
+    <div class="scrim modal-scrim" onClick=${onClose}></div>
     <div class=${cx("modal", size)} role="dialog" aria-modal="true" aria-label=${label || title} ref=${ref} tabindex="-1">
       ${title && html`<div class="modal-head"><h2>${title}</h2><span class="spacer"></span><${Btn} kind="ghost" icon="x" aria-label="Close" onClick=${onClose} /></div>`}
       <div class="modal-body">${children}</div>
@@ -1874,7 +1905,7 @@ function Modal({ title, onClose, children, foot, size, label }) {
 }
 function Drawer({ onClose, head, children, foot, label }) {
   const ref = useRef(null);
-  useEscape(onClose); useFocusTrap(ref);
+  useEscape(onClose); useFocusTrap(ref, true);
   return html`<${Fragment}>
     <div class="scrim" onClick=${onClose}></div>
     <aside class="drawer" role="dialog" aria-modal="true" aria-label=${label} ref=${ref} tabindex="-1">
@@ -2221,8 +2252,9 @@ function startOfWeek(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); const
 
 /* ===== Example pipeline (fictional companies, clearly labeled) ===== */
 function loadExamples() {
-  const t = now();
-  const d = (n) => t - n * DAY;
+  const base = new Date(); base.setHours(10, 0, 0, 0);
+  const t = base.getTime();
+  const d = (n) => t - n * DAY + ((n * 5) % 7) * 3600000 + ((n % 2) * 1800000);
   const mk = (o) => {
     const ev = [{ id: uid("e_"), at: o.createdAt, kind: "created", text: "Saved" }];
     if (o.appliedAt) ev.push({ id: uid("e_"), at: o.appliedAt, kind: "stage", from: "saved", to: "applied", text: "Moved to Applied" });
@@ -2251,7 +2283,7 @@ function loadExamples() {
     mk({ company: "Verity Labs", title: "Frontend Engineer, New Grad", location: "New York, NY", stage: "applied", createdAt: d(3), appliedAt: d(3) }),
   ];
   store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(list.map((a) => [a.id, a])) }, settings: { ...s.settings, showExamples: true } }));
-  toast("Loaded 10 example applications. They're labeled Example.");
+  toast("Added 10 example applications");
 }
 function clearExamples() {
   store.set((s) => ({ ...s, apps: Object.fromEntries(Object.entries(s.apps).filter(([, a]) => !a.example)) }));
@@ -2320,8 +2352,7 @@ function Topbar({ route }) {
       <button type="button" class="search-trigger" onClick=${() => ui.set({ palette: true })} aria-label="Search and commands">
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
       </button>
-      <${Btn} kind="ghost" icon=${s === "dark" ? "moon" : s === "light" ? "sun" : "eye"} aria-label="Change theme" title="Theme" onClick=${cycle} cls="hide-sm" />
-      <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Paste an email to log it (E)">Paste email</${Btn}>
+      <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Log an email (E)">Log an email</${Btn}>
       <${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
     </div>
   </header>`;
@@ -2331,7 +2362,7 @@ MODALS.more = () => {
   const items = [
     { icon: "companies", label: "Companies", run: () => go("companies") },
     { icon: "stats", label: "Insights", run: () => go("stats") },
-    { icon: "mail", label: "Paste an email", run: () => openModal("paste") },
+    { icon: "mail", label: "Log an email", run: () => openModal("paste") },
     { icon: "prefs", label: "Settings", run: () => go("prefs") },
     { icon: "keyboard", label: "Keyboard shortcuts", run: () => openModal("shortcuts") },
   ];
@@ -2353,13 +2384,15 @@ function Palette() {
   const jobs = useJobs();
   const s = useStore();
   const listRef = useRef(null);
+  const inRef = useRef(null);
+  useEffect(() => { const t = setTimeout(() => inRef.current?.focus(), 30); return () => clearTimeout(t); }, []);
   const close = () => ui.set({ palette: false });
   useEscape(close);
   const items = useMemo(() => {
     const n = norm(q);
     const acts = [
       { g: "Actions", icon: "plus", label: "Add application", sub: "N", run: () => openModal("add") },
-      { g: "Actions", icon: "mail", label: "Paste an email to log it", sub: "E", run: () => openModal("paste") },
+      { g: "Actions", icon: "mail", label: "Log an email", sub: "E", run: () => openModal("paste") },
       { g: "Actions", icon: "doc", label: "Update your resume", run: () => openModal("resume") },
       { g: "Actions", icon: "moon", label: "Toggle dark mode", run: () => store.set((st) => ({ ...st, settings: { ...st.settings, theme: document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches) ? "light" : "dark" } })) },
       { g: "Actions", icon: "keyboard", label: "Keyboard shortcuts", sub: "?", run: () => openModal("shortcuts") },
@@ -2391,9 +2424,9 @@ function Palette() {
   };
   let lastG = null;
   return html`<${Fragment}>
-    <div class="scrim" onClick=${close}></div>
+    <div class="scrim modal-scrim" onClick=${close}></div>
     <div class="modal palette" role="dialog" aria-modal="true" aria-label="Command palette">
-      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" autofocus placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
+      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" ref=${inRef} placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
       <div class="palette-list" ref=${listRef} role="listbox">
         ${items.length === 0 && html`<div class="empty" style="padding:28px"><p>No matches for “${q}”.</p></div>`}
         ${items.map((it, i) => {
@@ -2446,8 +2479,8 @@ function useShortcuts() {
 }
 
 function Toasts() {
-  const { toasts } = useUI();
-  return html`<div class="toasts" role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.action && html`<button type="button" onClick=${() => { t.action.run(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>${t.action.label}</button>`}${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
+  const { toasts, drawer } = useUI();
+  return html`<div class=${cx("toasts", drawer && "over-drawer")} role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.action && html`<button type="button" onClick=${() => { t.action.run(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>${t.action.label}</button>`}${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
 }
 function Celebrate() {
   const { celebrate } = useUI();
@@ -2463,7 +2496,7 @@ function App() {
   const u = useUI();
   useShortcuts();
   useEffect(() => applyTheme(s.settings.theme), [s.settings.theme]);
-  useEffect(() => { const w = document.querySelector(".workspace"); if (w) w.scrollTop = 0; }, [route]);
+  useEffect(() => { const w = document.querySelector(".workspace"); if (w) w.scrollTop = 0; ui.set({ drawer: null, modal: null, palette: false }); }, [route]);
   const View = VIEWS[route];
   const DrawerC = u.drawer && DRAWERS[u.drawer.kind];
   const ModalC = u.modal && MODALS[u.modal.__kind];
@@ -2495,7 +2528,7 @@ const FIND_POSTED = [
   { id: "3", label: "3d", title: "Last 3 days" }, { id: "7", label: "7d", title: "Last 7 days" }, { id: "30", label: "30d", title: "Last 30 days" },
 ];
 const FIND_VISA = [{ id: "any", label: "Any" }, { id: "yes", label: "Offers sponsorship" }, { id: "nocit", label: "Hide citizenship-required" }];
-const FIND_SORTS = [{ id: "new", label: "Newest" }, { id: "fit", label: "Best fit" }, { id: "ghost", label: "Fewest ghost signals" }];
+const FIND_SORTS = [{ id: "new", label: "Newest" }, { id: "fit", label: "Best fit" }, { id: "ghost", label: "Most likely real" }];
 const FIND_ATS = { greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", workday: "Workday" };
 const FIND_DEG = { BS: "Bachelor's", MS: "Master's", PhD: "PhD", AS: "Associate's", MBA: "MBA", Cert: "Certificate" };
 const FIND_LV = { intern: "Internship", newgrad: "New grad" };
@@ -3083,7 +3116,7 @@ DRAWERS.job = ({ id }) => {
 };
 
 /* ---------- Companies ---------- */
-const CO_SORTS = [{ id: "open", label: "Most open roles" }, { id: "hiring", label: "Still hiring" }, { id: "fast", label: "Fastest to close" }, { id: "ghost", label: "Fewest ghost signals" }, { id: "az", label: "A–Z" }];
+const CO_SORTS = [{ id: "open", label: "Most open roles" }, { id: "hiring", label: "Still hiring" }, { id: "fast", label: "Fastest to close" }, { id: "ghost", label: "Most likely real" }, { id: "az", label: "A–Z" }];
 const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.season.posted : null);
 const find_ghostShareC = { jobs: null, m: null };
 function find_ghostShare(jobsState) {
@@ -3750,7 +3783,7 @@ function PlEmpty() {
     <div class="pl-empty-actions">
       <button type="button" class="pl-empty-act" onClick=${() => go("find")}><span class="pl-empty-ico"><${Icon} name="find" /></span><span><b>Find jobs</b><span>Browse live internship and new-grad roles</span></span></button>
       <button type="button" class="pl-empty-act" onClick=${() => openModal("add")}><span class="pl-empty-ico"><${Icon} name="plus" /></span><span><b>Add application</b><span>Log one you've already sent</span></span></button>
-      <button type="button" class="pl-empty-act" onClick=${() => openModal("paste")}><span class="pl-empty-ico"><${Icon} name="mail" /></span><span><b>Paste an email</b><span>Turn a confirmation or invite into an entry</span></span></button>
+      <button type="button" class="pl-empty-act" onClick=${() => openModal("paste")}><span class="pl-empty-ico"><${Icon} name="mail" /></span><span><b>Log an email</b><span>Turn a confirmation or invite into an entry</span></span></button>
     </div>
     <${Btn} kind="ghost" size="sm" onClick=${loadExamples}>Load example pipeline</${Btn}>
   </div>`;
@@ -4371,7 +4404,7 @@ ${raw.slice(0, 12000)}
     toast(`${app.company}: ${done.length ? done.join(", ") : "email logged"}`);
   };
 
-  return html`<${Modal} title="Log from an email" onClose=${closeModal} size="lg" foot=${html`
+  return html`<${Modal} title="Log an email" onClose=${closeModal} size="lg" foot=${html`
     <span class="pl-foot-note hide-sm">Read on this device. Nothing is sent anywhere${c.sample ? " unless you choose Claude" : ""}.</span>
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" onClick=${closeModal}>Cancel</${Btn}>
@@ -5677,7 +5710,7 @@ function today_Upcoming({ up }) {
       : html`<div class="td-mini-empty">
           <${Icon} name="cal" cls="faint" />
           <span class="muted td-small td-grow">No interviews in the next 7 days. Paste an invite email and the round shows up here.</span>
-          <${Btn} size="sm" kind="ghost" icon="mail" onClick=${() => openModal("paste")}>Paste an email</${Btn}>
+          <${Btn} size="sm" kind="ghost" icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
         </div>`}
   </section>`;
 }
@@ -5803,7 +5836,7 @@ function today_Response({ st }) {
 
 function today_Quick() {
   const rows = [
-    { id: "paste", icon: "mail", label: "Paste an email", sub: "Log a reply or invite", k: "E", run: () => openModal("paste") },
+    { id: "paste", icon: "mail", label: "Log an email", sub: "Log a reply or invite", k: "E", run: () => openModal("paste") },
     { id: "add", icon: "plus", label: "Add application", sub: "Track a role you applied to", k: "N", run: () => openModal("add") },
     { id: "find", icon: "find", label: "Find jobs", sub: "Search fresh listings", k: "/", run: () => go("find") },
   ];
@@ -6029,9 +6062,7 @@ function PoolCompanyCard({ company }) {
   const p = usePool();
   const c = poolFor(company);
   const head = html`<div class="card-head"><${Icon} name="reply" /><h3>Reply data from Heardback users</h3></div>`;
-  if (p.status === "unavailable" || p.status === "error") {
-    return html`<div class="card">${head}<div class="card-body stack-sm"><p class="muted" style="font-size:var(--fs-sm)">Reply data loads when you open Heardback on claude.ai while signed in.</p></div></div>`;
-  }
+  if (p.status === "unavailable" || p.status === "error") return null;
   if (p.status !== "ready") return html`<div class="card">${head}<div class="card-body"><div class="skel" style="height:14px;width:60%"></div></div></div>`;
   if (!c || !c.enough) {
     return html`<div class="card">${head}<div class="card-body stack-sm">

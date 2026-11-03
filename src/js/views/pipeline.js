@@ -206,7 +206,7 @@ function PlEmpty() {
     <div class="pl-empty-actions">
       <button type="button" class="pl-empty-act" onClick=${() => go("find")}><span class="pl-empty-ico"><${Icon} name="find" /></span><span><b>Find jobs</b><span>Browse live internship and new-grad roles</span></span></button>
       <button type="button" class="pl-empty-act" onClick=${() => openModal("add")}><span class="pl-empty-ico"><${Icon} name="plus" /></span><span><b>Add application</b><span>Log one you've already sent</span></span></button>
-      <button type="button" class="pl-empty-act" onClick=${() => openModal("paste")}><span class="pl-empty-ico"><${Icon} name="mail" /></span><span><b>Paste an email</b><span>Turn a confirmation or invite into an entry</span></span></button>
+      <button type="button" class="pl-empty-act" onClick=${() => openModal("paste")}><span class="pl-empty-ico"><${Icon} name="mail" /></span><span><b>Log an email</b><span>Turn a confirmation or invite into an entry</span></span></button>
     </div>
     <${Btn} kind="ghost" size="sm" onClick=${loadExamples}>Load example pipeline</${Btn}>
   </div>`;
@@ -827,7 +827,7 @@ ${raw.slice(0, 12000)}
     toast(`${app.company}: ${done.length ? done.join(", ") : "email logged"}`);
   };
 
-  return html`<${Modal} title="Log from an email" onClose=${closeModal} size="lg" foot=${html`
+  return html`<${Modal} title="Log an email" onClose=${closeModal} size="lg" foot=${html`
     <span class="pl-foot-note hide-sm">Read on this device. Nothing is sent anywhere${c.sample ? " unless you choose Claude" : ""}.</span>
     <span class="spacer" style="flex:1"></span>
     <${Btn} kind="ghost" onClick=${closeModal}>Cancel</${Btn}>

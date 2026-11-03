@@ -8,7 +8,7 @@ const FIND_POSTED = [
   { id: "3", label: "3d", title: "Last 3 days" }, { id: "7", label: "7d", title: "Last 7 days" }, { id: "30", label: "30d", title: "Last 30 days" },
 ];
 const FIND_VISA = [{ id: "any", label: "Any" }, { id: "yes", label: "Offers sponsorship" }, { id: "nocit", label: "Hide citizenship-required" }];
-const FIND_SORTS = [{ id: "new", label: "Newest" }, { id: "fit", label: "Best fit" }, { id: "ghost", label: "Fewest ghost signals" }];
+const FIND_SORTS = [{ id: "new", label: "Newest" }, { id: "fit", label: "Best fit" }, { id: "ghost", label: "Most likely real" }];
 const FIND_ATS = { greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", workday: "Workday" };
 const FIND_DEG = { BS: "Bachelor's", MS: "Master's", PhD: "PhD", AS: "Associate's", MBA: "MBA", Cert: "Certificate" };
 const FIND_LV = { intern: "Internship", newgrad: "New grad" };
@@ -596,7 +596,7 @@ DRAWERS.job = ({ id }) => {
 };
 
 /* ---------- Companies ---------- */
-const CO_SORTS = [{ id: "open", label: "Most open roles" }, { id: "hiring", label: "Still hiring" }, { id: "fast", label: "Fastest to close" }, { id: "ghost", label: "Fewest ghost signals" }, { id: "az", label: "A–Z" }];
+const CO_SORTS = [{ id: "open", label: "Most open roles" }, { id: "hiring", label: "Still hiring" }, { id: "fast", label: "Fastest to close" }, { id: "ghost", label: "Most likely real" }, { id: "az", label: "A–Z" }];
 const find_stillShare = (c) => (c.season && c.season.posted ? c.season.open / c.season.posted : null);
 const find_ghostShareC = { jobs: null, m: null };
 function find_ghostShare(jobsState) {

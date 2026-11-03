@@ -103,9 +103,7 @@ function PoolCompanyCard({ company }) {
   const p = usePool();
   const c = poolFor(company);
   const head = html`<div class="card-head"><${Icon} name="reply" /><h3>Reply data from Heardback users</h3></div>`;
-  if (p.status === "unavailable" || p.status === "error") {
-    return html`<div class="card">${head}<div class="card-body stack-sm"><p class="muted" style="font-size:var(--fs-sm)">Reply data loads when you open Heardback on claude.ai while signed in.</p></div></div>`;
-  }
+  if (p.status === "unavailable" || p.status === "error") return null;
   if (p.status !== "ready") return html`<div class="card">${head}<div class="card-body"><div class="skel" style="height:14px;width:60%"></div></div></div>`;
   if (!c || !c.enough) {
     return html`<div class="card">${head}<div class="card-body stack-sm">

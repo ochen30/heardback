@@ -76,8 +76,9 @@ function startOfWeek(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); const
 
 /* ===== Example pipeline (fictional companies, clearly labeled) ===== */
 function loadExamples() {
-  const t = now();
-  const d = (n) => t - n * DAY;
+  const base = new Date(); base.setHours(10, 0, 0, 0);
+  const t = base.getTime();
+  const d = (n) => t - n * DAY + ((n * 5) % 7) * 3600000 + ((n % 2) * 1800000);
   const mk = (o) => {
     const ev = [{ id: uid("e_"), at: o.createdAt, kind: "created", text: "Saved" }];
     if (o.appliedAt) ev.push({ id: uid("e_"), at: o.appliedAt, kind: "stage", from: "saved", to: "applied", text: "Moved to Applied" });
@@ -106,7 +107,7 @@ function loadExamples() {
     mk({ company: "Verity Labs", title: "Frontend Engineer, New Grad", location: "New York, NY", stage: "applied", createdAt: d(3), appliedAt: d(3) }),
   ];
   store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(list.map((a) => [a.id, a])) }, settings: { ...s.settings, showExamples: true } }));
-  toast("Loaded 10 example applications. They're labeled Example.");
+  toast("Added 10 example applications");
 }
 function clearExamples() {
   store.set((s) => ({ ...s, apps: Object.fromEntries(Object.entries(s.apps).filter(([, a]) => !a.example)) }));

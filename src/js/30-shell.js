@@ -49,8 +49,7 @@ function Topbar({ route }) {
       <button type="button" class="search-trigger" onClick=${() => ui.set({ palette: true })} aria-label="Search and commands">
         <${Icon} name="search" /><span class="label-text">Search jobs, companies, actions</span><span class="kbd">${isMac ? "⌘" : "Ctrl"} K</span>
       </button>
-      <${Btn} kind="ghost" icon=${s === "dark" ? "moon" : s === "light" ? "sun" : "eye"} aria-label="Change theme" title="Theme" onClick=${cycle} cls="hide-sm" />
-      <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Paste an email to log it (E)">Paste email</${Btn}>
+      <${Btn} icon="mail" onClick=${() => openModal("paste")} cls="hide-sm" title="Log an email (E)">Log an email</${Btn}>
       <${Btn} kind="primary" icon="plus" onClick=${() => openModal("add")} aria-label="Add application" title="Add application (N)"><span class="hide-sm">Add</span></${Btn}>
     </div>
   </header>`;
@@ -60,7 +59,7 @@ MODALS.more = () => {
   const items = [
     { icon: "companies", label: "Companies", run: () => go("companies") },
     { icon: "stats", label: "Insights", run: () => go("stats") },
-    { icon: "mail", label: "Paste an email", run: () => openModal("paste") },
+    { icon: "mail", label: "Log an email", run: () => openModal("paste") },
     { icon: "prefs", label: "Settings", run: () => go("prefs") },
     { icon: "keyboard", label: "Keyboard shortcuts", run: () => openModal("shortcuts") },
   ];
@@ -82,13 +81,15 @@ function Palette() {
   const jobs = useJobs();
   const s = useStore();
   const listRef = useRef(null);
+  const inRef = useRef(null);
+  useEffect(() => { const t = setTimeout(() => inRef.current?.focus(), 30); return () => clearTimeout(t); }, []);
   const close = () => ui.set({ palette: false });
   useEscape(close);
   const items = useMemo(() => {
     const n = norm(q);
     const acts = [
       { g: "Actions", icon: "plus", label: "Add application", sub: "N", run: () => openModal("add") },
-      { g: "Actions", icon: "mail", label: "Paste an email to log it", sub: "E", run: () => openModal("paste") },
+      { g: "Actions", icon: "mail", label: "Log an email", sub: "E", run: () => openModal("paste") },
       { g: "Actions", icon: "doc", label: "Update your resume", run: () => openModal("resume") },
       { g: "Actions", icon: "moon", label: "Toggle dark mode", run: () => store.set((st) => ({ ...st, settings: { ...st.settings, theme: document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches) ? "light" : "dark" } })) },
       { g: "Actions", icon: "keyboard", label: "Keyboard shortcuts", sub: "?", run: () => openModal("shortcuts") },
@@ -120,9 +121,9 @@ function Palette() {
   };
   let lastG = null;
   return html`<${Fragment}>
-    <div class="scrim" onClick=${close}></div>
+    <div class="scrim modal-scrim" onClick=${close}></div>
     <div class="modal palette" role="dialog" aria-modal="true" aria-label="Command palette">
-      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" autofocus placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
+      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" ref=${inRef} placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
       <div class="palette-list" ref=${listRef} role="listbox">
         ${items.length === 0 && html`<div class="empty" style="padding:28px"><p>No matches for “${q}”.</p></div>`}
         ${items.map((it, i) => {
@@ -175,8 +176,8 @@ function useShortcuts() {
 }
 
 function Toasts() {
-  const { toasts } = useUI();
-  return html`<div class="toasts" role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.action && html`<button type="button" onClick=${() => { t.action.run(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>${t.action.label}</button>`}${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
+  const { toasts, drawer } = useUI();
+  return html`<div class=${cx("toasts", drawer && "over-drawer")} role="status" aria-live="polite">${toasts.map((t) => html`<div class="toast" key=${t.id}><${Icon} name="check" /><span>${t.text}</span>${t.action && html`<button type="button" onClick=${() => { t.action.run(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>${t.action.label}</button>`}${t.undo && html`<button type="button" onClick=${() => { t.undo(); ui.set((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) })); }}>Undo</button>`}</div>`)}</div>`;
 }
 function Celebrate() {
   const { celebrate } = useUI();
@@ -192,7 +193,7 @@ function App() {
   const u = useUI();
   useShortcuts();
   useEffect(() => applyTheme(s.settings.theme), [s.settings.theme]);
-  useEffect(() => { const w = document.querySelector(".workspace"); if (w) w.scrollTop = 0; }, [route]);
+  useEffect(() => { const w = document.querySelector(".workspace"); if (w) w.scrollTop = 0; ui.set({ drawer: null, modal: null, palette: false }); }, [route]);
   const View = VIEWS[route];
   const DrawerC = u.drawer && DRAWERS[u.drawer.kind];
   const ModalC = u.modal && MODALS[u.modal.__kind];

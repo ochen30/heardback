@@ -81,9 +81,7 @@ function StageBadge({ stage }) {
   return html`<span class=${cx("badge", kinds[stage])}><span class=${cx("dot", stage)}></span>${STAGE[stage]?.label}</span>`;
 }
 function Logo({ name, size }) {
-  const hue = hashHue(name || "");
-  const style = `background: hsl(${hue} 40% 50% / .12); color: hsl(${hue} 45% 38%);`;
-  return html`<span class=${cx("logo", size)} style=${style} aria-hidden="true"><span class="logo-txt">${initials(name)}</span></span>`;
+  return html`<span class=${cx("logo", size)} aria-hidden="true"><span class="logo-txt">${initials(name)}</span></span>`;
 }
 function Switch({ id, checked, onChange, label }) {
   return html`<label class="row" style="gap:10px; cursor:pointer" for=${id}>
@@ -97,7 +95,7 @@ function Seg({ value, options, onChange, label }) {
   </div>`;
 }
 function Chip({ on, onClick, children, icon }) {
-  return html`<button type="button" class="chip" aria-pressed=${on ? "true" : "false"} onClick=${onClick}>${icon && html`<${Icon} name=${icon} size=${14} />`}${children}</button>`;
+  return html`<button type="button" class="chip" aria-pressed=${on ? "true" : "false"} onClick=${onClick}>${on ? html`<${Icon} name="check" size=${13} />` : icon && html`<${Icon} name=${icon} size=${14} />`}${children}</button>`;
 }
 function Empty({ icon = "info", title, children, action }) {
   return html`<div class="empty"><div class="empty-ico"><${Icon} name=${icon} size=${20} /></div><h3>${title}</h3>${children && html`<p>${children}</p>`}${action}</div>`;
@@ -124,10 +122,11 @@ function useEscape(fn) {
   const ref = useRef(fn); ref.current = fn;
   useEffect(() => { escStack.push(ref); return () => { const i = escStack.indexOf(ref); if (i >= 0) escStack.splice(i, 1); }; }, []);
 }
-function useFocusTrap(ref) {
+function useFocusTrap(ref, self) {
   useEffect(() => {
     const el = ref.current; if (!el) return;
     const prev = document.activeElement;
+    if (self) { setTimeout(() => el.focus({ preventScroll: true }), 20); return () => { try { prev?.focus?.(); } catch {} }; }
     const first = el.querySelector("[data-autofocus], [autofocus]") || el.querySelector(".modal-body input:not([type=checkbox]):not([type=radio]):not([type=file]), .modal-body textarea, .modal-body select") || el.querySelector("input:not([type=checkbox]):not([type=file]), textarea, select") || el.querySelector("button");
     setTimeout(() => (first || el).focus?.(), 20);
     return () => { try { prev?.focus?.(); } catch {} };
@@ -137,7 +136,7 @@ function Modal({ title, onClose, children, foot, size, label }) {
   const ref = useRef(null);
   useEscape(onClose); useFocusTrap(ref);
   return html`<${Fragment}>
-    <div class="scrim" onClick=${onClose}></div>
+    <div class="scrim modal-scrim" onClick=${onClose}></div>
     <div class=${cx("modal", size)} role="dialog" aria-modal="true" aria-label=${label || title} ref=${ref} tabindex="-1">
       ${title && html`<div class="modal-head"><h2>${title}</h2><span class="spacer"></span><${Btn} kind="ghost" icon="x" aria-label="Close" onClick=${onClose} /></div>`}
       <div class="modal-body">${children}</div>
@@ -147,7 +146,7 @@ function Modal({ title, onClose, children, foot, size, label }) {
 }
 function Drawer({ onClose, head, children, foot, label }) {
   const ref = useRef(null);
-  useEscape(onClose); useFocusTrap(ref);
+  useEscape(onClose); useFocusTrap(ref, true);
   return html`<${Fragment}>
     <div class="scrim" onClick=${onClose}></div>
     <aside class="drawer" role="dialog" aria-modal="true" aria-label=${label} ref=${ref} tabindex="-1">

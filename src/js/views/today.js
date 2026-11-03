@@ -172,7 +172,7 @@ function today_Upcoming({ up }) {
       : html`<div class="td-mini-empty">
           <${Icon} name="cal" cls="faint" />
           <span class="muted td-small td-grow">No interviews in the next 7 days. Paste an invite email and the round shows up here.</span>
-          <${Btn} size="sm" kind="ghost" icon="mail" onClick=${() => openModal("paste")}>Paste an email</${Btn}>
+          <${Btn} size="sm" kind="ghost" icon="mail" onClick=${() => openModal("paste")}>Log an email</${Btn}>
         </div>`}
   </section>`;
 }
@@ -298,7 +298,7 @@ function today_Response({ st }) {
 
 function today_Quick() {
   const rows = [
-    { id: "paste", icon: "mail", label: "Paste an email", sub: "Log a reply or invite", k: "E", run: () => openModal("paste") },
+    { id: "paste", icon: "mail", label: "Log an email", sub: "Log a reply or invite", k: "E", run: () => openModal("paste") },
     { id: "add", icon: "plus", label: "Add application", sub: "Track a role you applied to", k: "N", run: () => openModal("add") },
     { id: "find", icon: "find", label: "Find jobs", sub: "Search fresh listings", k: "/", run: () => go("find") },
   ];
