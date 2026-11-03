@@ -2879,10 +2879,9 @@ function Palette() {
     if (d?.kind === "app" && Apps.get(d.id)) {
       const a = Apps.get(d.id);
       const ctx = [
-        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
         { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
         { g: `${a.company} · ${a.title || "Application"}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
-        ...(a.url ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "ext", label: "Open the posting", run: () => window.open(a.url, "_blank", "noopener") }] : []),
+        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
       ];
       res.push(...(n ? ctx.filter((x) => norm(x.label).includes(n)) : ctx.slice(0, 6)));
     } else if (d?.kind === "job" && jobsStore.byId.get(d.id)) {
@@ -2922,12 +2921,12 @@ function Palette() {
   return html`<${Fragment}>
     <div class="scrim modal-scrim" onClick=${close}></div>
     <div class="modal palette" role="dialog" aria-modal="true" aria-label="Command palette">
-      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" ref=${inRef} placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
-      <div class="palette-list" ref=${listRef} role="listbox">
+      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" ref=${inRef} role="combobox" aria-expanded="true" aria-controls="palette-list" aria-activedescendant=${items[sel] ? `pal-${sel}` : undefined} placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
+      <div class="palette-list" id="palette-list" ref=${listRef} role="listbox">
         ${items.length === 0 && html`<div class="empty" style="padding:28px"><p>No matches for “${q}”.</p></div>`}
         ${items.map((it, i) => {
           const head = it.g !== lastG ? html`<div class="palette-group">${it.g}</div>` : null; lastG = it.g;
-          return html`${head}<button type="button" class="palette-item" role="option" aria-selected=${i === sel ? "true" : "false"} onMouseMove=${() => setSel(i)} onClick=${() => { close(); setTimeout(it.run, 0); }}>
+          return html`${head}<button type="button" class="palette-item" role="option" id=${`pal-${i}`} aria-selected=${i === sel ? "true" : "false"} onMouseMove=${() => setSel(i)} onClick=${() => { close(); setTimeout(it.run, 0); }}>
             ${it.logo ? html`<${Logo} name=${it.logo} size="sm" />` : html`<${Icon} name=${it.icon} />`}<span class="truncate" style="flex:1">${it.label}</span>${it.sub && html`<span class="sub">${/^(?:[A-Z?]|G then [A-Z,])$/.test(it.sub) ? it.sub.split(" then ").map((k, i) => html`${i ? " " : ""}<span class="kbd">${k}</span>`) : it.sub}</span>`}
           </button>`;
         })}
@@ -7197,6 +7196,8 @@ VIEWS.today = today_View;
 const CAL_SERVER = "Google Calendar";
 const CAL_MIN = 45;
 function cal_localISO(ts) { const d = new Date(ts); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`; }
+function cal_tz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } }
+function cal_fold(line) { const out = []; let s = line; while (s.length > 74) { out.push(s.slice(0, 74)); s = " " + s.slice(74); } out.push(s); return out.join("\r\n"); }
 function cal_utcStamp(ts) { return new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
 function cal_text(app, round) {
   const type = ROUND[round.type]?.label || "Interview";
@@ -7215,7 +7216,7 @@ function cal_ics(app, round) {
     `UID:${round.id}@heardback`, `DTSTAMP:${cal_utcStamp(now())}`, `DTSTART:${cal_utcStamp(round.at)}`, `DTEND:${cal_utcStamp(round.at + CAL_MIN * 60000)}`,
     `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(description)}`,
     "BEGIN:VALARM", "TRIGGER:-PT30M", "ACTION:DISPLAY", "DESCRIPTION:Interview in 30 minutes", "END:VALARM",
-    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    "END:VEVENT", "END:VCALENDAR"].map(cal_fold).join("\r\n");
 }
 async function addToCalendar(appId, roundId) {
   const app = Apps.get(appId); const round = app?.rounds.find((r) => r.id === roundId);
@@ -7224,7 +7225,7 @@ async function addToCalendar(appId, roundId) {
   if (caps.mcp) {
     const { summary, description } = cal_text(app, round);
     try {
-      await caps.mcp.callTool(CAL_SERVER, "create_event", { summary, description, startTime: cal_localISO(round.at), endTime: cal_localISO(round.at + CAL_MIN * 60000) });
+      await caps.mcp.callTool(CAL_SERVER, "create_event", { summary, description, startTime: cal_localISO(round.at), endTime: cal_localISO(round.at + CAL_MIN * 60000), ...(cal_tz() ? { timeZone: cal_tz() } : {}) });
       Apps.updateRound(appId, roundId, { calendar: "google" });
       toast("Added to Google Calendar");
       return;
@@ -7235,6 +7236,7 @@ async function addToCalendar(appId, roundId) {
       if (!fallthrough.includes(e?.code)) { toast("Google Calendar didn't respond. Downloading a calendar file instead."); }
     }
   }
+  if (!caps.downloads) { toast("Calendar files can't be saved in this view. Open Heardback on claude.ai to add it to your calendar.", { ms: 7000 }); return; }
   const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
   if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
 }
@@ -7800,6 +7802,7 @@ MODALS.share = function ShareModal() {
   applyTheme(store.get().settings.theme);
   render(html`<${App} />`, document.getElementById("app"));
   initCaps();
+  if (storage.corrupt) setTimeout(() => toast("Your saved data couldn't be read. A copy was kept in this browser.", { ms: 15000, action: { label: "Restore", run: () => go("prefs") } }), 600);
   loadJobs();
 })();
 

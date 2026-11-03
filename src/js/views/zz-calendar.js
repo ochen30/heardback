@@ -4,6 +4,8 @@
 const CAL_SERVER = "Google Calendar";
 const CAL_MIN = 45;
 function cal_localISO(ts) { const d = new Date(ts); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`; }
+function cal_tz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } }
+function cal_fold(line) { const out = []; let s = line; while (s.length > 74) { out.push(s.slice(0, 74)); s = " " + s.slice(74); } out.push(s); return out.join("\r\n"); }
 function cal_utcStamp(ts) { return new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
 function cal_text(app, round) {
   const type = ROUND[round.type]?.label || "Interview";
@@ -22,7 +24,7 @@ function cal_ics(app, round) {
     `UID:${round.id}@heardback`, `DTSTAMP:${cal_utcStamp(now())}`, `DTSTART:${cal_utcStamp(round.at)}`, `DTEND:${cal_utcStamp(round.at + CAL_MIN * 60000)}`,
     `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(description)}`,
     "BEGIN:VALARM", "TRIGGER:-PT30M", "ACTION:DISPLAY", "DESCRIPTION:Interview in 30 minutes", "END:VALARM",
-    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    "END:VEVENT", "END:VCALENDAR"].map(cal_fold).join("\r\n");
 }
 async function addToCalendar(appId, roundId) {
   const app = Apps.get(appId); const round = app?.rounds.find((r) => r.id === roundId);
@@ -31,7 +33,7 @@ async function addToCalendar(appId, roundId) {
   if (caps.mcp) {
     const { summary, description } = cal_text(app, round);
     try {
-      await caps.mcp.callTool(CAL_SERVER, "create_event", { summary, description, startTime: cal_localISO(round.at), endTime: cal_localISO(round.at + CAL_MIN * 60000) });
+      await caps.mcp.callTool(CAL_SERVER, "create_event", { summary, description, startTime: cal_localISO(round.at), endTime: cal_localISO(round.at + CAL_MIN * 60000), ...(cal_tz() ? { timeZone: cal_tz() } : {}) });
       Apps.updateRound(appId, roundId, { calendar: "google" });
       toast("Added to Google Calendar");
       return;
@@ -42,6 +44,7 @@ async function addToCalendar(appId, roundId) {
       if (!fallthrough.includes(e?.code)) { toast("Google Calendar didn't respond. Downloading a calendar file instead."); }
     }
   }
+  if (!caps.downloads) { toast("Calendar files can't be saved in this view. Open Heardback on claude.ai to add it to your calendar.", { ms: 7000 }); return; }
   const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
   if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
 }

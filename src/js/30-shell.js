@@ -102,10 +102,9 @@ function Palette() {
     if (d?.kind === "app" && Apps.get(d.id)) {
       const a = Apps.get(d.id);
       const ctx = [
-        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
         { g: `${a.company} · ${a.title || "Application"}`, icon: "plus", label: "Add an interview round", run: () => openApp(a.id, "rounds") },
         { g: `${a.company} · ${a.title || "Application"}`, icon: "reply", label: "Draft a follow-up", run: () => openModal("draft", { appId: a.id, kind: "follow" }) },
-        ...(a.url ? [{ g: `${a.company} · ${a.title || "Application"}`, icon: "ext", label: "Open the posting", run: () => window.open(a.url, "_blank", "noopener") }] : []),
+        ...STAGES.filter((st) => st.id !== a.stage).map((st) => ({ g: `${a.company} · ${a.title || "Application"}`, icon: "arrowR", label: `Move to ${st.label}`, run: () => Apps.move(a.id, st.id) })),
       ];
       res.push(...(n ? ctx.filter((x) => norm(x.label).includes(n)) : ctx.slice(0, 6)));
     } else if (d?.kind === "job" && jobsStore.byId.get(d.id)) {
@@ -145,12 +144,12 @@ function Palette() {
   return html`<${Fragment}>
     <div class="scrim modal-scrim" onClick=${close}></div>
     <div class="modal palette" role="dialog" aria-modal="true" aria-label="Command palette">
-      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" ref=${inRef} placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
-      <div class="palette-list" ref=${listRef} role="listbox">
+      <div class="palette-input"><${Icon} name="search" size=${18} /><input id="palette-q" ref=${inRef} role="combobox" aria-expanded="true" aria-controls="palette-list" aria-activedescendant=${items[sel] ? `pal-${sel}` : undefined} placeholder="Search jobs, companies, your applications, or type a command" value=${q} onInput=${(e) => setQ(e.currentTarget.value)} onKeyDown=${onKey} aria-label="Search" autocomplete="off" /></div>
+      <div class="palette-list" id="palette-list" ref=${listRef} role="listbox">
         ${items.length === 0 && html`<div class="empty" style="padding:28px"><p>No matches for “${q}”.</p></div>`}
         ${items.map((it, i) => {
           const head = it.g !== lastG ? html`<div class="palette-group">${it.g}</div>` : null; lastG = it.g;
-          return html`${head}<button type="button" class="palette-item" role="option" aria-selected=${i === sel ? "true" : "false"} onMouseMove=${() => setSel(i)} onClick=${() => { close(); setTimeout(it.run, 0); }}>
+          return html`${head}<button type="button" class="palette-item" role="option" id=${`pal-${i}`} aria-selected=${i === sel ? "true" : "false"} onMouseMove=${() => setSel(i)} onClick=${() => { close(); setTimeout(it.run, 0); }}>
             ${it.logo ? html`<${Logo} name=${it.logo} size="sm" />` : html`<${Icon} name=${it.icon} />`}<span class="truncate" style="flex:1">${it.label}</span>${it.sub && html`<span class="sub">${/^(?:[A-Z?]|G then [A-Z,])$/.test(it.sub) ? it.sub.split(" then ").map((k, i) => html`${i ? " " : ""}<span class="kbd">${k}</span>`) : it.sub}</span>`}
           </button>`;
         })}
