@@ -17,6 +17,15 @@ async function loadJobs() {
     });
     jobs.sort((a, b) => b.p - a.p);
     const byId = new Map(jobs.map((x) => [x.id, x]));
+    // Collapse identical live listings (same company, title and locations) into the newest one.
+    const firstOf = new Map(); const uniq = [];
+    for (const x of jobs) {
+      const k = `${x.c}|${x.t.toLowerCase()}|${(x.l || []).slice(0, 3).join(";")}`;
+      const f = firstOf.get(k);
+      if (f) { f.dup = (f.dup || 0) + 1; continue; }
+      firstOf.set(k, x); uniq.push(x);
+    }
+    jobs.length = 0; jobs.push(...uniq);
     const byCompany = new Map();
     for (const x of jobs) { if (!byCompany.has(x.co)) byCompany.set(x.co, []); byCompany.get(x.co).push(x); }
     const cstats = {};
@@ -135,7 +144,7 @@ function fitScore(job, profile) {
   if (!profile.skills?.length) { score += 8; parts.push({ k: "Skills", ok: null, text: "Add your resume to compare skills" }); }
   else if (!exp.length) { score += 12; parts.push({ k: "Skills", ok: null, text: "Title doesn't point to specific skills" }); }
   else {
-    const r = matched.length / Math.min(exp.length, 4);
+    const r = matched.length / Math.max(3, exp.length);
     score += Math.round(20 * Math.min(1, r));
     parts.push({ k: "Skills", ok: matched.length ? true : false, text: matched.length ? `You list ${matched.slice(0, 3).join(", ")}` : `Usually asks for ${exp.slice(0, 3).join(", ")}` });
   }

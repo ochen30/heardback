@@ -67,7 +67,7 @@ function find_run(jobs, f, q, facets) {
   const masks = find_locMasks(jobs);
   const words = norm(q).split(" ").filter(Boolean);
   const locMask = f.locs.reduce((b, id) => b | find_locBit(id), 0);
-  const minP = f.posted === "any" ? 0 : now() - +f.posted * DAY;
+  const minP = f.posted === "any" ? 0 : f.posted === "since" ? (visit.since || 0) : now() - +f.posted * DAY;
   const res = [];
   const cLv = {}, cRole = {}, cLoc = new Array(LOC_OPTIONS.length).fill(0);
   for (const j of jobs) {
@@ -199,7 +199,8 @@ function find_FilterControls({ px, f, counts, profile }) {
     </div>
     <div class="filter-group">
       <h4>Posted</h4>
-      <${Seg} label="Posted within" value=${f.posted} options=${FIND_POSTED} onChange=${(v) => find_setFilters({ posted: v })} />
+      <${Seg} label="Posted within" value=${f.posted === "since" ? "" : f.posted} options=${FIND_POSTED} onChange=${(v) => find_setFilters({ posted: v })} />
+      ${visit.since && html`<div class="chips"><${Chip} on=${f.posted === "since"} icon="bolt" onClick=${() => find_setFilters({ posted: f.posted === "since" ? "any" : "since" })}>New since your last visit</${Chip}></div>`}
     </div>
     <div class="filter-group" role="group" aria-labelledby=${px + "-visa"}>
       <h4 id=${px + "-visa"}>Visa</h4>
@@ -343,6 +344,7 @@ VIEWS.find = function FindView() {
         <div class="find-bar">
           <div class="find-count">
             <strong class="num">${fmt.num(list.length)}</strong> ${list.length === 1 ? "match" : "matches"}
+            ${visit.since && f.posted !== "since" && (() => { const n = list.filter((j) => j.p > visit.since).length; return n ? html`<span class="find-prefs"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters({ posted: "since" })}>${fmt.num(n)} new since your last visit</button></span>` : null; })()}
             ${find_hasPrefs(profile) && (usingPrefs
               ? html`<span class="find-prefs"><span class="sep">·</span>Using your preferences<span class="sep">·</span><button type="button" class="find-link" onClick=${find_clearAll}>Show all</button></span>`
               : html`<span class="find-prefs"><span class="sep">·</span><button type="button" class="find-link" onClick=${() => find_setFilters(null)}>Use my preferences</button></span>`)}
@@ -541,12 +543,13 @@ DRAWERS.job = ({ id }) => {
         ${(job.gr || []).length
           ? html`<ul class="reason-list">${job.gr.map((r, i) => html`<li key=${i}><${Icon} name="flag" size=${14} cls="find-r-ico" />${r}</li>`)}</ul>`
           : html`<p class="muted find-small">No warning signs found in the listing data.</p>`}
+        ${job.dup ? html`<p class="muted find-small"><${Icon} name="layers" size=${14} /> The same title and location is listed ${pluralize(job.dup, "more time")} right now. We show it once.</p>` : null}
         <p class="hint">Signals we can see in the listing data. Not proof either way.</p>
         <details class="find-details">
           <summary>How this works</summary>
           <ul class="find-rubric">
             <li><b>Age.</b> Days since it was first listed. 30 or more adds points, with more at 60, 90 and 150 days.</li>
-            <li><b>Reposts.</b> The company listed the same title before. Several open at once is often volume hiring, so it counts for less.</li>
+            <li><b>Reposts.</b> The company posted and closed the same title before. Several open at once is often volume hiring, so that alone adds nothing.</li>
             <li><b>Location count.</b> Listed in 8 or more cities at once.</li>
             <li><b>Talent-pool wording.</b> Titles like "talent community" or "general application".</li>
             <li><b>Company tempo.</b> Much older than this company's usual time to close a listing.</li>

@@ -53,6 +53,17 @@ const storage = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 
+/* ---------- Visits: "new since your last visit" ---------- */
+const visit = (() => {
+  const prev = storage.get("heardback:lastVisit", null);
+  const t = Date.now();
+  // A visit is a session that starts 30+ minutes after the last activity.
+  const since = prev && t - prev.last > 30 * 60000 ? prev.last : (prev && prev.since) || null;
+  storage.set("heardback:lastVisit", { last: t, since });
+  setInterval(() => storage.set("heardback:lastVisit", { last: Date.now(), since }), 60000);
+  return { since };
+})();
+
 /* ---------- Stages ---------- */
 const STAGES = [
   { id: "saved", label: "Saved", short: "Saved" },
