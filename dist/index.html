@@ -249,7 +249,7 @@ p { margin: 0; }
 .badge.ghost { background: var(--ghost-soft); color: var(--ghost); }
 .badge.info { background: var(--info-soft); color: var(--info); }
 .badge.example { background: transparent; border: 1px solid var(--line-strong); color: var(--fg-3); display: none; }
-.drawer-head .badge.example, .prep-head .badge.example { display: inline-flex; }
+.drawer-head .badge.example { display: inline-flex; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--fg-3); }
 .dot.saved { background: var(--fg-3); }
 .dot.applied { background: var(--accent); }
@@ -556,6 +556,22 @@ p { margin: 0; }
 .dsec:first-child { border-top: 0; padding-top: 0; }
 .dsec > h3 { font-size: var(--fs-sm); font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .dsec > h3 .spacer { flex: 1; }
+
+/* v4 core polish */
+.toast { background: var(--fg); color: var(--bg); white-space: nowrap; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast { background: var(--surface-3); color: var(--fg); border: 1px solid var(--line-strong); } }
+:root[data-theme="dark"] .toast { background: var(--surface-3); color: var(--fg); border: 1px solid var(--line-strong); }
+@media (min-width: 861px) {
+  .toasts { left: auto; right: 24px; align-items: flex-end; }
+  .toasts.over-drawer { right: calc(min(560px, 100vw) + 24px); }
+}
+@media (max-width: 860px) {
+  .toasts.over-drawer { top: calc(env(safe-area-inset-top, 0px) + 12px); bottom: auto; }
+  .toast { max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+}
+.palette-input input:focus, .palette-input input:focus-visible { box-shadow: none; outline: none; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+.btn.primary .kbd { border-color: color-mix(in srgb, currentColor 35%, transparent); }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -2487,7 +2503,7 @@ function loadExamples() {
     mk({ company: "Verity Labs", title: "Frontend Engineer, New Grad", location: "New York, NY", stage: "applied", createdAt: d(3), appliedAt: d(3) }),
   ];
   store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(list.map((a) => [a.id, a])) }, settings: { ...s.settings, showExamples: true } }));
-  toast("Added 10 example applications");
+  toast("Added 10 examples");
 }
 function clearExamples() {
   store.set((s) => ({ ...s, apps: Object.fromEntries(Object.entries(s.apps).filter(([, a]) => !a.example)) }));
@@ -2535,11 +2551,11 @@ function Rail({ route }) {
       ${NAV.map((n) => html`<a class="nav-item" href=${"#" + n.id} aria-current=${route === n.id ? "page" : undefined}><${Icon} name=${n.icon} />${n.label}${counts[n.id] ? html`<span class="nav-count">${counts[n.id]}</span>` : null}</a>`)}
     </div>
     <div class="rail-foot">
-      <div class="goal-card">
+      ${route !== "today" && html`<div class="goal-card">
         <div class="goal-top"><span style="font-weight:500">This week</span><span class="num muted">${st.thisWeek} / ${goal} applied</span></div>
         <${Meter} value=${st.thisWeek} max=${goal} ok=${st.thisWeek >= goal} />
         <span class="hint">${st.thisWeek >= goal ? "Weekly goal reached. Nice work." : `${goal - st.thisWeek} more to hit your goal`}</span>
-      </div>
+      </div>`}
       <a class="nav-item" href="#prefs" aria-current=${route === "prefs" ? "page" : undefined}><${Icon} name="prefs" />Settings</a>
     </div>
   </nav>`;

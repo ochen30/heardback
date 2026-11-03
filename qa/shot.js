@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs'); const http = require('http');
 const root = path.resolve(__dirname, '..'); const dist = path.join(root, 'dist'); const nm = path.join(root, 'tools', 'node_modules');
-const out = path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
+const out = process.env.OUT ? path.resolve(process.env.OUT) : path.join(__dirname, 'out'); fs.mkdirSync(out, { recursive: true });
 const types = { '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.js': 'text/javascript' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';

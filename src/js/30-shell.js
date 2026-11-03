@@ -28,11 +28,11 @@ function Rail({ route }) {
       ${NAV.map((n) => html`<a class="nav-item" href=${"#" + n.id} aria-current=${route === n.id ? "page" : undefined}><${Icon} name=${n.icon} />${n.label}${counts[n.id] ? html`<span class="nav-count">${counts[n.id]}</span>` : null}</a>`)}
     </div>
     <div class="rail-foot">
-      <div class="goal-card">
+      ${route !== "today" && html`<div class="goal-card">
         <div class="goal-top"><span style="font-weight:500">This week</span><span class="num muted">${st.thisWeek} / ${goal} applied</span></div>
         <${Meter} value=${st.thisWeek} max=${goal} ok=${st.thisWeek >= goal} />
         <span class="hint">${st.thisWeek >= goal ? "Weekly goal reached. Nice work." : `${goal - st.thisWeek} more to hit your goal`}</span>
-      </div>
+      </div>`}
       <a class="nav-item" href="#prefs" aria-current=${route === "prefs" ? "page" : undefined}><${Icon} name="prefs" />Settings</a>
     </div>
   </nav>`;

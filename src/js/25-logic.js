@@ -124,7 +124,7 @@ function loadExamples() {
     mk({ company: "Verity Labs", title: "Frontend Engineer, New Grad", location: "New York, NY", stage: "applied", createdAt: d(3), appliedAt: d(3) }),
   ];
   store.set((s) => ({ ...s, apps: { ...s.apps, ...Object.fromEntries(list.map((a) => [a.id, a])) }, settings: { ...s.settings, showExamples: true } }));
-  toast("Added 10 example applications");
+  toast("Added 10 examples");
 }
 function clearExamples() {
   store.set((s) => ({ ...s, apps: Object.fromEntries(Object.entries(s.apps).filter(([, a]) => !a.example)) }));
