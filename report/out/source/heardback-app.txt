@@ -2234,7 +2234,7 @@ function cleanApp(a, id) {
     stage: STAGE[a.stage] ? a.stage : "applied", createdAt: created, appliedAt: ts(a.appliedAt), lastActivityAt: ts(a.lastActivityAt) || created, lastReplyAt: ts(a.lastReplyAt), followedUpAt: ts(a.followedUpAt),
     notes: strOr(a.notes), salary: strOr(a.salary), source: strOr(a.source || "manual"), example: !!a.example,
     contacts: (Array.isArray(a.contacts) ? a.contacts : []).filter(isObj).map((c) => ({ name: strOr(c.name), role: strOr(c.role), email: strOr(c.email) })),
-    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
+    rounds: (Array.isArray(a.rounds) ? a.rounds : []).filter(isObj).map((r) => ({ ...r, id: strOr(r.id) || uid("r_"), type: ROUND[r.type] ? r.type : "other", at: ts(r.at), interviewers: strOr(r.interviewers), where: strOr(r.where), prep: strOr(r.prep), reflection: strOr(r.reflection), outcome: ["pending", "passed", "failed", "cancelled"].includes(r.outcome) ? r.outcome : "pending", thanked: !!r.thanked })),
     events: (Array.isArray(a.events) ? a.events : []).filter(isObj).map((e) => ({ ...e, id: strOr(e.id) || uid("e_"), at: ts(e.at) || created, kind: strOr(e.kind || "note"), text: strOr(e.text), from: STAGE[e.from] ? e.from : undefined, to: STAGE[e.to] ? e.to : undefined })),
   };
 }
@@ -2971,7 +2971,7 @@ function computeTasks(s = store.get()) {
       }
       if (until > 0 && until < 3 * DAY) {
         const key = `prep:${a.id}:${r.id}`;
-        if (!skip(key)) out.push({ key, kind: "prep", pri: until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}`, action: "Prep" });
+        if (!skip(key)) out.push({ key, kind: "prep", pri: until < 12 * 3600000 ? -1 : until < DAY ? 0 : 1, app: a, round: r, icon: "cal", tone: "accent", title: `${roundTitle(r)} with ${a.company} ${fmt.until(r.at)}`, sub: `${fmt.dateTime(r.at)}${roundPeople(r) ? " · " + roundPeople(r) : ""}`, action: "Prep" });
       }
       if (until <= 0 && -until < 2 * DAY && !r.thanked && r.outcome === "pending") {
         const key = `thanks:${a.id}:${r.id}`;
@@ -3100,7 +3100,7 @@ function followUpTemplate(a, profile) {
   const name = a.contacts?.[0]?.name?.split(/\s+/)[0];
   const hi = name ? `Hi ${name},` : `Hi ${a.company} team,`;
   if (a.followedUpAt) {
-    return `Subject: Checking in on my ${a.title || "application"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
+    return `Subject: Checking in again on my ${a.title || "role"} application\n\n${hi}\n\nI wanted to check in once more on my application for the ${a.title || "role"}. I know timelines shift, so no pressure. If the role has been filled or paused, a quick note would help me plan.\n\nThanks again for considering me.\n\nBest,\n${profile.name || "[Your name]"}`;
   }
   return `Subject: Following up on my ${a.title || "application"} application\n\n${hi}\n\nI applied for the ${a.title || "role"} at ${a.company} on ${fmt.date(a.appliedAt)} and wanted to follow up. I'm still very interested in the role and in what ${a.company} is building.\n\nIf it's helpful, I'm happy to share more about my experience or availability. Thanks for your time.\n\nBest,\n${profile.name || "[Your name]"}`;
 }
@@ -4559,8 +4559,8 @@ function OnbStepTargets({ d, set }) {
     <${OnbGroup} id="onb-g-level" title="Level" hint="Leave empty to see both.">
       <div class="chips">${LEVELS.map((l) => html`<${Chip} key=${l.id} on=${d.levels.includes(l.id)} onClick=${() => set({ levels: onbToggle(d.levels, l.id) })}>${l.label}</${Chip}>`)}</div>
     </${OnbGroup}>
-    <${OnbGroup} id="onb-g-deg" title="Degree by graduation" hint="Roles that ask for a higher degree get a low fit.">
-      <div class="onb-deg"><${Seg} label="Degree by graduation" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
+    <${OnbGroup} id="onb-g-deg" title="Degree when you graduate" hint="Roles that ask for a higher degree get a low fit.">
+      <div class="onb-deg"><${Seg} label="Degree when you graduate" value=${d.degree || "BS"} options=${ONB_DEGREES} onChange=${(v) => set({ degree: v })} /></div>
     </${OnbGroup}>
     <${OnbGroup} id="onb-g-role" title="Roles" hint="Tech-focused for now: software, data and AI, product, quant and hardware.">
       <div class="chips">${CATS.map((c) => html`<${Chip} key=${c} on=${d.roles.includes(c)} onClick=${() => set({ roles: onbToggle(d.roles, c) })}>${c}</${Chip}>`)}<${Chip} key="other" on=${!!d.other} onClick=${() => set({ other: !d.other })}>Something else</${Chip}></div>
@@ -4825,7 +4825,7 @@ function plNextStep(a, st) {
   const t = now();
   const up = plUpcoming(a, t);
   const silent = Apps.daysSilent(a);
-  const label = (r) => ROUND[r.type]?.label || "Interview";
+  const label = (r) => roundTitle(r);
   if (PL_CLOSED.includes(a.stage)) return a.stage === "rejected"
     ? { kind: "closed", icon: "flag", short: "Closed", title: "This one is closed", sub: "If you had interviews, it’s fair to ask for brief feedback. Otherwise, let it go." }
     : { kind: "closed", icon: "ghost", short: "Closed", title: "Marked as ghosted", sub: "If they reply after all, move it back to the right stage." };
@@ -7690,7 +7690,7 @@ function today_taskCopy(tk) {
   if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
   if (tk.kind === "apply") return { sub: today_typo(typeof tk.sub === "string" ? tk.sub.replace(" · this listing shows strong ghost signals", " · Strong ghost signals") : tk.sub), action: "Apply" };
   if (tk.kind === "nextround") return { sub: `${a.stage === "screen" ? "In screening" : "Interviewing"}, nothing scheduled yet. Add the next round’s date.`, action: "Add a round" };
-  const rl = tk.round && (ROUND[tk.round.type]?.label || "Interview");
+  const rl = tk.round && roundTitle(tk.round);
   if (tk.kind === "outcome") return { sub: `${rl} · ${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })} (${today_daysAgo(tk.round.at)})`, action: "Log outcome" };
   if (tk.kind === "thanks" && tk.round?.at && now() - tk.round.at > DAY) return { sub: `Your ${rl.toLowerCase()} was ${today_daysAgo(tk.round.at)}. A short note still helps.`, action: tk.action };
   return { sub: today_typo(tk.sub), action: tk.action };
@@ -8135,8 +8135,10 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
       <button type="button" class="btn ghost sm td-goal-edit" onClick=${() => go("prefs")}>Edit goal</button>
     </div>
     <div class="td-week-goal">
-      <div class="goal-top"><span class="num td-week-n">${thisWeek} / ${goal} applied</span><span class="hint">${thisWeek >= goal ? "Goal reached." : `${left} more to hit your goal`}</span></div>
-      <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} />
+      ${Apps.list().some((a) => !a.example && a.stage !== "saved")
+        ? html`<div class="goal-top"><span class="num td-week-n">${thisWeek} / ${goal} applied</span><span class="hint">${thisWeek >= goal ? "Goal reached." : `${left} more to hit your goal`}</span></div>
+      <${Meter} value=${thisWeek} max=${goal} ok=${thisWeek >= goal} label="Applications this week toward your goal" />`
+        : html`<div class="goal-top"><span class="hint">Goal: ${goal} applications a week. Mark a job as applied to start counting.</span></div>`}
     </div>
     ${thisWeek > 0 ? html`<div class="td-bars" role="img" aria-label=${"Applications per day this week: " + days.map((x) => `${x.label} ${x.n}`).join(", ")}>
           ${days.map((x) => html`<div class=${cx("td-bar", x.future && "future", x.isToday && "today")} key=${x.d} title=${`${fmt.date(x.d, { weekday: "long", month: "short", day: "numeric" })}: ${pluralize(x.n, "application")}`}>
@@ -8148,7 +8150,7 @@ function today_ThisWeek({ apps, goal, thisWeek }) {
   </section>`;
 }
 
-const TODAY_STAGE_COLOR = { saved: "var(--fg-3)", applied: "var(--accent)", screen: "var(--info)", interview: "var(--wait)", offer: "var(--ok)", rejected: "var(--bad)", ghosted: "var(--ghost)" };
+const TODAY_STAGE_COLOR = { saved: "var(--fg-3)", applied: "var(--accent)", screen: "var(--info)", interview: "var(--int)", offer: "var(--ok)", rejected: "var(--bad)", ghosted: "var(--ghost)" };
 
 function today_Pipeline({ apps }) {
   const counts = STAGES.map((st) => ({ ...st, n: apps.filter((a) => a.stage === st.id).length }));
@@ -8281,6 +8283,7 @@ function cal_text(app, round) {
   const summary = `${type}: ${app.company}${app.title ? " · " + app.title : ""}`;
   const lines = [`${type} for ${app.title || "the role"} at ${app.company}.`];
   if (round.interviewers) lines.push(`With: ${round.interviewers}`);
+  if (round.where) lines.push(`Where: ${round.where}`);
   if (round.prep) lines.push(`Prep notes: ${round.prep}`);
   if (app.url) lines.push(`Posting: ${app.url}`);
   lines.push("Added from Heardback.");
@@ -8313,15 +8316,22 @@ async function addToCalendar(appId, roundId) {
       if (!fallthrough.includes(e?.code)) { toast("Google Calendar didn't respond. Downloading a calendar file instead."); }
     }
   }
-  if (!caps.downloads) { toast("Calendar files can't be saved in this view. Open Heardback on claude.ai to add it to your calendar.", { ms: 7000 }); return; }
+  if (!caps.downloads) {
+    const { summary } = cal_text(app, round);
+    const who = roundPeople(round);
+    const text = `${summary}\n${fmt.dateTime(round.at)}${who ? `\nWith ${who}` : ""}${round.where ? `\nWhere: ${round.where}` : ""}`;
+    copyText(text, "Event details copied. Paste them into your calendar.");
+    return;
+  }
   const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
-  if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
+  if (ok) { Apps.updateRound(appId, roundId, { calendar: "ics" }); toast("Calendar file saved. Open it to add the event."); }
 }
 function CalendarButton({ appId, round, size = "sm" }) {
   useCaps();
   if (!round?.at || round.at < now() - DAY) return null;
   const done = round.calendar;
-  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? "In calendar" : "Add to calendar"}</${Btn}>`;
+  const doneLabel = done === "google" ? "In calendar" : "Calendar file saved";
+  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"}</${Btn}>`;
 }
 
 /* --- js/views/zz-method.js --- */
