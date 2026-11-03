@@ -73,20 +73,20 @@
   "lastSeen": "2026-10-27"
  },
  {
+  "company": "Shield AI",
+  "ats": "lever",
+  "board": "shieldai",
+  "openInDataset": 17,
+  "seenInDataset": 26,
+  "lastSeen": "2026-11-03"
+ },
+ {
   "company": "Akuna Capital",
   "ats": "greenhouse",
   "board": "akunacapitaloci",
   "openInDataset": 16,
   "seenInDataset": 16,
   "lastSeen": "2026-10-29"
- },
- {
-  "company": "Shield AI",
-  "ats": "lever",
-  "board": "shieldai",
-  "openInDataset": 16,
-  "seenInDataset": 25,
-  "lastSeen": "2026-11-02"
  },
  {
   "company": "Toyota Research Institute",
