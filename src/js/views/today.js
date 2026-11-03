@@ -101,7 +101,7 @@ const TODAY_SNOOZE = [{ d: 1, label: "Snooze 1 day" }, { d: 3, label: "Snooze 3 
 /* Display copy for a task. Core builds the text; Today trims it to one plain line and matches the verb to the task. */
 function today_taskCopy(tk) {
   const a = tk.app;
-  if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark ghosted" };
+  if (tk.kind === "ghost") return { sub: "Most replies come within 3 weeks.", action: "Mark as ghosted" };
   if (tk.kind === "apply") return { sub: today_typo(tk.sub), action: "Apply" };
   if (tk.kind === "outcome") return { sub: `${fmt.date(tk.round.at, { weekday: "short", month: "short", day: "numeric" })}. Log it while it’s fresh.`, action: "Log outcome" };
   return { sub: today_typo(tk.sub), action: tk.action };

@@ -35,6 +35,7 @@ async function run(fn) {
     if (/css2/.test(u) && fs.existsSync(path.join(fd, 'fonts.css'))) return route.fulfill({ path: path.join(fd, 'fonts.css'), contentType: 'text/css' });
     return route.fulfill({ status: 200, contentType: 'text/css', body: '' });
   });
+  if (process.env.CLOCK) await page.clock.install({ time: new Date(process.env.CLOCK) });
   if (process.env.MOCK) await page.addInitScript({ path: path.join(root, 'qa', 'mock-claude.js') });
   let clicks = 0, n = 0; const t0 = Date.now(); const tag = process.env.TAG || 'run';
   const t = {

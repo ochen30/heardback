@@ -604,3 +604,4 @@ input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; borde
 .funnel-bar { background: var(--surface-3); }
 p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
 .sep-item { white-space: nowrap; }
+@media (max-width: 860px) { .topbar .btn.primary { width: 36px; height: 36px; padding: 0; } }

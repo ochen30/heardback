@@ -32,7 +32,7 @@ function computeTasks(s = store.get()) {
       const upcoming = (a.rounds || []).some((r) => r.at && r.at > t);
       if (!upcoming && silent >= s.settings.ghostDays) {
         const key = `ghost:${a.id}`;
-        if (!skip(key)) out.push({ key, kind: "ghost", pri: 3, app: a, icon: "ghost", tone: "ghost", title: `No reply from ${a.company} in ${silent} days`, sub: "Most companies reply within 3 weeks if they're interested. Mark it as ghosted to keep your board honest.", action: "Mark ghosted" });
+        if (!skip(key)) out.push({ key, kind: "ghost", pri: 3, app: a, icon: "ghost", tone: "ghost", title: `No reply from ${a.company} in ${silent} days`, sub: "Most companies reply within 3 weeks if they're interested. Mark it as ghosted to keep your board honest.", action: "Mark as ghosted" });
       } else if (!upcoming && a.stage === "applied" && silent >= s.settings.followUpDays && !a.followedUpAt) {
         const key = `follow:${a.id}`;
         if (!skip(key)) out.push({ key, kind: "follow", pri: 2, app: a, icon: "reply", tone: "wait", title: `Follow up with ${a.company}`, sub: `You applied ${silent} days ago and haven't heard back.`, action: "Draft follow-up" });
