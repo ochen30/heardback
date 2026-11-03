@@ -762,7 +762,7 @@ function PrepWorkspace({ a, r }) {
           <dl class="prep-facts">
             <div><dt>When</dt><dd class="num">${r.at ? today_meta([fmt.dateTime(r.at), html`<span class=${cx("faint", r.at > now() && r.at - now() < DAY && "prep-soon")}>${fmt.until(r.at)}</span>`]) : html`<span class="faint">No date yet</span>`}</dd></div>
             <div><dt>With</dt><dd>${r.interviewers || html`<span class="faint">Not added</span>`}</dd></div>
-            ${r.where ? html`<div><dt>Where</dt><dd class="prep-where">${whereUrl ? html`<a href=${whereUrl} target="_blank" rel="noopener" class="truncate" id="prep-where-link">${r.where}</a>` : r.where}</dd></div>` : null}
+            ${r.where ? html`<div><dt>Where</dt><dd class="prep-where">${whereUrl ? html`<a href=${whereUrl} target="_blank" rel="noopener" class="truncate" id="prep-where-link" title=${r.where}>${typeof plWhereLabel === "function" ? plWhereLabel(r.where) : "Join link"}</a>` : r.where}</dd></div>` : null}
             <div><dt>Role type</dt><dd>${cat}</dd></div>
           </dl>
         </div>`}

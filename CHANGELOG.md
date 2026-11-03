@@ -171,3 +171,8 @@ A cold-visitor test (someone tapping a LinkedIn link) and design review 8 (8.9, 
 - Calendar is honest: "Copy event details" when it can't add events, "Calendar file saved" for .ics, "In calendar" only for Google Calendar.
 - Natural round names everywhere; interviews violet in Today's glance bar; no goal nag before your first application; second follow-up has its own subject.
 - QA: end-to-end 2,428 / 2,428; axe clean; zero console errors at every width and theme.
+
+### 07:45 PT — v17 published (final build of the night)
+- Final design check (9.2, ship): Prep shows "Zoom"/"Join" instead of a raw meeting URL; one toast when saving a calendar file; labelled calendar button on phones; the pinned "Next up" interview isn't repeated in Needs you and names the round.
+- Job data refreshed at 15:30 UTC: 8,233 open postings from 1,962 companies.
+- Final QA: end-to-end 2,428 / 2,428 · zero console errors at 375/768/1440 in light and dark · axe clean.

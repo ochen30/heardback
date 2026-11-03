@@ -63,12 +63,12 @@ async function addToCalendar(appId, roundId) {
     return;
   }
   const ok = await saveFile(`${app.company.replace(/[^\w]+/g, "-").toLowerCase()}-${round.type}.ics`, cal_ics(app, round), "text/calendar");
-  if (ok) { Apps.updateRound(appId, roundId, { calendar: "ics" }); toast("Calendar file saved. Open it to add the event."); }
+  if (ok) Apps.updateRound(appId, roundId, { calendar: "ics" });
 }
 function CalendarButton({ appId, round, size = "sm" }) {
   useCaps();
   if (!round?.at || round.at < now() - DAY) return null;
   const done = round.calendar;
   const doneLabel = done === "google" ? "In calendar" : "Calendar file saved";
-  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"}</${Btn}>`;
+  return html`<${Btn} size=${size} icon=${done ? "check" : "cal"} aria-label=${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"} onClick=${(e) => { e.stopPropagation(); addToCalendar(appId, round.id); }} title=${caps.mcp ? "Adds the event to your Google Calendar" : "Downloads a calendar file you can open in any calendar app"}>${done ? doneLabel : caps.mcp || caps.downloads ? "Add to calendar" : "Copy event details"}</${Btn}>`;
 }

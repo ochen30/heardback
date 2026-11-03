@@ -633,7 +633,7 @@ function today_NextUp({ x }) {
       <${Logo} name=${a.company} size="sm" />
       <div class="td-next-text">
         <span class="td-next-k" id="td-next-h">Next up<span class="faint"> · ${started ? "started " + fmt.ago(r.at) : fmt.until(r.at)}</span></span>
-        ${today_meta([html`<b>${a.company}</b>`, html`<span class="num">${fmt.time(r.at)}</span>`, roundPeople(r) || ROUND[r.type]?.label || "Interview"], "td-next-line", "div")}
+        ${today_meta([html`<b>${a.company}</b>`, html`<span class="num">${fmt.time(r.at)}</span>`, roundTitle(r), roundPeople(r)].filter(Boolean), "td-next-line", "div")}
         ${r.where && !url ? html`<div class="td-next-where truncate muted"><${Icon} name="pin" size=${12} />${r.where}</div>` : null}
       </div>
       <div class="td-next-actions">
@@ -667,6 +667,7 @@ function today_View() {
   const st = useMemo(() => computeStats(s, apps), [s]);
   const up = useMemo(() => today_upcoming(apps), [s]);
   const nextUp = today_nextUp(up);
+  const tasksShown = nextUp ? tasks.filter((tk) => !(tk.kind === "prep" && tk.round && tk.round.id === nextUp.r.id)) : tasks;
   const m = useMemo(() => today_matches(jobs, s.profile, s.apps), [jobs.status, s.profile, s.apps]);
   const fr = useMemo(() => (!apps.length || m?.noProfile ? today_fresh(jobs, s.profile, s.apps) : null), [jobs.status, s.profile, s.apps, apps.length, m]);
   const name = today_firstName(s.profile.name);
@@ -701,7 +702,7 @@ function today_View() {
       <div class="stack td-col">
         ${!apps.length ? html`<${today_Start} jobs=${jobs} fr=${fr} />` : null}
         ${nextUp ? html`<${today_NextUp} x=${nextUp} />` : null}
-        <${today_NeedsYou} tasks=${tasks} fresh=${!apps.length} next=${up.items[0]} noPrimary=${!!nextUp} />
+        <${today_NeedsYou} tasks=${tasksShown} fresh=${!apps.length} next=${up.items[0]} noPrimary=${!!nextUp} />
         ${apps.length ? html`<${today_Upcoming} up=${up} />` : null}
         ${apps.length || (m && !m.noProfile) ? html`<${today_NewForYou} jobs=${jobs} m=${m} fr=${fr} />` : null}
       </div>
