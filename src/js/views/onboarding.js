@@ -243,7 +243,7 @@ function OnbStepMatches({ d, examples, setExamples }) {
                     <span class="job-title truncate">${j.t}</span>
                     <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
                   </div>
-                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 85 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
             <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}

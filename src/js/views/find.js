@@ -156,7 +156,7 @@ const find_daysText = (d) => (d == null ? null : `~${Math.max(1, Math.round(d))}
 const find_typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
 /* ---------- shared bits ---------- */
-const find_fitHi = (score) => score >= 85;
+const find_fitHi = (score) => score >= 95;
 function find_FitPill({ fit, sponsor }) {
   if (!fit) return null;
   return html`<span class=${cx("fit", find_fitHi(fit.score) && "hi")} title=${`Fit ${fit.score} out of 100, from role, level, location${sponsor ? ", visa" : ""} and skills`}>Fit ${fit.score}</span>`;

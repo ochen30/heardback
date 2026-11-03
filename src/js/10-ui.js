@@ -183,5 +183,5 @@ function GhostScore({ g, compact }) {
 }
 function Fresh({ ts }) {
   const d = (now() - ts) / DAY;
-  return html`<span class=${cx("fresh", d < 2 && "new")} title=${`Posted ${fmt.dateY(ts)}`}>${d < 2 ? "New · " : ""}${fmt.ago(ts)}</span>`;
+  return html`<span class=${cx("fresh", d < 2 && "new")} title=${`Posted ${fmt.dateY(ts)}`}>${d < 2 && html`<span class="sr">New, </span>`}${fmt.ago(ts)}</span>`;
 }

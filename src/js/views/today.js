@@ -228,7 +228,7 @@ function today_NewForYou({ jobs, m }) {
         <span class="job-title truncate">${j.t}</span>
         <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
       </div>
-      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 85 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
+      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
     <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer's own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;

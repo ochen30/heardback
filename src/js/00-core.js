@@ -337,9 +337,9 @@ async function saveFile(filename, data, mime = "text/plain") {
 
 /* ---------- Text helpers ---------- */
 function initials(name = "") {
-  const w = name.replace(/[^A-Za-z0-9 &]/g, " ").split(/\s+/).filter(Boolean);
+  const w = name.replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter((x) => /^[A-Za-z0-9]/.test(x));
   if (!w.length) return "·";
-  return (w.length === 1 ? w[0].slice(0, 2) : w[0][0] + w[1][0]).toUpperCase();
+  return (w.length === 1 ? w[0][0] : w[0][0] + w[1][0]).toUpperCase();
 }
 function hashHue(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h) % 360; }
 function norm(s) { return (s || "").toLowerCase().replace(/[^a-z0-9+#.\s]/g, " ").replace(/\s+/g, " ").trim(); }

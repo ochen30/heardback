@@ -10,6 +10,7 @@
 :root {
   --bg: #f6f7f9;
   --surface: #ffffff;
+  --surface-raised: #ffffff;
   --surface-2: #f1f3f6;
   --surface-3: #e8ebf0;
   --line: #e2e6ec;
@@ -56,7 +57,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d0f13; --surface: #14171c; --surface-2: #1a1e24; --surface-3: #232830;
+    --bg: #0d0f13; --surface: #14171c; --surface-raised: #181b21; --surface-2: #1a1e24; --surface-3: #232830;
     --line: #262b33; --line-strong: #353c46;
     --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1;
     --accent: #6f8bff; --accent-hover: #8aa0ff; --accent-soft: #1c2440; --accent-fg: #0b1020; --accent-text: #93a8ff;
@@ -64,12 +65,12 @@
     --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
     --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
     --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
-    --scrim: rgba(0, 0, 0, .66);
+    --scrim: rgba(0, 0, 0, .56);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d0f13; --surface: #14171c; --surface-2: #1a1e24; --surface-3: #232830;
+  --bg: #0d0f13; --surface: #14171c; --surface-raised: #181b21; --surface-2: #1a1e24; --surface-3: #232830;
   --line: #262b33; --line-strong: #353c46;
   --fg: #e9ecf1; --fg-2: #aab2bf; --fg-3: #8a93a1;
   --accent: #6f8bff; --accent-hover: #8aa0ff; --accent-soft: #1c2440; --accent-fg: #0b1020; --accent-text: #93a8ff;
@@ -77,7 +78,7 @@
   --ghost: #a59fc2; --ghost-soft: #221f2e; --info: #6cb4e6; --info-soft: #132433;
   --shadow-float: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .45);
   --shadow-pop: 0 2px 4px rgba(0, 0, 0, .4), 0 16px 48px rgba(0, 0, 0, .6);
-  --scrim: rgba(0, 0, 0, .66);
+  --scrim: rgba(0, 0, 0, .56);
   color-scheme: dark;
 }
 
@@ -595,6 +596,21 @@ input[type="radio"]:checked::after { content: ""; width: 8px; height: 8px; borde
 .task-ico.ok, .task-ico.accent, .task-ico.ghost { background: var(--surface-2); color: var(--fg-2); }
 .palette-item .sub .kbd { background: var(--surface); }
 @media (max-width: 860px) { .search-trigger { background: transparent; border-color: transparent; } }
+
+/* v7 polish (review 4) */
+.fit { background: transparent; padding: 2px 0; min-width: 0; color: var(--fg-2); text-align: right; }
+.fit.hi { background: var(--accent-soft); color: var(--accent-text); padding: 2px 7px; }
+.fresh, .fresh.new { color: var(--fg-3); font-weight: 400; }
+.fresh.new::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.logo { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+.logo.lg { font-size: var(--fs-lg); }
+.logo.sm { font-size: 11px; }
+.drawer, .modal, .palette { background: var(--surface-raised); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .drawer, :root:not([data-theme="light"]) .modal { box-shadow: var(--shadow-pop), inset 0 1px 0 rgba(255,255,255,.04); } }
+:root[data-theme="dark"] .drawer, :root[data-theme="dark"] .modal { box-shadow: var(--shadow-pop), inset 0 1px 0 rgba(255,255,255,.04); }
+.funnel-bar { background: var(--surface-3); }
+p, .hint, .muted, .task-sub, .empty p { text-wrap: pretty; }
+.sep-item { white-space: nowrap; }
 
 /* ===== Find jobs, job drawer, companies, company drawer ===== */
 .find-page { gap: 20px; }
@@ -2160,9 +2176,9 @@ async function saveFile(filename, data, mime = "text/plain") {
 
 /* ---------- Text helpers ---------- */
 function initials(name = "") {
-  const w = name.replace(/[^A-Za-z0-9 &]/g, " ").split(/\s+/).filter(Boolean);
+  const w = name.replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter((x) => /^[A-Za-z0-9]/.test(x));
   if (!w.length) return "·";
-  return (w.length === 1 ? w[0].slice(0, 2) : w[0][0] + w[1][0]).toUpperCase();
+  return (w.length === 1 ? w[0][0] : w[0][0] + w[1][0]).toUpperCase();
 }
 function hashHue(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h) % 360; }
 function norm(s) { return (s || "").toLowerCase().replace(/[^a-z0-9+#.\s]/g, " ").replace(/\s+/g, " ").trim(); }
@@ -2367,7 +2383,7 @@ function GhostScore({ g, compact }) {
 }
 function Fresh({ ts }) {
   const d = (now() - ts) / DAY;
-  return html`<span class=${cx("fresh", d < 2 && "new")} title=${`Posted ${fmt.dateY(ts)}`}>${d < 2 ? "New · " : ""}${fmt.ago(ts)}</span>`;
+  return html`<span class=${cx("fresh", d < 2 && "new")} title=${`Posted ${fmt.dateY(ts)}`}>${d < 2 && html`<span class="sr">New, </span>`}${fmt.ago(ts)}</span>`;
 }
 
 /* --- js/20-data.js --- */
@@ -3180,7 +3196,7 @@ const find_daysText = (d) => (d == null ? null : `~${Math.max(1, Math.round(d))}
 const find_typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
 /* ---------- shared bits ---------- */
-const find_fitHi = (score) => score >= 85;
+const find_fitHi = (score) => score >= 95;
 function find_FitPill({ fit, sponsor }) {
   if (!fit) return null;
   return html`<span class=${cx("fit", find_fitHi(fit.score) && "hi")} title=${`Fit ${fit.score} out of 100, from role, level, location${sponsor ? ", visa" : ""} and skills`}>Fit ${fit.score}</span>`;
@@ -4140,7 +4156,7 @@ function OnbStepMatches({ d, examples, setExamples }) {
                     <span class="job-title truncate">${j.t}</span>
                     <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
                   </div>
-                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 85 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
+                  <div class="job-side"><${Fresh} ts=${j.p} />${ghostLevel(j.g || 0) !== "low" && html`<${GhostScore} g=${j.g} />`}${f && html`<span class=${cx("fit", f.score >= 95 && "hi")} title=${`Fit ${f.score} out of 100, from your targets and skills`}>Fit ${f.score}</span>`}</div>
                 </div>`)}
               </div>`}
             <div class="onb-source"><span class="hint">${onbGenTs(J.meta) ? `Updated ${fmt.ago(onbGenTs(J.meta))} from SimplifyJobs.` : "From SimplifyJobs."} Fit is out of 100.</span></div>`}
@@ -7053,7 +7069,7 @@ function today_NewForYou({ jobs, m }) {
         <span class="job-title truncate">${j.t}</span>
         <span class="job-meta"><span class="truncate">${j.co}</span><span class="sep">·</span><span class="truncate">${j.r && !(j.l || []).length ? "Remote" : (j.l || [])[0] || "Location not listed"}${j.nl > 1 ? ` +${j.nl - 1}` : ""}</span></span>
       </div>
-      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 85 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
+      <div class="job-side"><${Fresh} ts=${j.p} /><span class=${cx("fit", f.score >= 95 && "hi")} title="Fit with your targets and skills, out of 100">Fit ${f.score}</span></div>
     </div>`)}</div>
     <div class="td-card-foot faint td-small">From SimplifyJobs community listings. Each links to the employer's own page.</div>`;
   return html`<section class="card" aria-labelledby="td-new-h">${head}${body}</section>`;
@@ -7256,6 +7272,13 @@ const METHOD_SIGNALS = [
   { k: "Talent-pool title", pts: "35", why: "Titles like “talent community”, “general application” or “future opportunities” usually mean there's no specific opening." },
   { k: "Slow for this company", pts: "15", why: "The company usually closes listings within three weeks, and this one is more than three times older than that." },
 ];
+function meth_pcts(ns) {
+  const tot = ns.reduce((a, b) => a + b, 0) || 1;
+  const raw = ns.map((n) => (n / tot) * 100); const fl = raw.map(Math.floor);
+  let left = 100 - fl.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => [r - fl[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { fl[i]++; left--; } });
+  return fl;
+}
 MODALS.method = () => {
   const jobs = useJobs();
   const b = useMemo(() => {
@@ -7266,22 +7289,22 @@ MODALS.method = () => {
   }, [jobs.status]);
   const rows = b ? [[ghostLabel(0), b.c[0], "var(--ok)"], [ghostLabel(25), b.c[1], "var(--wait)"], [ghostLabel(50), b.c[2], "var(--bad)"]] : [];
   return html`<${Modal} title="How we score listings" size="lg" onClose=${closeModal}>
-    <p class="muted" style="font-size:var(--fs-sm);max-width:68ch">Every listing gets a ghost-signal score from 0 to 100, built only from things we can see in the listing data. We show the reasons on each listing and never call a listing fake. A high score means "check before you invest hours", not "don't apply".</p>
+    <p class="muted" style="font-size:var(--fs-sm);max-width:68ch">Every listing gets a ghost-signal score from 0 to 100, built only from things we can see in the listing data. We show the reasons on each listing and never call a listing fake. A high score means “check before you invest hours”, not “don’t apply”.</p>
     ${b && html`<div class="stack-sm">
       <span class="label">Across ${fmt.num(b.n)} live listings right now${b.raw && b.raw > b.n ? html` <span class="faint" style="font-weight:400">(${fmt.num(b.raw)} postings, with identical repeats shown once)</span>` : null}</span>
       <div class="meth-bar" role="img" aria-label=${rows.map(([l, n]) => `${l}: ${n}`).join(", ")}>${rows.map(([l, n, col]) => html`<i key=${l} style=${`flex:${n};background:${col}`} title=${`${l}: ${fmt.num(n)}`}></i>`)}</div>
-      <div class="meth-legend">${rows.map(([l, n, col]) => html`<span key=${l}><i style=${`background:${col}`}></i>${l} <b class="num">${fmt.pct(n / b.n)}</b></span>`)}</div>
+      <div class="meth-legend">${rows.map(([l, n, col]) => html`<span key=${l}><i style=${`background:${col}`}></i>${l} <b class="num">${meth_pcts(rows.map((r) => r[1]))[rows.findIndex((r) => r[0] === l)]}%</b></span>`)}</div>
     </div>`}
     <div class="table-wrap card"><table class="table meth-table"><thead><tr><th>Signal</th><th>Points</th><th>Why it matters</th></tr></thead><tbody>
       ${METHOD_SIGNALS.map((s) => html`<tr key=${s.k} style="cursor:default"><td style="font-weight:500;white-space:nowrap">${s.k}</td><td class="num meth-pts">${s.pts.split(" · ").map((x) => html`<div key=${x}>${x}</div>`)}</td><td class="muted">${s.why}</td></tr>`)}
     </tbody></table></div>
-    <p class="hint">Scores add up and cap at 100. Under 25 shows as "${ghostLabel(0)}", 25–49 as "${ghostLabel(25)}", 50 and up as "${ghostLabel(50)}".</p>
+    <p class="hint">Scores add up and cap at 100. Under 25 shows as “${ghostLabel(0)}”, 25–49 as “${ghostLabel(25)}”, 50 and up as “${ghostLabel(50)}”.</p>
     <div class="stack-sm">
       <span class="label">Limits we know about</span>
       <ul style="margin:0;padding-left:18px;color:var(--fg-2);font-size:var(--fs-sm);display:flex;flex-direction:column;gap:4px">
-        <li>Dates are when the source list first saw a listing (from Mar 9, 2026), which can be later than the employer's own date.</li>
+        <li>Dates are when the source list first saw a listing (from Mar 9, 2026), which can be later than the employer’s own date.</li>
         <li>Reposts are matched by company and title, not by requisition number, so a big employer reusing one title can look like it reposts.</li>
-        <li>Company timing uses closed listings only, so "usually closes in" leans short.</li>
+        <li>Company timing uses closed listings only, so “usually closes in” leans short.</li>
       </ul>
     </div>
     <p class="hint">Data: SimplifyJobs community listings on GitHub${jobs.meta?.generatedAt ? `, refreshed ${fmt.ago(Date.parse(jobs.meta.generatedAt))}` : ""}. Every listing links to the employer's own application page.</p>
